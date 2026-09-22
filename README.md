@@ -7,7 +7,8 @@ composition for R and Python packages.
 This repository currently contains the project infrastructure and a verified
 LazyMatrix integration example. Model fitting is not implemented yet. See
 [DESIGN.md](DESIGN.md) for the architecture, statistical conventions, and
-implementation milestones.
+implementation milestones, and [TODO.md](TODO.md) for the implementation
+checklist.
 
 ## Matrix dependency
 
