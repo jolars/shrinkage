@@ -19,9 +19,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.89.0
-        with:
-          components: clippy, rustfmt
+        run: rustup toolchain install
 
       - uses: Swatinem/rust-cache@v2
 

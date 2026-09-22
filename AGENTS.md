@@ -48,6 +48,7 @@ unless a deliberate compatibility change raises it.
 
 - Track `Cargo.lock` and `devenv.lock`; regenerate them with Cargo and devenv.
 - Keep CI's Panache version aligned with the package in the locked devenv.
+- Install CI toolchains with direct `rustup` commands.
 - Do not edit `.pre-commit-config.yaml`; devenv generates it.
 - Use Conventional Commits. Versionary manages `CHANGELOG.md`; do not edit it
   manually. Release automation requires the `RELEASE_TOKEN` GitHub secret.
