@@ -1,0 +1,5 @@
+flavor = "gfm"
+
+[formatters]
+rust = "rustfmt"
+toml = "taplo"

@@ -1,0 +1,32 @@
+[package]
+name = "shrinkage"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+description = "Composable regularized statistical models in Rust."
+authors = ["Johan Larsson <johan@jolars.co>"]
+license = "MIT"
+repository = "https://github.com/jolars/shrinkage"
+readme = "README.md"
+keywords = ["statistics", "optimization", "regression", "regularization"]
+categories = ["mathematics", "science"]
+
+[dependencies]
+lazymatrix = { version = "=0.2.0", default-features = false }
+faer = { version = "0.24", optional = true, default-features = false, features = [
+  "std",
+  "linalg",
+] }
+
+[features]
+default = []
+faer = ["dep:faer", "lazymatrix/faer"]
+nalgebra = ["lazymatrix/nalgebra"]
+
+[[example]]
+name = "normalization"
+required-features = ["faer"]
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"

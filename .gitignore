@@ -1,0 +1,20 @@
+/target
+
+# devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv and generated hooks
+.direnv/
+.pre-commit-config.yaml
+
+# Nix build outputs
+result
+result-*
+
+# Task
+.task/
+
+# Panache cache
+.panache/

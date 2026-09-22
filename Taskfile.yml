@@ -1,0 +1,37 @@
+version: "3"
+
+tasks:
+  format:
+    desc: Format source and documentation
+    cmds:
+      - cargo fmt --all
+      - panache format .
+
+  lint:
+    desc: Lint source and documentation
+    cmds:
+      - cargo clippy --locked --all-targets --all-features -- -D warnings
+      - panache lint .
+
+  test:
+    desc: Run tests
+    cmds:
+      - cargo test --locked --no-default-features
+      - cargo test --locked --all-features
+
+  example:
+    desc: Verify dense and sparse LazyMatrix integration
+    cmds:
+      - cargo run --locked --example normalization --features faer
+
+  check:
+    desc: Run all required checks
+    cmds:
+      - cargo fmt --all -- --check
+      - cargo clippy --locked --all-targets --all-features -- -D warnings
+      - cargo build --locked --no-default-features
+      - task: test
+      - task: example
+      - RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
+      - panache format --check .
+      - panache lint .
