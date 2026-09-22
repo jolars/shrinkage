@@ -37,8 +37,10 @@ jobs:
           cargo test --locked --no-default-features
           cargo test --locked --all-features
 
-      - name: Verify matrix integration
-        run: cargo run --locked --example normalization --features faer
+      - name: Verify matrix integration and fitting
+        run: |
+          cargo run --locked --example normalization --features faer
+          cargo run --locked --example lasso --features faer
 
       - name: Check documentation
         run: cargo doc --locked --no-deps --all-features

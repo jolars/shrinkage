@@ -1,10 +1,10 @@
 # Shrinkage roadmap
 
 This checklist tracks implementation of [DESIGN.md](DESIGN.md). The repository
-currently has project infrastructure and a LazyMatrix integration example; model
-fitting is the next milestone. Work through the milestones in order, with each
-leaving a usable, tested subset. Check off numerical features only after their
-correctness tests and relevant benchmarks are in place.
+currently fits Gaussian lasso models through a convenience API. Work through the
+milestones in order, with each leaving a usable, tested subset. Check off
+numerical features only after their correctness tests and relevant benchmarks
+are in place.
 
 Keep architectural decisions and statistical conventions in `DESIGN.md`, and
 update this checklist as work lands. Start with `f64` and modules in the
@@ -15,8 +15,8 @@ boundaries only when an implemented consumer needs them.
 
 - [x] Create the Rust 2024 library with a declared Rust 1.89 MSRV, README,
   design, and license.
-- [x] Pin LazyMatrix 0.2.0 with optional `faer` and `nalgebra` backends and no
-  default matrix backend.
+- [x] Pin LazyMatrix with optional `faer` and `nalgebra` backends and no default
+  matrix backend.
 - [x] Add a runnable example with dense and CSC input that verifies lazy
   normalization and prediction-preserving coefficient and intercept
   transformations.
@@ -24,35 +24,41 @@ boundaries only when an implemented consumer needs them.
 
 ## 2. First vertical slice: Gaussian lasso
 
-- [ ] Implement Gaussian lasso coordinate descent with an unpenalized intercept
+- [x] Implement Gaussian lasso coordinate descent with an unpenalized intercept
   and a simple convenience API, using LazyMatrix's dense and sparse CSC
   column capabilities.
-- [ ] Apply the loss and penalty conventions in [Design
+- [x] Apply the loss and penalty conventions in [Design
   §8](DESIGN.md#8-statistical-semantics): average squared loss with the
   `1/(2n)` factor and L1 penalization of optimization-scale coefficients.
-- [ ] Fit training-column means and population standard deviations by default.
+- [x] Fit training-column means and population standard deviations by default.
   Use the raw design when standardization is disabled, disable centering
   when the intercept is disabled, and retain fitted preprocessing metadata.
 - [ ] Validate dimensions, nonempty observations, finite inputs, penalty
   strengths, and explicit scales before constructing LazyMatrix views.
   Replace computed zero scales with one and hold zero-norm normalized
-  columns at zero.
-- [ ] Implement sparse residual state with a scalar centering offset, cached
+  columns at zero. Convenience-API validation is implemented; explicit
+  normalization remains pending.
+- [x] Implement sparse residual state with a scalar centering offset, cached
   base sum, and column summaries. Keep coordinate updates and cached-sum
   column dots at `O(nnz_j)`, and periodically refresh residuals to control
   drift.
 - [ ] Return original-scale coefficients and predictions while preserving any
-  intercept induced by preprocessing, including through the typed API.
-- [ ] Add a documented KKT convergence check and report termination reason,
+  intercept induced by preprocessing, including through the typed API. The
+  convenience API is implemented; the compositional typed API remains
+  pending.
+- [x] Add a documented KKT convergence check and report termination reason,
   iterations, and objective diagnostics. Distinguish iteration limits,
   numerical failures, and invalid input from convergence.
 - [ ] Verify analytical cases, independent reference fixtures, agreement between
   dense and sparse fits, and agreement between explicit and lazy
   normalization. Test intercept policies, constant columns, penalty scaling,
-  invalid inputs, and nonconvergence.
+  invalid inputs, and nonconvergence. Analytical and independently solved
+  small cases are covered; external reference fixtures remain pending.
 - [ ] Add the benchmark harness and a lean consumer benchmark. Test sparse
   operation counts and reconstructed residuals, and measure time,
-  allocations, and memory without forming a Gram matrix by default.
+  allocations, and memory without forming a Gram matrix by default. Timing
+  benchmarks, operation counts, and residual tests are implemented;
+  allocation and memory profiling remain pending.
 
 ## 3. Composition proof
 
@@ -69,7 +75,7 @@ boundaries only when an implemented consumer needs them.
   unsupported combinations.
 - [ ] Establish reusable workspace ownership across iterations and path points.
   Measure normalized-product and proximal allocations, including LazyMatrix
-  0.2.0's scaled input clone. Verify reusable normalization scratch storage
+  0.3.0's scaled input clone. Verify reusable normalization scratch storage
   upstream before claiming allocation-free normalized iterations.
 - [ ] Prototype a separate fallible block-reader capability with bounded buffer
   reuse and explicit borrowing contracts before stabilizing solver

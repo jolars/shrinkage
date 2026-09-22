@@ -1,6 +1,7 @@
 # Shrinkage: design
 
-Status: bootstrap design. This document records architectural commitments and an
+Status: Gaussian lasso convenience API implemented; composition is the next
+architectural milestone. This document records architectural commitments and an
 implementation sequence; illustrative API names are not frozen interfaces.
 
 ## 1. Purpose
@@ -116,12 +117,14 @@ dense and sparse integrations, rather than defining a competing matrix API.
 Inspect dependency upgrades before changing the pinned release or relying on new
 capabilities.
 
-The bootstrap pins the inspected release `lazymatrix = "=0.2.0"`, with default
-features disabled. Its optional `faer` and `nalgebra` backends cover dense and
-CSC input. The sibling checkout also contains newer backend/version features and
-raw CSR row access; those are not part of this dependency contract. Adopt them
-through a verified release when a consumer needs them. Keep upstream development
-overrides local so a clean checkout builds without the sibling repository.
+The crate pins the inspected release `lazymatrix = "=0.3.0"`, with default
+features disabled. Shrinkage's optional `faer` and `nalgebra` features select
+`faer_v0_24` and `nalgebra_v0_34`, retaining faer 0.24, nalgebra 0.34, and
+nalgebra-sparse 0.11 for dense and CSC input. Version 0.3.0 supplies fallible
+statistics and products, including a combined normalization-statistics hook.
+Other backends and storage capabilities remain outside this solver's public
+feature set. Keep upstream development overrides local so a clean checkout
+builds without the sibling repository.
 
 For centering vector `c` and diagonal scale matrix `S`, optimize using
 
@@ -151,7 +154,7 @@ residual refreshes, and full convergence checks are separate passes. Test these
 operation counts and compare reconstructed residuals against dense references;
 periodically refresh cached state to control floating-point drift.
 
-Reusable output does not imply allocation-free execution. In release 0.2.0,
+Reusable output does not imply allocation-free execution. In release 0.3.0,
 `LazyMatrix::matvec_into` clones its input when scaling is active. Measure that
 allocation in the proximal-gradient consumer. Before claiming an allocation-free
 normalized iteration, add and verify reusable normalization scratch storage in
@@ -179,13 +182,15 @@ operations in Shrinkage. Avoid scalar-indexing APIs as the universal interface.
 File-backed failures must propagate as errors rather than panic or corrupt a
 fit.
 
-The current products and borrowed column views are infallible interfaces. A
-fallible block reader needs a separate capability and cannot be represented by
-silently panicking inside those traits. Establish its borrowing, buffer reuse,
-and error contracts during the composition milestone, before solver interfaces
-stabilize. The prototype must use a bounded block buffer and an injected read
-failure, including during preprocessing and a later solver iteration. Full
-file-format support remains a later milestone.
+Products, column statistics, and computed normalization return `Result` in
+LazyMatrix 0.3.0. The lasso uses the combined `normalization_stats` hook and
+preserves preprocessing errors with their operation context and source type.
+Borrowed column views remain infallible and must not hide I/O or decoding. A
+fallible block reader still needs a separate capability. Establish its borrowing
+and buffer-reuse contracts during the composition milestone, before solver
+interfaces stabilize. The prototype must use a bounded block buffer and an
+injected read failure, including during preprocessing and a later solver
+iteration. Full file-format support remains a later milestone.
 
 ## 6. Datafits, penalties, and solver oracles
 
@@ -297,6 +302,20 @@ strictly positive. Replace computed zero scales with one, as LazyMatrix does,
 and hold zero-norm normalized columns at zero. Validate inputs before invoking
 LazyMatrix constructors: the matrix library deliberately preserves nonfinite
 statistics and does not supply the statistical fit's validation policy.
+
+The implemented `Lasso` builder defaults to an absolute KKT tolerance of `1e-6`
+and at most 10,000 complete cyclic sweeps. For `c_j = X_tilde_j' r / n`, use
+`|c_j - lambda sign(theta_j)|` on active coordinates and
+`max(|c_j| - lambda, 0)` on zero coordinates, together with `|mean(r)|` when
+fitting an intercept. Check the maximum violation after each sweep. Reconstruct
+residuals every 50 sweeps, at the iteration limit, and before accepting
+convergence. An initially optimal fit takes zero sweeps.
+
+`LassoFit` owns original-scale parameters, fitted centers and scales, and final
+objective and KKT diagnostics. A finite fit that exhausts its budget returns
+`Termination::IterationLimit`. Invalid inputs, nonfinite arithmetic, and backend
+preprocessing errors return distinct `LassoError` variants. Explicit
+user-supplied normalization and the compositional typed API remain later work.
 
 Paths support warm starts, reusable working sets, and full optimality checks.
 Automatic maximum-penalty calculations and sequences are

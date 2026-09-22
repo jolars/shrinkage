@@ -2,10 +2,10 @@
 
 ## Scope and structure
 
-Shrinkage is a Rust 2024 library for regularized statistical models. The current
-bootstrap exposes LazyMatrix through `src/lib.rs`; model fitting follows
-`DESIGN.md`. `examples/normalization.rs` exercises the matrix dependency with
-dense and sparse CSC input.
+Shrinkage is a Rust 2024 library for regularized statistical models. `Lasso`
+provides Gaussian coordinate descent in `src/lasso.rs` and its child modules.
+Model fitting follows `DESIGN.md`. The `normalization` and `lasso` examples
+exercise dense and sparse CSC input through LazyMatrix 0.3.0.
 
 Start with modules in this crate. Use `name.rs` and `name/child.rs`, never
 `mod.rs`. Add solver tests and benchmarks with the numerical implementations.
@@ -36,6 +36,7 @@ cargo build --locked --no-default-features
 cargo test --locked --no-default-features
 cargo test --locked --all-features
 cargo run --locked --example normalization --features faer
+cargo run --locked --example lasso --features faer
 RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
 ```
 

@@ -20,9 +20,15 @@ tasks:
       - cargo test --locked --all-features
 
   example:
-    desc: Verify dense and sparse LazyMatrix integration
+    desc: Verify dense and sparse normalization and lasso fitting
     cmds:
       - cargo run --locked --example normalization --features faer
+      - cargo run --locked --example lasso --features faer
+
+  bench:
+    desc: Benchmark Gaussian lasso with only the faer backend enabled
+    cmds:
+      - cargo bench --locked --no-default-features --features faer --bench lasso
 
   check:
     desc: Run all required checks

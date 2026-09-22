@@ -12,7 +12,7 @@ keywords = ["statistics", "optimization", "regression", "regularization"]
 categories = ["mathematics", "science"]
 
 [dependencies]
-lazymatrix = { version = "=0.2.0", default-features = false }
+lazymatrix = { version = "=0.3.0", default-features = false }
 faer = { version = "0.24", optional = true, default-features = false, features = [
   "std",
   "linalg",
@@ -20,11 +20,25 @@ faer = { version = "0.24", optional = true, default-features = false, features =
 
 [features]
 default = []
-faer = ["dep:faer", "lazymatrix/faer"]
-nalgebra = ["lazymatrix/nalgebra"]
+faer = ["dep:faer", "lazymatrix/faer_v0_24"]
+nalgebra = ["lazymatrix/nalgebra_v0_34"]
+
+[dev-dependencies]
+criterion = { version = "0.8.2", default-features = false }
+nalgebra = { version = "0.34", default-features = false, features = ["std"] }
+nalgebra-sparse = "0.11"
 
 [[example]]
 name = "normalization"
+required-features = ["faer"]
+
+[[example]]
+name = "lasso"
+required-features = ["faer"]
+
+[[bench]]
+name = "lasso"
+harness = false
 required-features = ["faer"]
 
 [lints.rust]

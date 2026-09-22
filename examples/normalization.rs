@@ -20,12 +20,16 @@ fn main() {
     .expect("valid CSC triplets");
 
     let spec = Normalization::new(Centering::Mean, Scaling::Sd);
-    let dense = LazyMatrix::new(&dense, spec);
-    let sparse = LazyMatrix::new(&sparse, spec);
+    let dense = LazyMatrix::new(&dense, spec).expect("in-memory statistics are infallible");
+    let sparse = LazyMatrix::new(&sparse, spec).expect("in-memory statistics are infallible");
     let theta = Col::from_fn(2, |j| [0.75, -1.25][j]);
     let normalized_intercept = 0.5;
-    let dense_prediction = dense.matvec(&theta);
-    let sparse_prediction = sparse.matvec(&theta);
+    let dense_prediction = dense
+        .matvec(&theta)
+        .expect("in-memory product is infallible");
+    let sparse_prediction = sparse
+        .matvec(&theta)
+        .expect("in-memory product is infallible");
 
     let centers = dense.centers().expect("mean centering is enabled");
     let scales = dense
