@@ -1,4 +1,4 @@
-//! Gaussian lasso with cyclic coordinate descent and lazy standardization.
+//! Gaussian lasso with cyclic coordinate descent and lazy normalization.
 
 mod solver;
 
@@ -6,10 +6,9 @@ use std::convert::Infallible;
 use std::error::Error;
 use std::fmt;
 
-use lazymatrix::{
-    Centering, ColumnStats, LazyMatrix, Normalization, RawColumn, RawColumns, Scaling,
-};
+use lazymatrix::{ColumnStats, LazyMatrix, RawColumn, RawColumns};
 
+use crate::{Centering, Normalization, Scaling};
 use solver::{NumericalFailure, finite};
 
 /// Gaussian lasso configuration.
@@ -17,7 +16,7 @@ use solver::{NumericalFailure, finite};
 /// Fits `||y - X_tilde * theta - intercept||² / (2n) + lambda * ||theta||₁`.
 /// The intercept is unpenalized. By default, `X_tilde` uses training-column
 /// means and population standard deviations, and the penalty acts on the
-/// standardized coefficients. Reported coefficients and predictions use the
+/// normalized coefficients. Reported coefficients and predictions use the
 /// original input scale.
 ///
 /// Dense and CSC matrices use the same statically dispatched iteration routine.
@@ -43,7 +42,7 @@ use solver::{NumericalFailure, finite};
 pub struct Lasso {
     lambda: f64,
     fit_intercept: bool,
-    standardize: bool,
+    normalization: Normalization,
     tolerance: f64,
     max_iterations: usize,
 }
@@ -51,13 +50,13 @@ pub struct Lasso {
 impl Lasso {
     /// Configure a fit with a finite, nonnegative penalty strength.
     ///
-    /// Defaults to an intercept, standardization, an absolute KKT tolerance of
-    /// `1e-6`, and at most `10_000` complete coordinate sweeps.
+    /// Defaults to an intercept, [`Normalization::Auto`], an absolute KKT
+    /// tolerance of `1e-6`, and at most `10_000` complete coordinate sweeps.
     pub fn new(lambda: f64) -> Self {
         Self {
             lambda,
             fit_intercept: true,
-            standardize: true,
+            normalization: Normalization::Auto,
             tolerance: 1e-6,
             max_iterations: 10_000,
         }
@@ -65,19 +64,25 @@ impl Lasso {
 
     /// Enable or disable the unpenalized intercept.
     ///
-    /// Disabling the intercept also disables centering. Requested scaling
-    /// still uses population standard deviations about the column means.
+    /// With [`Normalization::Auto`], disabling the intercept also disables
+    /// centering while retaining population-standard-deviation scaling.
+    /// Explicit normalization choices are honored independently. Explicit
+    /// centering can induce a fixed original-scale intercept even when this
+    /// option is disabled.
     pub fn fit_intercept(mut self, enabled: bool) -> Self {
         self.fit_intercept = enabled;
         self
     }
 
-    /// Enable or disable training-column standardization.
+    /// Select a training-column normalization preset or custom specification.
     ///
-    /// Disabling standardization uses the raw design, including when fitting
-    /// an intercept. Computed zero standard deviations are replaced with one.
-    pub fn standardize(mut self, enabled: bool) -> Self {
-        self.standardize = enabled;
+    /// Defaults to [`Normalization::Auto`]. Use [`Normalization::None`] for
+    /// the raw design or [`Normalization::Custom`] to choose centering and
+    /// scaling independently. Computed zero scales are replaced with one.
+    /// Penalties act on normalized coefficients; reported parameters and
+    /// predictions use the original scale.
+    pub fn normalize(mut self, normalization: Normalization) -> Self {
+        self.normalization = normalization;
         self
     }
 
@@ -134,15 +139,9 @@ impl Lasso {
             }
         }
         validate_matrix(x)?;
-        let (centers, mut scales) = if self.standardize {
-            let spec = Normalization::new(
-                if self.fit_intercept {
-                    Centering::Mean
-                } else {
-                    Centering::None
-                },
-                Scaling::Sd,
-            );
+        let spec = self.normalization.specification(self.fit_intercept);
+        let (centers, mut scales) = if spec.center != Centering::None || spec.scale != Scaling::None
+        {
             x.normalization_stats(spec)
                 .map_err(|source| LassoError::Backend {
                     operation: "computing training normalization statistics",
@@ -154,15 +153,20 @@ impl Lasso {
         validate_statistics(
             &centers,
             x.ncols(),
-            self.standardize && self.fit_intercept,
+            spec.center != Centering::None,
             "column centers",
         )?;
-        validate_statistics(&scales, x.ncols(), self.standardize, "column scales")?;
+        validate_statistics(
+            &scales,
+            x.ncols(),
+            spec.scale != Scaling::None,
+            "column scales",
+        )?;
         if let Some(scales) = &mut scales {
             for scale in scales {
                 if *scale < 0.0 {
                     return Err(invalid(
-                        "matrix backend returned a negative standard deviation",
+                        "matrix backend returned a negative normalization scale",
                     ));
                 }
                 if *scale == 0.0 {
@@ -196,7 +200,11 @@ impl Lasso {
         Ok(LassoFit {
             coefficients,
             intercept,
-            preprocessing: Preprocessing { centers, scales },
+            preprocessing: Preprocessing {
+                spec,
+                centers,
+                scales,
+            },
             termination: solution.termination,
             iterations: solution.iterations,
             objective: solution.objective,
@@ -221,17 +229,28 @@ impl Lasso {
 /// Training normalization retained by a fitted lasso.
 #[derive(Clone, Debug)]
 pub struct Preprocessing {
+    spec: lazymatrix::Normalization,
     centers: Option<Vec<f64>>,
     scales: Option<Vec<f64>>,
 }
 
 impl Preprocessing {
-    /// Training-column means, or `None` when centering was disabled.
+    /// The centering rule used during training, with automatic choices resolved.
+    pub fn centering(&self) -> Centering {
+        self.spec.center
+    }
+
+    /// The scaling rule used during training, with automatic choices resolved.
+    pub fn scaling(&self) -> Scaling {
+        self.spec.scale
+    }
+
+    /// Training-column centers, or `None` when centering was disabled.
     pub fn centers(&self) -> Option<&[f64]> {
         self.centers.as_deref()
     }
 
-    /// Population standard deviations with zeros replaced by one, or `None`.
+    /// Training-column scales with zeros replaced by one, or `None` when disabled.
     pub fn scales(&self) -> Option<&[f64]> {
         self.scales.as_deref()
     }

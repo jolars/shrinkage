@@ -5,10 +5,10 @@ use std::error::Error;
 use std::fmt;
 
 use shrinkage::lazymatrix::{
-    ColumnStats, MatrixErrorType, MatrixShape, Normalization, NormalizationStats, RawColumn,
-    RawColumns,
+    ColumnStats, MatrixErrorType, MatrixShape, Normalization as MatrixNormalization,
+    NormalizationStats, RawColumn, RawColumns,
 };
-use shrinkage::{Lasso, LassoError};
+use shrinkage::{Centering, Lasso, LassoError, Normalization, Scaling};
 
 #[derive(Debug, PartialEq)]
 struct ReadFailure;
@@ -71,7 +71,7 @@ macro_rules! unused_stats {
 impl ColumnStats<f64> for Source {
     fn normalization_stats(
         &self,
-        _: Normalization,
+        _: MatrixNormalization,
     ) -> Result<NormalizationStats<f64>, Self::Error> {
         self.calls.set(self.calls.get() + 1);
         self.statistics.as_ref().cloned().map_err(|_| ReadFailure)
@@ -113,12 +113,42 @@ fn preprocessing_failure_retains_source_and_context() {
             source: ReadFailure
         }
     ));
-    let fit = Lasso::new(0.1)
-        .standardize(false)
-        .fit(&source, &[1.0, 2.0])
-        .unwrap();
-    assert!(fit.objective().is_finite());
+    for normalization in [
+        Normalization::None,
+        Normalization::Custom {
+            center: Centering::None,
+            scale: Scaling::None,
+        },
+    ] {
+        let fit = Lasso::new(0.1)
+            .normalize(normalization)
+            .fit(&source, &[1.0, 2.0])
+            .unwrap();
+        assert!(fit.objective().is_finite());
+    }
     assert_eq!(source.calls.get(), 1);
+}
+
+#[test]
+fn centering_and_scaling_can_be_requested_independently() {
+    for (normalization, statistics) in [
+        (Normalization::Center, (Some(vec![1.5]), None)),
+        (Normalization::MaxAbs, (None, Some(vec![2.0]))),
+    ] {
+        let source = Source {
+            values: [1.0, 2.0],
+            calls: Cell::new(0),
+            statistics: Ok(statistics.clone()),
+        };
+        let fit = Lasso::new(0.1)
+            .normalize(normalization)
+            .fit_intercept(false)
+            .fit(&source, &[1.0, 2.0])
+            .unwrap();
+        assert_eq!(source.calls.get(), 1);
+        assert_eq!(fit.preprocessing().centers(), statistics.0.as_deref());
+        assert_eq!(fit.preprocessing().scales(), statistics.1.as_deref());
+    }
 }
 
 #[test]

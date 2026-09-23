@@ -4,7 +4,7 @@
 mod matrix;
 
 use matrix::Matrix;
-use shrinkage::{Lasso, LassoError, Termination};
+use shrinkage::{Lasso, LassoError, Normalization, Termination};
 
 fn close(actual: f64, expected: f64) {
     assert!(
@@ -37,7 +37,9 @@ fn default_fit_soft_thresholds_optimization_coefficients() {
 fn raw_fit_has_unpenalized_intercept_and_averaged_loss() {
     let rows: &[&[f64]] = &[&[0.0], &[2.0], &[4.0]];
     let y = [1.0, 5.0, 9.0];
-    let model = Lasso::new(0.5).standardize(false).tolerance(1e-10);
+    let model = Lasso::new(0.5)
+        .normalize(Normalization::None)
+        .tolerance(1e-10);
     let fit = model.fit(&Matrix::from_rows(rows), &y).unwrap();
     close(fit.coefficients()[0], 2.0 - 0.5 / (8.0 / 3.0));
     close(fit.intercept(), 5.0 - 2.0 * fit.coefficients()[0]);
@@ -51,16 +53,16 @@ fn raw_fit_has_unpenalized_intercept_and_averaged_loss() {
 }
 
 #[test]
-fn no_intercept_disables_centering_but_retains_sd_scaling() {
+fn automatic_normalization_disables_centering_without_intercept() {
     let x = Matrix::from_rows(&[&[1.0], &[2.0], &[3.0]]);
-    for standardize in [false, true] {
+    for normalization in [Normalization::None, Normalization::Auto] {
         let fit = Lasso::new(0.4)
             .fit_intercept(false)
-            .standardize(standardize)
+            .normalize(normalization)
             .tolerance(1e-10)
             .fit(&x, &[2.0, 4.0, 6.0])
             .unwrap();
-        let scale = if standardize {
+        let scale = if normalization == Normalization::Auto {
             (2.0_f64 / 3.0).sqrt()
         } else {
             1.0
@@ -78,7 +80,7 @@ fn correlated_case_matches_independently_solved_active_set() {
     let x = Matrix::from_rows(&[&[-1.0, -1.0], &[-1.0, 0.0], &[1.0, 0.0], &[1.0, 1.0]]);
     let y = [0.0, 2.0, 4.0, 6.0];
     let fit = Lasso::new(0.25)
-        .standardize(false)
+        .normalize(Normalization::None)
         .tolerance(1e-11)
         .fit(&x, &y)
         .unwrap();
@@ -142,7 +144,7 @@ fn explicit_normalization_and_lazy_fit_preserve_predictions() {
         .collect();
     let explicit_x = Matrix::from_rows(&normalized.iter().map(Vec::as_slice).collect::<Vec<_>>());
     let explicit = Lasso::new(0.15)
-        .standardize(false)
+        .normalize(Normalization::None)
         .tolerance(1e-10)
         .fit(&explicit_x, &y)
         .unwrap();
@@ -161,7 +163,7 @@ fn explicit_normalization_and_lazy_fit_preserve_predictions() {
 fn iteration_limit_returns_a_finite_fit_with_diagnostics() {
     let x = Matrix::from_rows(&[&[1.0], &[2.0], &[3.0]]);
     let fit = Lasso::new(0.1)
-        .standardize(false)
+        .normalize(Normalization::None)
         .tolerance(1e-14)
         .max_iterations(1)
         .fit(&x, &[2.0, 4.0, 6.0])
@@ -217,7 +219,7 @@ fn overflow_during_iteration_or_prediction_is_not_a_successful_fit() {
     let tiny = Matrix::from_rows(&[&[1e-150], &[0.0]]);
     assert!(matches!(
         Lasso::new(0.0)
-            .standardize(false)
+            .normalize(Normalization::None)
             .fit_intercept(false)
             .fit(&tiny, &[1e160, 0.0]),
         Err(LassoError::NumericalFailure { iteration: 1, .. })
@@ -234,7 +236,7 @@ fn overflow_during_iteration_or_prediction_is_not_a_successful_fit() {
 fn slow_raw_fit_crosses_residual_refresh_boundaries() {
     let x = Matrix::from_rows(&[&[10.0], &[11.0], &[12.0]]);
     let fit = Lasso::new(0.2)
-        .standardize(false)
+        .normalize(Normalization::None)
         .tolerance(1e-9)
         .fit(&x, &[21.0, 23.0, 25.0])
         .unwrap();
@@ -249,7 +251,7 @@ fn slow_raw_fit_crosses_residual_refresh_boundaries() {
 fn negative_coefficients_and_rank_deficient_designs_converge() {
     let x = Matrix::from_rows(&[&[-1.0, -1.0], &[0.0, 0.0], &[1.0, 1.0]]);
     let fit = Lasso::new(0.2)
-        .standardize(false)
+        .normalize(Normalization::None)
         .tolerance(1e-10)
         .fit(&x, &[3.0, 1.0, -1.0])
         .unwrap();

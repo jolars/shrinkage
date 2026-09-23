@@ -9,8 +9,10 @@
 //! LazyMatrix's dense and sparse CSC integrations.
 
 pub mod lasso;
+pub mod normalization;
 
 pub use lasso::{Lasso, LassoError, LassoFit, Preprocessing, Termination};
+pub use normalization::{Centering, Normalization, Scaling};
 
 /// Matrix capabilities, borrowed columns, and lazy normalization.
 pub use lazymatrix;

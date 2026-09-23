@@ -31,13 +31,18 @@ boundaries only when an implemented consumer needs them.
   §8](DESIGN.md#8-statistical-semantics): average squared loss with the
   `1/(2n)` factor and L1 penalization of optimization-scale coefficients.
 - [x] Fit training-column means and population standard deviations by default.
-  Use the raw design when standardization is disabled, disable centering
-  when the intercept is disabled, and retain fitted preprocessing metadata.
+  Under `Normalization::Auto`, disable centering when the intercept is
+  disabled, and retain fitted preprocessing metadata.
+- [x] Replace `standardize(bool)` with `normalize(Normalization)`. Provide
+  common presets and custom independent centering and scaling using
+  LazyMatrix's enums. Honor explicit choices independently of intercept
+  fitting, preserve induced intercepts, and test dense/sparse and
+  explicit/lazy equivalence.
 - [ ] Validate dimensions, nonempty observations, finite inputs, penalty
   strengths, and explicit scales before constructing LazyMatrix views.
   Replace computed zero scales with one and hold zero-norm normalized
-  columns at zero. Convenience-API validation is implemented; explicit
-  normalization remains pending.
+  columns at zero. Convenience-API validation is implemented; user-supplied
+  center and scale vectors remain pending.
 - [x] Implement sparse residual state with a scalar centering offset, cached
   base sum, and column summaries. Keep coordinate updates and cached-sum
   column dots at `O(nnz_j)`, and periodically refresh residuals to control
@@ -49,6 +54,17 @@ boundaries only when an implemented consumer needs them.
 - [x] Add a documented KKT convergence check and report termination reason,
   iterations, and objective diagnostics. Distinguish iteration limits,
   numerical failures, and invalid input from convergence.
+- [ ] Implement a valid Gaussian lasso dual certificate and duality gap. Test
+  feasibility, objective scaling, intercept and normalization policies, zero
+  penalty, and zero reference loss before making relative duality gap the
+  default convergence criterion.
+- [ ] Introduce `terminate_on(StoppingCriterion)` with criterion-specific
+  tolerances, concise duality-gap and KKT constructors, and explicit
+  absolute and relative gap tolerances. Document the reference scale and
+  migrate the existing absolute-KKT `tolerance` setter without silently
+  changing its meaning. Keep iteration budgets independent, reject
+  unsupported criteria, and report the selected criterion, final value, and
+  threshold.
 - [ ] Verify analytical cases, independent reference fixtures, agreement between
   dense and sparse fits, and agreement between explicit and lazy
   normalization. Test intercept policies, constant columns, penalty scaling,

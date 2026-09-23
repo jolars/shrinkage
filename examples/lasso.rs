@@ -2,7 +2,7 @@
 
 use faer::Mat;
 use faer::sparse::{SparseColMat, Triplet};
-use shrinkage::{Lasso, Termination};
+use shrinkage::{Centering, Lasso, Normalization, Scaling, Termination};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rows = [
@@ -26,7 +26,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let sparse = SparseColMat::<usize, f64>::try_new_from_triplets(rows.len(), 2, &triplets)?;
 
-    let model = Lasso::new(0.15).tolerance(1e-9);
+    let model = Lasso::new(0.15)
+        .normalize(Normalization::Custom {
+            center: Centering::Mean,
+            scale: Scaling::L2,
+        })
+        .tolerance(1e-9);
     let fit = model.fit(&dense, &y)?;
     let sparse_fit = model.fit(&sparse, &y)?;
     assert_eq!(fit.termination(), Termination::Converged);

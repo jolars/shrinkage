@@ -3,7 +3,7 @@
 #![cfg(any(feature = "faer", feature = "nalgebra"))]
 
 use shrinkage::lazymatrix::{ColumnStats, RawColumns};
-use shrinkage::{Lasso, LassoFit, Termination};
+use shrinkage::{Centering, Lasso, LassoFit, Normalization, Scaling, Termination};
 
 const ROWS: [[f64; 4]; 6] = [
     [0.0, 1.0, 5.0, 0.0],
@@ -79,10 +79,32 @@ where
     B: RawColumns<f64> + ColumnStats<f64>,
 {
     for intercept in [false, true] {
-        for standardize in [false, true] {
+        let mut normalizations = vec![
+            Normalization::Auto,
+            Normalization::None,
+            Normalization::Center,
+            Normalization::Standardize,
+            Normalization::MinMax,
+            Normalization::MaxAbs,
+            Normalization::L1,
+            Normalization::L2,
+        ];
+        for center in [Centering::None, Centering::Mean, Centering::Min] {
+            for scale in [
+                Scaling::None,
+                Scaling::Sd,
+                Scaling::Range,
+                Scaling::MaxAbs,
+                Scaling::L1,
+                Scaling::L2,
+            ] {
+                normalizations.push(Normalization::Custom { center, scale });
+            }
+        }
+        for normalization in normalizations {
             let model = Lasso::new(0.15)
                 .fit_intercept(intercept)
-                .standardize(standardize)
+                .normalize(normalization)
                 .tolerance(1e-9)
                 .max_iterations(50_000);
             let a = model.fit(dense, &Y).unwrap();

@@ -268,13 +268,26 @@ Retain fitted preprocessing metadata and verify prediction equivalence. With no
 fitted intercept, centering can induce a fixed original-scale intercept; do not
 silently discard it or claim the same no-intercept model was fitted.
 
-The initial lasso convenience API fits an intercept and uses training-column
-means and population standard deviations by default. Disabling standardization
-uses the raw design; explicitly disabling the intercept also disables centering.
-The typed API may express other transformations, but must preserve any induced
-original-scale intercept. The initial penalty always acts on the optimization
-coefficients. Original-scale penalties under nontrivial scaling are deferred
-until their transformed subproblems are implemented explicitly.
+The lasso convenience API accepts `.normalize(Normalization)`, replacing the
+former `standardize(bool)` option. The enum provides `Auto`, `None`, `Center`,
+`Standardize`, `MinMax`, `MaxAbs`, `L1`, `L2`, and `Custom { center, scale }`.
+Custom choices reuse LazyMatrix's `Centering` and `Scaling` enums. Centering and
+scaling are independent; norm and maximum-absolute scales are computed after
+centering. The implementation delegates statistics and normalization algebra to
+LazyMatrix.
+
+`Auto` preserves the initial default: fit an intercept, center by
+training-column means, and scale by population standard deviations. Disabling
+the intercept under `Auto` disables centering while retaining scaling. `None`
+uses the raw design. All explicit presets and custom choices are independent of
+the intercept option and builder call order. Explicit centering without a fitted
+intercept must retain the induced original-scale intercept. Fitted preprocessing
+records the resolved centering and scaling rules and values. User-supplied
+center and scale vectors remain later work.
+
+The initial penalty always acts on the optimization coefficients. Original-scale
+penalties under nontrivial scaling are deferred until their transformed
+subproblems are implemented explicitly.
 
 Specify loss normalization, observation-weight semantics, offsets, and penalty
 scaling. For the initial Gaussian lasso, use
@@ -314,8 +327,8 @@ convergence. An initially optimal fit takes zero sweeps.
 `LassoFit` owns original-scale parameters, fitted centers and scales, and final
 objective and KKT diagnostics. A finite fit that exhausts its budget returns
 `Termination::IterationLimit`. Invalid inputs, nonfinite arithmetic, and backend
-preprocessing errors return distinct `LassoError` variants. Explicit
-user-supplied normalization and the compositional typed API remain later work.
+preprocessing errors return distinct `LassoError` variants. User-supplied center
+and scale vectors and the compositional typed API remain later work.
 
 Paths support warm starts, reusable working sets, and full optimality checks.
 Automatic maximum-penalty calculations and sequences are
@@ -401,6 +414,51 @@ Document each tolerance: KKT violation, duality gap, proximal-gradient mapping,
 fixed-point residual, or another justified criterion. Do not fabricate a duality
 gap for objectives lacking an implemented valid dual. Include solver selection,
 objective conventions, and available work counters in diagnostics.
+
+The planned convergence API is `.terminate_on(StoppingCriterion)`. Each
+criterion owns its tolerances, so changing criteria cannot silently reuse a
+tolerance with a different meaning. Provide concise constructors for common
+choices and explicit absolute and relative tolerances where applicable.
+Illustrative calls are:
+
+```rust,ignore
+let model = Lasso::new(0.1)
+    .terminate_on(StoppingCriterion::duality_gap(1e-6))
+    .max_iterations(10_000);
+
+let model = Lasso::new(0.1).terminate_on(StoppingCriterion::DualityGap {
+    absolute: 1e-10,
+    relative: 1e-6,
+});
+
+let model = Lasso::new(0.1)
+    .terminate_on(StoppingCriterion::kkt_violation(1e-8));
+```
+
+`duality_gap(tol)` denotes a relative tolerance; `kkt_violation(tol)` denotes an
+absolute tolerance. Define the gap threshold as `absolute + relative * scale`,
+with a documented reference scale for each supported problem. For Gaussian
+lasso, use the averaged squared loss at the zero-coefficient model, with the
+intercept optimized when enabled. Keep this scale fixed during a fit, and define
+zero-scale behavior without dividing by it. Validate finite, nonnegative
+tolerances with at least one positive component.
+
+Duality gap is the intended default for Gaussian lasso and other supported
+convex problems once valid dual certificates are implemented and tested. The
+current `.tolerance(...)` API still controls absolute KKT violation; do not
+silently reinterpret it as a gap tolerance. Introduce `terminate_on` when
+implementing the criteria, with an explicit migration from the existing setter.
+Unsupported criteria must be rejected before iteration, without silently
+substituting another criterion. Nonconvex models require an appropriate
+stationarity criterion.
+
+Iteration limits remain independent budgets and report `IterationLimit`, not
+convergence. Report the selected criterion, its final value, and its threshold.
+Keep diagnostic computation separate from criterion selection: a fit may report
+both KKT violation and a duality gap. A cheap check can trigger a more expensive
+certificate calculation, but only the requested certificate may establish
+convergence. Check frequency is a separate solver policy, and final convergence
+checks must use refreshed state.
 
 Verification must cover:
 

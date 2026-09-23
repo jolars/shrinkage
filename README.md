@@ -30,15 +30,44 @@ $$
   - \widetilde b\mathbf1\|_2^2 + \lambda\|\theta\|_1.
 $$
 
-The penalty acts on the standardized coefficients. `coefficients()`,
+The penalty acts on the normalized coefficients. `coefficients()`,
 `intercept()`, and `predict()` use the original input scale. Fitted centers and
 scales remain available through `preprocessing()`; prediction does not estimate
 new statistics.
 
-Use `.standardize(false)` to fit the raw design. `.fit_intercept(false)` also
-disables centering, while retaining scaling if requested. Zero standard
-deviations become one, and zero-norm normalized columns stay at zero. Inputs
-must be finite, and the solver does not impute missing values.
+Choose normalization with `.normalize(Normalization::...)`:
+
+  | Option                     | Centering                                      | Scaling                       |
+  | -------------------------- | ---------------------------------------------- | ----------------------------- |
+  | `Auto` (default)           | Mean when fitting an intercept; otherwise none | Population standard deviation |
+  | `None`                     | None                                           | None                          |
+  | `Center`                   | Mean                                           | None                          |
+  | `Standardize`              | Mean                                           | Population standard deviation |
+  | `MinMax`                   | Minimum                                        | Range                         |
+  | `MaxAbs`                   | None                                           | Maximum absolute value        |
+  | `L1`                       | None                                           | L1 norm                       |
+  | `L2`                       | None                                           | L2 norm                       |
+  | `Custom { center, scale }` | Selected independently                         | Selected independently        |
+
+Custom choices reuse LazyMatrix's enums, re-exported from Shrinkage:
+
+```rust
+use shrinkage::{Centering, Lasso, Normalization, Scaling};
+
+let model = Lasso::new(0.1).normalize(Normalization::Custom {
+    center: Centering::Mean,
+    scale: Scaling::L2,
+});
+```
+
+Scales based on norms or maximum absolute values are computed after centering.
+Use `Normalization::None` for the raw design. Only `Auto` changes centering when
+`.fit_intercept(false)` is selected. Explicit centering is honored even without
+a fitted intercept, and its induced original-scale intercept is retained.
+Builder call order does not change this behavior. Fitted preprocessing exposes
+the resolved `centering()` and `scaling()` rules as well as their values.
+Computed zero scales become one, and zero-norm normalized columns stay at zero.
+Inputs must be finite, and the solver does not impute missing values.
 
 A successful `Result` contains a finite fit, which may have reached the
 iteration limit. Check `termination()` before treating it as converged. The
