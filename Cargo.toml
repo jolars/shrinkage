@@ -22,11 +22,15 @@ faer = { version = "0.24", optional = true, default-features = false, features =
 default = []
 faer = ["dep:faer", "lazymatrix/faer_v0_24"]
 nalgebra = ["lazymatrix/nalgebra_v0_34"]
+ndarray = ["lazymatrix/ndarray_v0_17"]
+sprs = ["lazymatrix/sprs_v0_11"]
 
 [dev-dependencies]
 criterion = { version = "0.8.2", default-features = false }
 nalgebra = { version = "0.34", default-features = false, features = ["std"] }
 nalgebra-sparse = "0.11"
+ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
+sprs = { version = "0.11.4", default-features = false }
 
 [[example]]
 name = "normalization"

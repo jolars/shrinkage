@@ -35,6 +35,8 @@ jobs:
       - name: Test
         run: |
           cargo test --locked --no-default-features
+          cargo test --locked --no-default-features --features ndarray
+          cargo test --locked --no-default-features --features sprs
           cargo test --locked --all-features
 
       - name: Verify matrix integration and fitting

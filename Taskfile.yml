@@ -17,6 +17,8 @@ tasks:
     desc: Run tests
     cmds:
       - cargo test --locked --no-default-features
+      - cargo test --locked --no-default-features --features ndarray
+      - cargo test --locked --no-default-features --features sprs
       - cargo test --locked --all-features
 
   example:

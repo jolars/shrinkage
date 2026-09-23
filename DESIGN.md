@@ -118,13 +118,17 @@ Inspect dependency upgrades before changing the pinned release or relying on new
 capabilities.
 
 The crate pins the inspected release `lazymatrix = "=0.3.0"`, with default
-features disabled. Shrinkage's optional `faer` and `nalgebra` features select
-`faer_v0_24` and `nalgebra_v0_34`, retaining faer 0.24, nalgebra 0.34, and
-nalgebra-sparse 0.11 for dense and CSC input. Version 0.3.0 supplies fallible
-statistics and products, including a combined normalization-statistics hook.
-Other backends and storage capabilities remain outside this solver's public
-feature set. Keep upstream development overrides local so a clean checkout
-builds without the sibling repository.
+features disabled. Shrinkage's optional `faer`, `nalgebra`, `ndarray`, and
+`sprs` features select `faer_v0_24`, `nalgebra_v0_34`, `ndarray_v0_17`, and
+`sprs_v0_11`, respectively. These retain faer 0.24, nalgebra 0.34 with
+nalgebra-sparse 0.11, ndarray 0.17, and sprs 0.11. ndarray arrays and borrowed
+views support row-major, column-major, and strided storage. sprs CSC matrices
+and views use LazyMatrix's checked `SprsCsc` wrapper; callers explicitly convert
+CSR input to CSC before fitting. Version 0.3.0 supplies fallible statistics and
+products, including a combined normalization-statistics hook. Other backends and
+storage capabilities remain outside this solver's public feature set. Keep
+upstream development overrides local so a clean checkout builds without the
+sibling repository.
 
 For centering vector `c` and diagonal scale matrix `S`, optimize using
 

@@ -91,9 +91,45 @@ cargo run --locked --example lasso --features faer
 ## Matrix dependency
 
 The crate pins LazyMatrix 0.3.0 from crates.io. No matrix backend is enabled by
-default. The optional `faer` feature selects faer 0.24, and `nalgebra` selects
-nalgebra 0.34 with nalgebra-sparse 0.11 through LazyMatrix's version-specific
-features. Custom matrices can implement LazyMatrix's `RawColumns<f64>` and
+default. Optional features select LazyMatrix's version-specific integrations:
+
+  | Feature    | Dependencies                           | Supported input                                      |
+  | ---------- | -------------------------------------- | ---------------------------------------------------- |
+  | `faer`     | faer 0.24                              | Dense matrices, dense views, and sparse CSC matrices |
+  | `nalgebra` | nalgebra 0.34 and nalgebra-sparse 0.11 | Dense matrices, dense views, and sparse CSC matrices |
+  | `ndarray`  | ndarray 0.17                           | Two-dimensional arrays and borrowed views            |
+  | `sprs`     | sprs 0.11                              | Sparse CSC matrices and views wrapped in `SprsCsc`   |
+
+With the `ndarray` feature, fit directly against an array or borrowed view:
+
+```rust
+use ndarray::array;
+use shrinkage::Lasso;
+
+let x = array![[0.0], [1.0], [2.0]];
+let fit = Lasso::new(0.1).fit(&x.view(), &[1.0, 3.0, 5.0])?;
+let predictions = fit.predict(&x)?;
+```
+
+Row-major, column-major, and strided arrays are supported. Column-major storage
+keeps each column contiguous for coordinate descent.
+
+With the `sprs` feature, wrap CSC storage in `shrinkage::lazymatrix::SprsCsc`.
+The wrapper checks storage orientation without copying entries:
+
+```rust
+use shrinkage::{Lasso, lazymatrix::SprsCsc};
+use sprs::CsMat;
+
+let x = CsMat::new_csc((3, 1), vec![0, 2], vec![1, 2], vec![1.0, 2.0]);
+let columns = SprsCsc::try_new(x.view()).unwrap();
+let fit = Lasso::new(0.1).fit(&columns, &[1.0, 3.0, 5.0])?;
+let predictions = fit.predict(&columns)?;
+```
+
+`SprsCsc::try_new` accepts owned matrices and borrowed views. It returns CSR
+input unchanged as an error; explicitly convert with `csr.to_csc()` before
+wrapping. Custom matrices can implement LazyMatrix's `RawColumns<f64>` and
 `ColumnStats<f64>` capabilities.
 
 Run the dense/sparse normalization example:
