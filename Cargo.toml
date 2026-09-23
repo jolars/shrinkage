@@ -20,10 +20,14 @@ faer = { version = "0.24", optional = true, default-features = false, features =
 
 [features]
 default = []
-faer = ["dep:faer", "lazymatrix/faer_v0_24"]
-nalgebra = ["lazymatrix/nalgebra_v0_34"]
-ndarray = ["lazymatrix/ndarray_v0_17"]
-sprs = ["lazymatrix/sprs_v0_11"]
+faer = ["faer_v0_24"]
+faer_v0_24 = ["dep:faer", "lazymatrix/faer_v0_24"]
+nalgebra = ["nalgebra_v0_34"]
+nalgebra_v0_34 = ["lazymatrix/nalgebra_v0_34"]
+ndarray = ["ndarray_v0_17"]
+ndarray_v0_17 = ["lazymatrix/ndarray_v0_17"]
+sprs = ["sprs_v0_11"]
+sprs_v0_11 = ["lazymatrix/sprs_v0_11"]
 
 [dev-dependencies]
 criterion = { version = "0.8.2", default-features = false }
@@ -34,16 +38,16 @@ sprs = { version = "0.11.4", default-features = false }
 
 [[example]]
 name = "normalization"
-required-features = ["faer"]
+required-features = ["faer_v0_24"]
 
 [[example]]
 name = "lasso"
-required-features = ["faer"]
+required-features = ["faer_v0_24"]
 
 [[bench]]
 name = "lasso"
 harness = false
-required-features = ["faer"]
+required-features = ["faer_v0_24"]
 
 [lints.rust]
 unsafe_code = "forbid"

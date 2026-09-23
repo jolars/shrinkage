@@ -1,6 +1,6 @@
 //! Normalization choices, penalty scales, and prediction-preserving transforms.
 
-#![cfg(feature = "faer")]
+#![cfg(feature = "faer_v0_24")]
 
 use faer::Mat;
 use shrinkage::{Centering, Lasso, Normalization, Scaling, Termination};

@@ -118,17 +118,25 @@ Inspect dependency upgrades before changing the pinned release or relying on new
 capabilities.
 
 The crate pins the inspected release `lazymatrix = "=0.3.0"`, with default
-features disabled. Shrinkage's optional `faer`, `nalgebra`, `ndarray`, and
-`sprs` features select `faer_v0_24`, `nalgebra_v0_34`, `ndarray_v0_17`, and
-`sprs_v0_11`, respectively. These retain faer 0.24, nalgebra 0.34 with
-nalgebra-sparse 0.11, ndarray 0.17, and sprs 0.11. ndarray arrays and borrowed
-views support row-major, column-major, and strided storage. sprs CSC matrices
-and views use LazyMatrix's checked `SprsCsc` wrapper; callers explicitly convert
-CSR input to CSC before fitting. Version 0.3.0 supplies fallible statistics and
-products, including a combined normalization-statistics hook. Other backends and
-storage capabilities remain outside this solver's public feature set. Keep
-upstream development overrides local so a clean checkout builds without the
-sibling repository.
+features disabled. Shrinkage's versioned features `faer_v0_24`,
+`nalgebra_v0_34`, `ndarray_v0_17`, and `sprs_v0_11` forward to the matching
+LazyMatrix features. The short names `faer`, `nalgebra`, `ndarray`, and `sprs`
+remain aliases for these release lines. Gate tests, doctests, examples, and
+benchmarks on the versioned features so either entry point works. These retain
+faer 0.24, nalgebra 0.34 with nalgebra-sparse 0.11, ndarray 0.17, and sprs 0.11.
+ndarray arrays and borrowed views support row-major, column-major, and strided
+storage. sprs CSC matrices and views use LazyMatrix's checked `SprsCsc` wrapper;
+callers explicitly convert CSR input to CSC before fitting. Version 0.3.0
+supplies fallible statistics and products, including a combined
+normalization-statistics hook. Other backends and storage capabilities remain
+outside this solver's public feature set. Keep upstream development overrides
+local so a clean checkout builds without the sibling repository.
+
+Expose only one release line per backend until LazyMatrix supports concurrent
+implementations for multiple versions. In release 0.3.0, Cargo feature
+unification can enable a newer adapter through another dependency and remove the
+trait implementations for older matrix types. Versioned feature names do not
+isolate a consumer from this upstream limitation.
 
 For centering vector `c` and diagonal scale matrix `S`, optimize using
 

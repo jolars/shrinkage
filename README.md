@@ -91,16 +91,25 @@ cargo run --locked --example lasso --features faer
 ## Matrix dependency
 
 The crate pins LazyMatrix 0.3.0 from crates.io. No matrix backend is enabled by
-default. Optional features select LazyMatrix's version-specific integrations:
+default. Versioned features select LazyMatrix's integrations for a particular
+release line; the short names remain convenience aliases:
 
-  | Feature    | Dependencies                           | Supported input                                      |
-  | ---------- | -------------------------------------- | ---------------------------------------------------- |
-  | `faer`     | faer 0.24                              | Dense matrices, dense views, and sparse CSC matrices |
-  | `nalgebra` | nalgebra 0.34 and nalgebra-sparse 0.11 | Dense matrices, dense views, and sparse CSC matrices |
-  | `ndarray`  | ndarray 0.17                           | Two-dimensional arrays and borrowed views            |
-  | `sprs`     | sprs 0.11                              | Sparse CSC matrices and views wrapped in `SprsCsc`   |
+  | Versioned feature | Alias      | Dependencies                           | Supported input                                      |
+  | ----------------- | ---------- | -------------------------------------- | ---------------------------------------------------- |
+  | `faer_v0_24`      | `faer`     | faer 0.24                              | Dense matrices, dense views, and sparse CSC matrices |
+  | `nalgebra_v0_34`  | `nalgebra` | nalgebra 0.34 and nalgebra-sparse 0.11 | Dense matrices, dense views, and sparse CSC matrices |
+  | `ndarray_v0_17`   | `ndarray`  | ndarray 0.17                           | Two-dimensional arrays and borrowed views            |
+  | `sprs_v0_11`      | `sprs`     | sprs 0.11                              | Sparse CSC matrices and views wrapped in `SprsCsc`   |
 
-With the `ndarray` feature, fit directly against an array or borrowed view:
+Match your direct matrix dependency to the selected release line. Each versioned
+feature works independently of its alias, including the faer examples and
+benchmarks. Shrinkage currently exposes one release line per backend. LazyMatrix
+0.3.0 implements traits only for the newest enabled release of each backend, so
+another dependency enabling a newer adapter on the same LazyMatrix package can
+remove support for older matrix types.
+
+With `ndarray_v0_17` or its `ndarray` alias, fit directly against an array or
+borrowed view:
 
 ```rust
 use ndarray::array;
@@ -114,8 +123,9 @@ let predictions = fit.predict(&x)?;
 Row-major, column-major, and strided arrays are supported. Column-major storage
 keeps each column contiguous for coordinate descent.
 
-With the `sprs` feature, wrap CSC storage in `shrinkage::lazymatrix::SprsCsc`.
-The wrapper checks storage orientation without copying entries:
+With `sprs_v0_11` or its `sprs` alias, wrap CSC storage in
+`shrinkage::lazymatrix::SprsCsc`. The wrapper checks storage orientation without
+copying entries:
 
 ```rust
 use shrinkage::{Lasso, lazymatrix::SprsCsc};

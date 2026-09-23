@@ -35,14 +35,20 @@ jobs:
       - name: Test
         run: |
           cargo test --locked --no-default-features
+          cargo test --locked --no-default-features --features faer_v0_24
+          cargo test --locked --no-default-features --features nalgebra_v0_34
+          cargo test --locked --no-default-features --features ndarray_v0_17
+          cargo test --locked --no-default-features --features sprs_v0_11
+          cargo test --locked --no-default-features --features faer
+          cargo test --locked --no-default-features --features nalgebra
           cargo test --locked --no-default-features --features ndarray
           cargo test --locked --no-default-features --features sprs
           cargo test --locked --all-features
 
       - name: Verify matrix integration and fitting
         run: |
-          cargo run --locked --example normalization --features faer
-          cargo run --locked --example lasso --features faer
+          cargo run --locked --example normalization --features faer_v0_24
+          cargo run --locked --example lasso --features faer_v0_24
 
       - name: Check documentation
         run: cargo doc --locked --no-deps --all-features

@@ -1,10 +1,10 @@
 //! Dense, strided, and CSC fits through the optional matrix backends.
 
 #![cfg(any(
-    feature = "faer",
-    feature = "nalgebra",
-    feature = "ndarray",
-    feature = "sprs"
+    feature = "faer_v0_24",
+    feature = "nalgebra_v0_34",
+    feature = "ndarray_v0_17",
+    feature = "sprs_v0_11"
 ))]
 
 use shrinkage::lazymatrix::{ColumnStats, RawColumns};
@@ -135,7 +135,7 @@ where
     }
 }
 
-#[cfg(feature = "faer")]
+#[cfg(feature = "faer_v0_24")]
 fn faer_matrices() -> (faer::Mat<f64>, faer::sparse::SparseColMat<usize, f64>) {
     let dense = faer::Mat::from_fn(6, 4, |i, j| ROWS[i][j]);
     let mut triplets = Vec::new();
@@ -153,7 +153,7 @@ fn faer_matrices() -> (faer::Mat<f64>, faer::sparse::SparseColMat<usize, f64>) {
     )
 }
 
-#[cfg(feature = "nalgebra")]
+#[cfg(feature = "nalgebra_v0_34")]
 fn nalgebra_matrices() -> (nalgebra::DMatrix<f64>, nalgebra_sparse::CscMatrix<f64>) {
     let dense = nalgebra::DMatrix::from_fn(6, 4, |i, j| ROWS[i][j]);
     let mut coo = nalgebra_sparse::CooMatrix::new(6, 4);
@@ -167,12 +167,12 @@ fn nalgebra_matrices() -> (nalgebra::DMatrix<f64>, nalgebra_sparse::CscMatrix<f6
     (dense, nalgebra_sparse::CscMatrix::from(&coo))
 }
 
-#[cfg(feature = "ndarray")]
+#[cfg(feature = "ndarray_v0_17")]
 fn ndarray_matrix() -> ndarray::Array2<f64> {
     ndarray::Array2::from_shape_fn((6, 4), |(i, j)| ROWS[i][j])
 }
 
-#[cfg(feature = "sprs")]
+#[cfg(feature = "sprs_v0_11")]
 fn sprs_matrix() -> sprs::CsMat<f64> {
     let mut indptr = vec![0];
     let mut indices = Vec::new();
@@ -189,7 +189,7 @@ fn sprs_matrix() -> sprs::CsMat<f64> {
     sprs::CsMat::new_csc((6, 4), indptr, indices, values)
 }
 
-#[cfg(feature = "faer")]
+#[cfg(feature = "faer_v0_24")]
 #[test]
 fn faer_dense_csc_and_strided_view_agree() {
     let (dense, sparse) = faer_matrices();
@@ -198,14 +198,14 @@ fn faer_dense_csc_and_strided_view_agree() {
     compare(&transposed.transpose(), &sparse);
 }
 
-#[cfg(feature = "nalgebra")]
+#[cfg(feature = "nalgebra_v0_34")]
 #[test]
 fn nalgebra_dense_and_csc_agree() {
     let (dense, sparse) = nalgebra_matrices();
     compare(&dense, &sparse);
 }
 
-#[cfg(feature = "ndarray")]
+#[cfg(feature = "ndarray_v0_17")]
 #[test]
 fn ndarray_layouts_and_views_agree() {
     use ndarray::{Array2, Axis, ShapeBuilder, Slice};
@@ -229,7 +229,7 @@ fn ndarray_layouts_and_views_agree() {
     compare(&row_major, &strided);
 }
 
-#[cfg(feature = "sprs")]
+#[cfg(feature = "sprs_v0_11")]
 #[test]
 fn sprs_owned_and_borrowed_csc_agree() {
     use shrinkage::lazymatrix::SprsCsc;
@@ -239,7 +239,7 @@ fn sprs_owned_and_borrowed_csc_agree() {
     compare(&owned, &borrowed);
 }
 
-#[cfg(feature = "sprs")]
+#[cfg(feature = "sprs_v0_11")]
 #[test]
 fn sprs_explicit_csr_conversion_preserves_fit() {
     use shrinkage::lazymatrix::SprsCsc;
@@ -250,7 +250,7 @@ fn sprs_explicit_csr_conversion_preserves_fit() {
     compare(&SprsCsc::try_new(csc).unwrap(), &converted);
 }
 
-#[cfg(all(feature = "faer", feature = "nalgebra"))]
+#[cfg(all(feature = "faer_v0_24", feature = "nalgebra_v0_34"))]
 #[test]
 fn faer_and_nalgebra_agree() {
     let (dense, _) = faer_matrices();
@@ -258,14 +258,14 @@ fn faer_and_nalgebra_agree() {
     compare(&dense, &sparse);
 }
 
-#[cfg(all(feature = "faer", feature = "ndarray"))]
+#[cfg(all(feature = "faer_v0_24", feature = "ndarray_v0_17"))]
 #[test]
 fn faer_and_ndarray_agree() {
     let (dense, _) = faer_matrices();
     compare(&dense, &ndarray_matrix());
 }
 
-#[cfg(all(feature = "faer", feature = "sprs"))]
+#[cfg(all(feature = "faer_v0_24", feature = "sprs_v0_11"))]
 #[test]
 fn faer_and_sprs_agree() {
     let (dense, _) = faer_matrices();
@@ -273,7 +273,7 @@ fn faer_and_sprs_agree() {
     compare(&dense, &sparse);
 }
 
-#[cfg(all(feature = "ndarray", feature = "sprs"))]
+#[cfg(all(feature = "ndarray_v0_17", feature = "sprs_v0_11"))]
 #[test]
 fn ndarray_and_sprs_agree() {
     let sparse = shrinkage::lazymatrix::SprsCsc::try_new(sprs_matrix()).unwrap();

@@ -16,7 +16,8 @@ boundaries only when an implemented consumer needs them.
 - [x] Create the Rust 2024 library with a declared Rust 1.89 MSRV, README,
   design, and license.
 - [x] Pin LazyMatrix with optional `faer`, `nalgebra`, `ndarray`, and `sprs`
-  backends and no default matrix backend.
+  backends, versioned features, short aliases, and no default matrix
+  backend.
 - [x] Add a runnable example with dense and CSC input that verifies lazy
   normalization and prediction-preserving coefficient and intercept
   transformations.

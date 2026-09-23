@@ -5,9 +5,10 @@
 Shrinkage is a Rust 2024 library for regularized statistical models. `Lasso`
 provides Gaussian coordinate descent in `src/lasso.rs` and its child modules.
 Model fitting follows `DESIGN.md`. The `normalization` and `lasso` examples
-exercise dense and sparse CSC input through LazyMatrix 0.3.0. Optional `faer`,
-`nalgebra`, `ndarray`, and `sprs` features expose its matrix integrations. sprs
-input uses LazyMatrix's checked `SprsCsc` wrapper.
+exercise dense and sparse CSC input through LazyMatrix 0.3.0. Optional
+`faer_v0_24`, `nalgebra_v0_34`, `ndarray_v0_17`, and `sprs_v0_11` features
+expose its matrix integrations. The short names `faer`, `nalgebra`, `ndarray`,
+and `sprs` are aliases. sprs input uses LazyMatrix's checked `SprsCsc` wrapper.
 
 Start with modules in this crate. Use `name.rs` and `name/child.rs`, never
 `mod.rs`. Add solver tests and benchmarks with the numerical implementations.
@@ -20,6 +21,8 @@ Start with modules in this crate. Use `name.rs` and `name/child.rs`, never
 - Keep default features free of matrix backends. The pinned LazyMatrix release
   defines supported backend versions; the sibling checkout may contain
   unpublished APIs. Do not commit a dependency on a sibling directory.
+- Gate tests, doctests, examples, and benchmarks on versioned backend features.
+  Test the versioned features and their short aliases independently.
 - Preserve the penalty scale, loss normalization, and intercept conventions in
   `DESIGN.md`. Back-transforming coefficients must preserve predictions.
 - Keep runtime dispatch outside scalar loops. Establish fallible operations and
@@ -36,11 +39,17 @@ cargo fmt --all -- --check
 cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo build --locked --no-default-features
 cargo test --locked --no-default-features
+cargo test --locked --no-default-features --features faer_v0_24
+cargo test --locked --no-default-features --features nalgebra_v0_34
+cargo test --locked --no-default-features --features ndarray_v0_17
+cargo test --locked --no-default-features --features sprs_v0_11
+cargo test --locked --no-default-features --features faer
+cargo test --locked --no-default-features --features nalgebra
 cargo test --locked --no-default-features --features ndarray
 cargo test --locked --no-default-features --features sprs
 cargo test --locked --all-features
-cargo run --locked --example normalization --features faer
-cargo run --locked --example lasso --features faer
+cargo run --locked --example normalization --features faer_v0_24
+cargo run --locked --example lasso --features faer_v0_24
 RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
 ```
 

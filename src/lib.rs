@@ -5,14 +5,22 @@
 //! and explicit convergence diagnostics. See [`Lasso::tolerance`] for the
 //! stopping criterion and [`LassoFit::termination`] before using a fit.
 //!
-//! No matrix backend is enabled by default. Optional features select LazyMatrix's
-//! integrations with faer 0.24 (`faer`), nalgebra 0.34 and nalgebra-sparse 0.11
-//! (`nalgebra`), ndarray 0.17 (`ndarray`), or sprs 0.11 (`sprs`).
+//! No matrix backend is enabled by default. Versioned features select
+//! LazyMatrix's integrations with faer 0.24 (`faer_v0_24`), nalgebra 0.34 and
+//! nalgebra-sparse 0.11 (`nalgebra_v0_34`), ndarray 0.17 (`ndarray_v0_17`), or
+//! sprs 0.11 (`sprs_v0_11`). The short names `faer`, `nalgebra`, `ndarray`, and
+//! `sprs` are aliases for these features. Match your direct matrix dependency
+//! to the selected release line.
 //!
-//! With the `ndarray` feature, fit directly against an array or borrowed view:
+//! LazyMatrix 0.3.0 implements traits only for the newest enabled release of
+//! each backend. Another dependency enabling a newer adapter on the same
+//! LazyMatrix package can remove support for older matrix types.
+//!
+//! With `ndarray_v0_17` or its `ndarray` alias, fit directly against an array or
+//! borrowed view:
 //!
 //! ```
-//! # #[cfg(feature = "ndarray")] {
+//! # #[cfg(feature = "ndarray_v0_17")] {
 //! use ndarray::array;
 //! use shrinkage::Lasso;
 //!
@@ -23,11 +31,12 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
-//! With the `sprs` feature, wrap CSC storage in `lazymatrix::SprsCsc`. Borrowing
-//! a view checks its orientation without copying its entries:
+//! With `sprs_v0_11` or its `sprs` alias, wrap CSC storage in
+//! `lazymatrix::SprsCsc`. Borrowing a view checks its orientation without copying
+//! its entries:
 //!
 //! ```
-//! # #[cfg(feature = "sprs")] {
+//! # #[cfg(feature = "sprs_v0_11")] {
 //! use shrinkage::{Lasso, lazymatrix::SprsCsc};
 //! use sprs::CsMat;
 //!

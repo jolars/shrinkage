@@ -25,7 +25,7 @@ use solver::{NumericalFailure, finite};
 ///
 /// ```
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// # #[cfg(feature = "faer")] {
+/// # #[cfg(feature = "faer_v0_24")] {
 /// use faer::Mat;
 /// use shrinkage::{Lasso, Termination};
 ///
