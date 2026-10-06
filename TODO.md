@@ -77,7 +77,7 @@ boundaries only when an implemented consumer needs them.
 
 ## 3. Composition proof
 
-- [ ] Extract small problem, datafit, penalty, result, and solver capabilities
+- [x] Extract small problem, datafit, penalty, result, and solver capabilities
   from the working lasso implementation. Keep matrix operations in
   LazyMatrix and solver state in Shrinkage.
 - [ ] Add proximal gradient, ridge (squared L2), and elastic net. Require a

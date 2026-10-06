@@ -3,12 +3,14 @@
 ## Scope and structure
 
 Shrinkage is a Rust 2024 library for regularized statistical models. `Lasso`
-provides Gaussian coordinate descent in `src/lasso.rs` and its child modules.
-Model fitting follows `DESIGN.md`. The `normalization` and `lasso` examples
-exercise dense and sparse CSC input through LazyMatrix 0.3.0. Optional
-`faer_v0_24`, `nalgebra_v0_34`, `ndarray_v0_17`, and `sprs_v0_11` features
-expose its matrix integrations. The short names `faer`, `nalgebra`, `ndarray`,
-and `sprs` are aliases. sprs input uses LazyMatrix's checked `SprsCsc` wrapper.
+provides the convenience API in `src/lasso.rs`; `src/solver/coordinate.rs` owns
+Gaussian coordinate descent and its residual state. Typed composition, datafits,
+penalties, and fitted results live in their respective modules. Model fitting
+follows `DESIGN.md`. The `normalization` and `lasso` examples exercise dense and
+sparse CSC input through LazyMatrix 0.3.0. Optional `faer_v0_24`,
+`nalgebra_v0_34`, `ndarray_v0_17`, and `sprs_v0_11` features expose its matrix
+integrations. The short names `faer`, `nalgebra`, `ndarray`, and `sprs` are
+aliases. sprs input uses LazyMatrix's checked `SprsCsc` wrapper.
 
 Start with modules in this crate. Use `name.rs` and `name/child.rs`, never
 `mod.rs`. Add solver tests and benchmarks with the numerical implementations.

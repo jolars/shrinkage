@@ -1,32 +1,13 @@
 use lazymatrix::{LazyColumn, LazyMatrix, RawColumn, RawColumns};
 
-use super::{Lasso, StoppingCriterion, Termination};
+use super::{CoordinateDescent, StoppingCriterion};
+use crate::error::{NumericalFailure, finite};
+use crate::{Gaussian, L1, Termination};
 
 #[cfg(test)]
 mod tests;
 
 const REFRESH_INTERVAL: usize = 50;
-
-#[derive(Debug)]
-pub(super) struct NumericalFailure {
-    pub operation: &'static str,
-    pub iteration: usize,
-}
-
-pub(super) fn finite(
-    value: f64,
-    operation: &'static str,
-    iteration: usize,
-) -> Result<f64, NumericalFailure> {
-    if value.is_finite() {
-        Ok(value)
-    } else {
-        Err(NumericalFailure {
-            operation,
-            iteration,
-        })
-    }
-}
 
 struct ColumnSummary {
     raw_sum: f64,
@@ -160,18 +141,15 @@ impl Residual {
     }
 
     fn loss(&self, iteration: usize) -> Result<f64, NumericalFailure> {
-        let divisor = (self.base.len() as f64).sqrt();
-        let mut sum = 0.0;
-        for &base in &self.base {
-            let value =
-                finite(base + self.offset, "reconstructing residuals", iteration)? / divisor;
-            sum += 0.5 * value * value;
-        }
-        finite(sum, "computing the loss", iteration)
+        Gaussian::residual_loss(
+            self.base.iter().map(|base| base + self.offset),
+            self.base.len(),
+            iteration,
+        )
     }
 }
 
-pub(super) struct Solution {
+pub(crate) struct Solution {
     pub coefficients: Vec<f64>,
     pub intercept: f64,
     pub termination: Termination,
@@ -201,32 +179,27 @@ fn diagnostics<M: RawColumns<f64>>(
     parameters: (&[f64], f64),
     residual: &Residual,
     summaries: &[ColumnSummary],
-    options: &Lasso,
+    components: (Gaussian<'_>, L1),
     iteration: usize,
 ) -> Result<Diagnostics, NumericalFailure> {
+    let (datafit, penalty) = components;
     let (coefficients, intercept) = parameters;
     let kkt_violation = kkt_violation(
         matrix,
         coefficients,
         residual,
         summaries,
-        options,
+        datafit,
+        penalty,
         iteration,
     )?;
-    let penalty = if options.lambda == 0.0 {
-        0.0
-    } else {
-        finite(
-            coefficients
-                .iter()
-                .map(|value| options.lambda * value.abs())
-                .sum(),
-            "computing the penalty",
-            iteration,
-        )?
-    };
+    let penalty_value = finite(
+        penalty.value_unchecked(coefficients),
+        "computing the penalty",
+        iteration,
+    )?;
     let objective = finite(
-        residual.loss(iteration)? + penalty,
+        residual.loss(iteration)? + penalty_value,
         "computing the objective",
         iteration,
     )?;
@@ -235,7 +208,7 @@ fn diagnostics<M: RawColumns<f64>>(
     // it when the intercept is free, then shrink it toward zero to satisfy
     // every normalized-column constraint without changing its direction.
     let n = y.len() as f64;
-    let mean = if options.fit_intercept {
+    let mean = if datafit.fit_intercept {
         residual.mean(iteration)?
     } else {
         0.0
@@ -251,7 +224,7 @@ fn diagnostics<M: RawColumns<f64>>(
             )
         })
         .collect::<Result<Vec<_>, _>>()?;
-    if options.fit_intercept {
+    if datafit.fit_intercept {
         let last = dual_certificate.len() - 1;
         let prefix_sum: f64 = dual_certificate[..last].iter().sum();
         dual_certificate[last] = finite(-prefix_sum, "centering a dual certificate", iteration)?;
@@ -273,7 +246,7 @@ fn diagnostics<M: RawColumns<f64>>(
         correlations.push(correlation);
     }
     let factor = if max_correlation > 0.0 {
-        (options.lambda / max_correlation).min(1.0) * (1.0 - 16.0 * f64::EPSILON)
+        (penalty.lambda / max_correlation).min(1.0) * (1.0 - 16.0 * f64::EPSILON)
     } else {
         1.0
     };
@@ -310,10 +283,10 @@ fn diagnostics<M: RawColumns<f64>>(
         duality_gap += 0.5 * (difference / n.sqrt()).powi(2);
     }
     for (&coefficient, &correlation) in coefficients.iter().zip(&correlations) {
-        let slack = options.lambda * coefficient.abs() - coefficient * factor * correlation;
+        let slack = penalty.lambda * coefficient.abs() - coefficient * factor * correlation;
         duality_gap += slack.max(0.0);
     }
-    if options.fit_intercept {
+    if datafit.fit_intercept {
         let scaled_sum: f64 = dual_certificate.iter().sum();
         duality_gap -= intercept * scaled_sum;
     }
@@ -334,25 +307,16 @@ fn stopping_value(diagnostics: &Diagnostics, criterion: StoppingCriterion) -> f6
     }
 }
 
-fn soft_threshold(value: f64, lambda: f64) -> f64 {
-    if value > lambda {
-        value - lambda
-    } else if value < -lambda {
-        value + lambda
-    } else {
-        0.0
-    }
-}
-
 fn kkt_violation<M: RawColumns<f64>>(
     matrix: &LazyMatrix<M>,
     coefficients: &[f64],
     residual: &Residual,
     summaries: &[ColumnSummary],
-    options: &Lasso,
+    datafit: Gaussian<'_>,
+    penalty: L1,
     iteration: usize,
 ) -> Result<f64, NumericalFailure> {
-    let mut violation = if options.fit_intercept {
+    let mut violation = if datafit.fit_intercept {
         residual.mean(iteration)?.abs()
     } else {
         0.0
@@ -361,10 +325,10 @@ fn kkt_violation<M: RawColumns<f64>>(
     for (j, &coefficient) in coefficients.iter().enumerate() {
         let correlation = residual.dot(&matrix.column(j), &summaries[j], iteration)? / n;
         let coordinate_violation = if coefficient == 0.0 {
-            (correlation.abs() - options.lambda).max(0.0)
+            (correlation.abs() - penalty.lambda).max(0.0)
         } else {
             finite(
-                correlation - options.lambda * coefficient.signum(),
+                correlation - penalty.lambda * coefficient.signum(),
                 "checking coordinate optimality",
                 iteration,
             )?
@@ -375,17 +339,20 @@ fn kkt_violation<M: RawColumns<f64>>(
     Ok(violation)
 }
 
-pub(super) fn solve<M: RawColumns<f64>>(
+pub(crate) fn solve<M: RawColumns<f64>>(
     matrix: &LazyMatrix<M>,
-    y: &[f64],
-    options: &Lasso,
+    datafit: Gaussian<'_>,
+    penalty: L1,
+    options: &CoordinateDescent,
 ) -> Result<Solution, NumericalFailure> {
+    let y = datafit.response;
+    let criterion = options.criterion(penalty);
     let n = matrix.nrows() as f64;
     let summaries: Vec<_> = (0..matrix.ncols())
         .map(|j| ColumnSummary::new(&matrix.column(j)))
         .collect::<Result<_, _>>()?;
     let mut coefficients = vec![0.0; matrix.ncols()];
-    let mut intercept = if options.fit_intercept {
+    let mut intercept = if datafit.fit_intercept {
         finite(
             y.iter().map(|value| value / n).sum(),
             "computing the response mean",
@@ -396,7 +363,7 @@ pub(super) fn solve<M: RawColumns<f64>>(
     };
     let mut residual = Residual::new(y, intercept)?;
     let reference_loss = residual.loss(0)?;
-    let threshold = match options.stopping_criterion {
+    let threshold = match criterion {
         StoppingCriterion::DualityGap { absolute, relative } => finite(
             absolute + relative * reference_loss,
             "computing the duality-gap threshold",
@@ -410,13 +377,11 @@ pub(super) fn solve<M: RawColumns<f64>>(
         (&coefficients, intercept),
         &residual,
         &summaries,
-        options,
+        (datafit, penalty),
         0,
     )?;
     let mut iterations = 0;
-    while stopping_value(&check, options.stopping_criterion) > threshold
-        && iterations < options.max_iterations
-    {
+    while stopping_value(&check, criterion) > threshold && iterations < options.max_iterations {
         iterations += 1;
         for (j, coefficient) in coefficients.iter_mut().enumerate() {
             let summary = &summaries[j];
@@ -431,7 +396,7 @@ pub(super) fn solve<M: RawColumns<f64>>(
                 iterations,
             )?;
             let updated = finite(
-                soft_threshold(partial, options.lambda) / curvature,
+                penalty.coordinate_minimum(partial, curvature),
                 "solving a coordinate subproblem",
                 iterations,
             )?;
@@ -445,7 +410,7 @@ pub(super) fn solve<M: RawColumns<f64>>(
                 *coefficient = updated;
             }
         }
-        if options.fit_intercept {
+        if datafit.fit_intercept {
             let delta = residual.mean(iterations)?;
             intercept = finite(intercept + delta, "updating the intercept", iterations)?;
             residual.offset = finite(
@@ -464,10 +429,10 @@ pub(super) fn solve<M: RawColumns<f64>>(
             (&coefficients, intercept),
             &residual,
             &summaries,
-            options,
+            (datafit, penalty),
             iterations,
         )?;
-        if stopping_value(&check, options.stopping_criterion) <= threshold && !refreshed {
+        if stopping_value(&check, criterion) <= threshold && !refreshed {
             residual.refresh(matrix, y, &coefficients, intercept, &summaries, iterations)?;
             check = diagnostics(
                 matrix,
@@ -475,12 +440,12 @@ pub(super) fn solve<M: RawColumns<f64>>(
                 (&coefficients, intercept),
                 &residual,
                 &summaries,
-                options,
+                (datafit, penalty),
                 iterations,
             )?;
         }
     }
-    let final_value = stopping_value(&check, options.stopping_criterion);
+    let final_value = stopping_value(&check, criterion);
     Ok(Solution {
         coefficients,
         intercept,
@@ -496,7 +461,7 @@ pub(super) fn solve<M: RawColumns<f64>>(
         dual_objective: check.dual_objective,
         duality_gap: check.duality_gap,
         reference_loss,
-        stopping_criterion: options.stopping_criterion,
+        stopping_criterion: criterion,
         stopping_value: final_value,
         stopping_threshold: threshold,
     })

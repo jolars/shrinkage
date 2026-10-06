@@ -72,6 +72,24 @@ Solvers depend on small capability interfaces. Avoid large traits with optional
 methods that fail at runtime. External crates must be able to provide their own
 datafits, penalties, matrices, and solvers.
 
+The initial extraction separates `problem`, `datafit`, `penalty`, `fit`,
+`error`, and `solver` modules. `Lasso` builds a typed `Problem`;
+`CoordinateDescent` implements `Solver<Problem<&M, Gaussian, L1>>` and owns the
+iteration machinery. `Problem::fit_with` accepts external solvers with their own
+result and error types. Component accessors expose the design, datafit, penalty,
+and normalization settings to those solvers. Unsupported coordinate-descent
+compositions have no `Solver` implementation.
+
+`Datafit` and `Penalty` provide fallible value evaluation. Gaussian residual
+loss and L1 coordinate minimization are shared with the specialized solver,
+whose residual caches and dual certificate remain Gaussian/L1-specific.
+`LassoFit` retains the specialized diagnostics and owns original-scale
+prediction and back-transformation. `FitError` preserves backend sources;
+`LassoError` remains an alias, and existing root, `lasso`, and `problem` import
+paths still work. These interfaces are provisional. Derivative,
+complete-proximal, runtime-oracle, and fallible block-reader capabilities belong
+to the subsequent composition steps.
+
 Build working numerical code before stabilizing abstractions. Do not introduce
 an elaborate type system or one crate per prospective feature at bootstrap.
 

@@ -1,88 +1,10 @@
-//! Typed components for the Gaussian lasso coordinate solver.
+//! Composition and validated preparation of training problems.
 
-use lazymatrix::{ColumnStats, RawColumns};
-
-use crate::{Lasso, LassoError, LassoFit, Normalization, StoppingCriterion};
-
-/// A Gaussian response with an optional unpenalized fitted intercept.
-#[derive(Clone, Copy, Debug)]
-pub struct Gaussian<'a> {
-    response: &'a [f64],
-    fit_intercept: bool,
-}
-
-impl<'a> Gaussian<'a> {
-    /// Borrow a response, fitting an intercept by default.
-    pub fn new(response: &'a [f64]) -> Self {
-        Self {
-            response,
-            fit_intercept: true,
-        }
-    }
-
-    /// Enable or disable the unpenalized fitted intercept.
-    ///
-    /// Explicit column centering can still induce an original-scale intercept.
-    pub fn fit_intercept(mut self, enabled: bool) -> Self {
-        self.fit_intercept = enabled;
-        self
-    }
-}
-
-/// An L1 penalty on optimization-scale coefficients.
-#[derive(Clone, Copy, Debug)]
-pub struct L1 {
-    lambda: f64,
-}
-
-impl L1 {
-    /// Set the penalty strength, checked when fitting.
-    pub fn new(lambda: f64) -> Self {
-        Self { lambda }
-    }
-}
-
-/// Cyclic coordinate descent settings for Gaussian lasso.
-#[derive(Clone, Copy, Debug)]
-pub struct CoordinateDescent {
-    stopping_criterion: Option<StoppingCriterion>,
-    max_iterations: usize,
-}
-
-impl CoordinateDescent {
-    /// Use a relative duality-gap tolerance of `1e-6` and at most 10,000 sweeps.
-    /// Zero-penalty problems use the lasso's absolute KKT default instead.
-    pub fn new() -> Self {
-        Self {
-            stopping_criterion: None,
-            max_iterations: 10_000,
-        }
-    }
-
-    /// Set the absolute KKT tolerance, checked when fitting.
-    pub fn tolerance(mut self, tolerance: f64) -> Self {
-        self.stopping_criterion = Some(StoppingCriterion::kkt_violation(tolerance));
-        self
-    }
-
-    /// Select a stopping criterion with its own tolerances.
-    pub fn terminate_on(mut self, criterion: StoppingCriterion) -> Self {
-        self.stopping_criterion = Some(criterion);
-        self
-    }
-
-    /// Set the maximum number of complete sweeps, checked when fitting.
-    pub fn max_iterations(mut self, max_iterations: usize) -> Self {
-        self.max_iterations = max_iterations;
-        self
-    }
-}
-
-impl Default for CoordinateDescent {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+use crate::error::{finite, invalid};
+use crate::solver::{Solver, coordinate};
+use crate::{Centering, LassoError, LassoFit, Normalization, Preprocessing, Scaling};
+pub use crate::{datafit::Gaussian, penalty::L1, solver::CoordinateDescent};
+use lazymatrix::{ColumnStats, LazyMatrix, RawColumn, RawColumns};
 
 /// A typed design, datafit, and penalty with training normalization settings.
 ///
@@ -127,6 +49,44 @@ impl<X, D, P> Problem<X, D, P> {
         }
     }
 
+    /// Borrow the design component.
+    pub fn design(&self) -> &X {
+        &self.design
+    }
+
+    /// Borrow the predictor datafit.
+    pub fn datafit(&self) -> &D {
+        &self.datafit
+    }
+
+    /// Borrow the complete penalty.
+    pub fn penalty(&self) -> &P {
+        &self.penalty
+    }
+
+    /// Selected training normalization policy.
+    pub fn normalization(&self) -> Normalization {
+        self.normalization
+    }
+
+    /// Explicit training centers, if supplied.
+    pub fn centers(&self) -> Option<&[f64]> {
+        self.supplied_centers.as_deref()
+    }
+
+    /// Explicit training scales, if supplied.
+    pub fn scales(&self) -> Option<&[f64]> {
+        self.supplied_scales.as_deref()
+    }
+
+    /// Fit with a solver that supports this composition.
+    ///
+    /// # Errors
+    /// Forwards validation and numerical failures from the selected solver.
+    pub fn fit_with<S: Solver<Self>>(&self, solver: &S) -> Result<S::Fit, S::Error> {
+        solver.solve(self)
+    }
+
     /// Select lazy training-column normalization.
     pub fn normalize(mut self, normalization: Normalization) -> Self {
         self.normalization = normalization;
@@ -146,33 +106,178 @@ impl<X, D, P> Problem<X, D, P> {
     }
 }
 
+impl<M> Solver<Problem<&M, Gaussian<'_>, L1>> for CoordinateDescent
+where
+    M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
+{
+    type Fit = LassoFit;
+    type Error = LassoError<M::Error>;
+
+    fn solve(&self, problem: &Problem<&M, Gaussian<'_>, L1>) -> Result<Self::Fit, Self::Error> {
+        problem.fit_coordinate(self)
+    }
+}
+
 impl<M> Problem<&M, Gaussian<'_>, L1>
 where
     M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
 {
-    /// Fit Gaussian lasso by coordinate descent.
-    ///
-    /// Penalties act on normalized coefficients. Returned coefficients,
-    /// intercept, and predictions use the original design scale, including a
-    /// centering-induced intercept when fitted intercepts are disabled.
-    ///
-    /// # Errors
-    /// Returns [`LassoError`] for invalid input, nonfinite arithmetic, or
-    /// backend preprocessing failure. An iteration limit returns a finite fit.
-    pub fn fit_with(&self, solver: &CoordinateDescent) -> Result<LassoFit, LassoError<M::Error>> {
-        let mut model = Lasso::new(self.penalty.lambda)
-            .fit_intercept(self.datafit.fit_intercept)
-            .normalize(self.normalization)
-            .max_iterations(solver.max_iterations);
-        if let Some(criterion) = solver.stopping_criterion {
-            model = model.terminate_on(criterion);
+    fn fit_coordinate(&self, solver: &CoordinateDescent) -> Result<LassoFit, LassoError<M::Error>> {
+        self.penalty.validate()?;
+        solver.validate(solver.criterion(self.penalty))?;
+        let x = self.design;
+        self.datafit.validate(x.nrows())?;
+        validate_matrix(x)?;
+        let spec = self.normalization.specification(self.datafit.fit_intercept);
+        validate_supplied(&self.supplied_centers, x.ncols(), false)?;
+        validate_supplied(&self.supplied_scales, x.ncols(), true)?;
+        let center_rule = if self.supplied_centers.is_some() {
+            Centering::None
+        } else {
+            spec.center
+        };
+        let scale_rule = if self.supplied_scales.is_some() {
+            Scaling::None
+        } else {
+            spec.scale
+        };
+        let centered_scale = self.supplied_centers.is_some()
+            && matches!(scale_rule, Scaling::L1 | Scaling::L2 | Scaling::MaxAbs);
+        let stats_spec = lazymatrix::Normalization::new(
+            center_rule,
+            if centered_scale {
+                Scaling::None
+            } else {
+                scale_rule
+            },
+        );
+        let (computed_centers, mut computed_scales) =
+            if stats_spec.center != Centering::None || stats_spec.scale != Scaling::None {
+                x.normalization_stats(stats_spec)
+                    .map_err(|source| LassoError::Backend {
+                        operation: "computing training normalization statistics",
+                        source,
+                    })?
+            } else {
+                (None, None)
+            };
+        if centered_scale {
+            let centers = self.supplied_centers.as_deref().unwrap();
+            computed_scales = Some(
+                match scale_rule {
+                    Scaling::L1 => x.col_l1_centered(centers),
+                    Scaling::L2 => x.col_l2_centered(centers),
+                    Scaling::MaxAbs => x.col_maxabs_centered(centers),
+                    _ => unreachable!(),
+                }
+                .map_err(|source| LassoError::Backend {
+                    operation: "computing training normalization statistics",
+                    source,
+                })?,
+            );
         }
-        if let Some(centers) = &self.supplied_centers {
-            model = model.with_centers(centers.clone());
+        let centers = self.supplied_centers.clone().or(computed_centers);
+        let mut scales = self.supplied_scales.clone().or(computed_scales);
+        validate_statistics(
+            &centers,
+            x.ncols(),
+            self.supplied_centers.is_some() || spec.center != Centering::None,
+            "column centers",
+        )?;
+        validate_statistics(
+            &scales,
+            x.ncols(),
+            self.supplied_scales.is_some() || spec.scale != Scaling::None,
+            "column scales",
+        )?;
+        if let Some(scales) = &mut scales {
+            for scale in scales {
+                if *scale < 0.0 {
+                    return Err(invalid(
+                        "matrix backend returned a negative normalization scale",
+                    ));
+                }
+                if *scale == 0.0 {
+                    *scale = 1.0;
+                }
+            }
         }
-        if let Some(scales) = &self.supplied_scales {
-            model = model.with_scales(scales.clone());
-        }
-        model.fit(self.design, self.datafit.response)
+        let matrix = LazyMatrix::from_parts(x, centers, scales);
+        let solution = coordinate::solve(&matrix, self.datafit, self.penalty, solver)?;
+        let (_, centers, scales) = matrix.into_parts();
+        LassoFit::from_solution(
+            solution,
+            Preprocessing {
+                spec,
+                centers,
+                scales,
+                supplied_centers: self.supplied_centers.is_some(),
+                supplied_scales: self.supplied_scales.is_some(),
+            },
+        )
     }
+}
+
+pub(crate) fn validate_matrix<M: RawColumns<f64> + ?Sized, E>(x: &M) -> Result<(), LassoError<E>> {
+    for j in 0..x.ncols() {
+        let column = x.raw_column(j);
+        if column.len() != x.nrows() || column.stored_len() > x.nrows() {
+            return Err(invalid(format!(
+                "matrix backend returned invalid dimensions for column {j}"
+            )));
+        }
+        let mut invalid_row = None;
+        column.for_each_stored(|i, value| {
+            if (i >= x.nrows() || !value.is_finite()) && invalid_row.is_none() {
+                invalid_row = Some(i);
+            }
+        });
+        if let Some(i) = invalid_row {
+            return Err(invalid(format!(
+                "invalid matrix entry at row {i}, column {j}: expected an in-bounds, finite value"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn validate_statistics<E>(
+    values: &Option<Vec<f64>>,
+    ncols: usize,
+    expected: bool,
+    operation: &'static str,
+) -> Result<(), LassoError<E>> {
+    if values.is_some() != expected || values.as_ref().is_some_and(|v| v.len() != ncols) {
+        return Err(invalid(format!(
+            "matrix backend returned unexpected {operation}"
+        )));
+    }
+    if let Some(values) = values {
+        for &value in values {
+            finite(value, operation, 0)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_supplied<E>(
+    values: &Option<Vec<f64>>,
+    ncols: usize,
+    scales: bool,
+) -> Result<(), LassoError<E>> {
+    if let Some(values) = values {
+        let name = if scales { "scales" } else { "centers" };
+        if values.len() != ncols {
+            return Err(invalid(format!(
+                "supplied {name} length {} does not match {ncols} columns",
+                values.len()
+            )));
+        }
+        for (j, &value) in values.iter().enumerate() {
+            if !value.is_finite() || (scales && value <= 0.0) {
+                return Err(invalid(format!("invalid supplied {name} at column {j}")));
+            }
+        }
+    }
+    Ok(())
 }
