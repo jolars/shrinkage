@@ -43,6 +43,8 @@ pub struct Lasso {
     lambda: f64,
     fit_intercept: bool,
     normalization: Normalization,
+    supplied_centers: Option<Vec<f64>>,
+    supplied_scales: Option<Vec<f64>>,
     tolerance: f64,
     max_iterations: usize,
 }
@@ -57,6 +59,8 @@ impl Lasso {
             lambda,
             fit_intercept: true,
             normalization: Normalization::Auto,
+            supplied_centers: None,
+            supplied_scales: None,
             tolerance: 1e-6,
             max_iterations: 10_000,
         }
@@ -83,6 +87,27 @@ impl Lasso {
     /// predictions use the original scale.
     pub fn normalize(mut self, normalization: Normalization) -> Self {
         self.normalization = normalization;
+        self
+    }
+
+    /// Supply column centers instead of computing them from the training data.
+    ///
+    /// This overrides the centering rule selected by [`Self::normalize`]. Each
+    /// center must be finite, and the vector must have one entry per column.
+    /// The values are checked by [`Self::fit`]. If scales are computed using
+    /// L1, L2, or maximum-absolute scaling, they use these centers.
+    pub fn with_centers(mut self, centers: Vec<f64>) -> Self {
+        self.supplied_centers = Some(centers);
+        self
+    }
+
+    /// Supply column scales instead of computing them from the training data.
+    ///
+    /// This overrides the scaling rule selected by [`Self::normalize`]. Each
+    /// scale must be finite and strictly positive, and the vector must have one
+    /// entry per column. The values are checked by [`Self::fit`].
+    pub fn with_scales(mut self, scales: Vec<f64>) -> Self {
+        self.supplied_scales = Some(scales);
         self
     }
 
@@ -140,26 +165,65 @@ impl Lasso {
         }
         validate_matrix(x)?;
         let spec = self.normalization.specification(self.fit_intercept);
-        let (centers, mut scales) = if spec.center != Centering::None || spec.scale != Scaling::None
-        {
-            x.normalization_stats(spec)
+        validate_supplied(&self.supplied_centers, x.ncols(), false)?;
+        validate_supplied(&self.supplied_scales, x.ncols(), true)?;
+        let center_rule = if self.supplied_centers.is_some() {
+            Centering::None
+        } else {
+            spec.center
+        };
+        let scale_rule = if self.supplied_scales.is_some() {
+            Scaling::None
+        } else {
+            spec.scale
+        };
+        let centered_scale = self.supplied_centers.is_some()
+            && matches!(scale_rule, Scaling::L1 | Scaling::L2 | Scaling::MaxAbs);
+        let stats_spec = lazymatrix::Normalization::new(
+            center_rule,
+            if centered_scale {
+                Scaling::None
+            } else {
+                scale_rule
+            },
+        );
+        let (computed_centers, mut computed_scales) =
+            if stats_spec.center != Centering::None || stats_spec.scale != Scaling::None {
+                x.normalization_stats(stats_spec)
+                    .map_err(|source| LassoError::Backend {
+                        operation: "computing training normalization statistics",
+                        source,
+                    })?
+            } else {
+                (None, None)
+            };
+        if centered_scale {
+            let centers = self.supplied_centers.as_deref().unwrap();
+            computed_scales = Some(
+                match scale_rule {
+                    Scaling::L1 => x.col_l1_centered(centers),
+                    Scaling::L2 => x.col_l2_centered(centers),
+                    Scaling::MaxAbs => x.col_maxabs_centered(centers),
+                    _ => unreachable!(),
+                }
                 .map_err(|source| LassoError::Backend {
                     operation: "computing training normalization statistics",
                     source,
-                })?
-        } else {
-            (None, None)
-        };
+                })?,
+            );
+        }
+        let centers = self.supplied_centers.clone().or(computed_centers);
+        let mut scales = self.supplied_scales.clone().or(computed_scales);
         validate_statistics(
             &centers,
             x.ncols(),
-            spec.center != Centering::None,
+            self.supplied_centers.is_some() || spec.center != Centering::None,
             "column centers",
         )?;
         validate_statistics(
             &scales,
             x.ncols(),
-            spec.scale != Scaling::None,
+            self.supplied_scales.is_some() || spec.scale != Scaling::None,
             "column scales",
         )?;
         if let Some(scales) = &mut scales {
@@ -204,6 +268,8 @@ impl Lasso {
                 spec,
                 centers,
                 scales,
+                supplied_centers: self.supplied_centers.is_some(),
+                supplied_scales: self.supplied_scales.is_some(),
             },
             termination: solution.termination,
             iterations: solution.iterations,
@@ -232,15 +298,19 @@ pub struct Preprocessing {
     spec: lazymatrix::Normalization,
     centers: Option<Vec<f64>>,
     scales: Option<Vec<f64>>,
+    supplied_centers: bool,
+    supplied_scales: bool,
 }
 
 impl Preprocessing {
-    /// The centering rule used during training, with automatic choices resolved.
+    /// The configured centering rule, with automatic choices resolved.
+    /// A supplied center vector overrides this rule.
     pub fn centering(&self) -> Centering {
         self.spec.center
     }
 
-    /// The scaling rule used during training, with automatic choices resolved.
+    /// The configured scaling rule, with automatic choices resolved.
+    /// A supplied scale vector overrides this rule.
     pub fn scaling(&self) -> Scaling {
         self.spec.scale
     }
@@ -253,6 +323,16 @@ impl Preprocessing {
     /// Training-column scales with zeros replaced by one, or `None` when disabled.
     pub fn scales(&self) -> Option<&[f64]> {
         self.scales.as_deref()
+    }
+
+    /// Whether the centers were supplied rather than computed during fitting.
+    pub fn centers_were_supplied(&self) -> bool {
+        self.supplied_centers
+    }
+
+    /// Whether the scales were supplied rather than computed during fitting.
+    pub fn scales_were_supplied(&self) -> bool {
+        self.supplied_scales
     }
 }
 
@@ -455,6 +535,28 @@ fn validate_statistics<E>(
     if let Some(values) = values {
         for &value in values {
             finite(value, operation, 0)?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_supplied<E>(
+    values: &Option<Vec<f64>>,
+    ncols: usize,
+    scales: bool,
+) -> Result<(), LassoError<E>> {
+    if let Some(values) = values {
+        let name = if scales { "scales" } else { "centers" };
+        if values.len() != ncols {
+            return Err(invalid(format!(
+                "supplied {name} length {} does not match {ncols} columns",
+                values.len()
+            )));
+        }
+        for (j, &value) in values.iter().enumerate() {
+            if !value.is_finite() || (scales && value <= 0.0) {
+                return Err(invalid(format!("invalid supplied {name} at column {j}")));
+            }
         }
     }
     Ok(())

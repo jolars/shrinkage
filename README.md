@@ -61,13 +61,20 @@ let model = Lasso::new(0.1).normalize(Normalization::Custom {
 ```
 
 Scales based on norms or maximum absolute values are computed after centering.
-Use `Normalization::None` for the raw design. Only `Auto` changes centering when
+Use `.with_centers(vec![...])` and `.with_scales(vec![...])` to supply either
+vector directly. Each supplied vector overrides only its own normalization rule.
+Supplied centers also determine computed L1, L2, and maximum-absolute scales. A
+supplied center must be finite; a supplied scale must be finite and strictly
+positive. Both vectors must have one value per column. These values are
+validated during fitting, before constructing a lazy matrix. Use
+`Normalization::None` for the raw design. Only `Auto` changes centering when
 `.fit_intercept(false)` is selected. Explicit centering is honored even without
 a fitted intercept, and its induced original-scale intercept is retained.
 Builder call order does not change this behavior. Fitted preprocessing exposes
-the resolved `centering()` and `scaling()` rules as well as their values.
-Computed zero scales become one, and zero-norm normalized columns stay at zero.
-Inputs must be finite, and the solver does not impute missing values.
+the resolved `centering()` and `scaling()` rules as well as their values and
+whether either vector was supplied. A supplied vector overrides its configured
+rule. Computed zero scales become one, and zero-norm normalized columns stay at
+zero. Inputs must be finite, and the solver does not impute missing values.
 
 A successful `Result` contains a finite fit, which may have reached the
 iteration limit. Check `termination()` before treating it as converged. The

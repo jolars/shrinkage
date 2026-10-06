@@ -76,18 +76,76 @@ impl ColumnStats<f64> for Source {
         self.calls.set(self.calls.get() + 1);
         self.statistics.as_ref().cloned().map_err(|_| ReadFailure)
     }
+    fn col_l2_centered(&self, centers: &[f64]) -> Result<Vec<f64>, Self::Error> {
+        Ok(vec![
+            self.values
+                .iter()
+                .map(|value| (value - centers[0]).powi(2))
+                .sum::<f64>()
+                .sqrt(),
+        ])
+    }
+    fn col_l1_centered(&self, centers: &[f64]) -> Result<Vec<f64>, Self::Error> {
+        Ok(vec![
+            self.values
+                .iter()
+                .map(|value| (value - centers[0]).abs())
+                .sum(),
+        ])
+    }
+    fn col_maxabs_centered(&self, centers: &[f64]) -> Result<Vec<f64>, Self::Error> {
+        Ok(vec![
+            self.values
+                .iter()
+                .map(|value| (value - centers[0]).abs())
+                .fold(0.0, f64::max),
+        ])
+    }
     unused_stats!(
-        col_means,
-        col_sds,
-        col_mins,
-        col_ranges,
-        col_maxabs,
-        col_l1,
-        col_l2,
-        col_l2_centered(centers),
-        col_l1_centered(centers),
-        col_maxabs_centered(centers)
+        col_means, col_sds, col_mins, col_ranges, col_maxabs, col_l1, col_l2
     );
+}
+
+#[test]
+fn supplied_centers_set_the_basis_for_computed_norm_scales() {
+    for (scale, expected) in [
+        (Scaling::L1, 1.0),
+        (Scaling::L2, 0.5_f64.sqrt()),
+        (Scaling::MaxAbs, 0.5),
+    ] {
+        let source = Source {
+            values: [1.0, 2.0],
+            calls: Cell::new(0),
+            statistics: Err(ReadFailure),
+        };
+        let fit = Lasso::new(0.0)
+            .fit_intercept(false)
+            .normalize(Normalization::Custom {
+                center: Centering::None,
+                scale,
+            })
+            .with_centers(vec![1.5])
+            .fit(&source, &[-0.5, 0.5])
+            .unwrap();
+        assert_eq!(source.calls.get(), 0);
+        assert_eq!(fit.preprocessing().centers(), Some([1.5].as_slice()));
+        assert!((fit.preprocessing().scales().unwrap()[0] - expected).abs() < 1e-12);
+        assert!((fit.coefficients()[0] - 1.0).abs() < 1e-12);
+        assert!((fit.intercept() + 1.5).abs() < 1e-12);
+    }
+    let constant = Source {
+        values: [1.0, 1.0],
+        calls: Cell::new(0),
+        statistics: Err(ReadFailure),
+    };
+    let fit = Lasso::new(0.0)
+        .fit_intercept(false)
+        .normalize(Normalization::L2)
+        .with_centers(vec![1.0])
+        .fit(&constant, &[1.0, 2.0])
+        .unwrap();
+    assert_eq!(fit.preprocessing().scales(), Some([1.0].as_slice()));
+    assert_eq!(fit.coefficients(), &[0.0]);
 }
 
 #[test]
@@ -183,5 +241,39 @@ fn invalid_backend_statistics_cannot_panic_in_lazy_construction() {
             statistics: Ok(statistics),
         };
         assert!(Lasso::new(0.1).fit(&source, &[1.0, 2.0]).is_err());
+    }
+}
+
+#[test]
+fn invalid_supplied_vectors_are_rejected_before_backend_statistics() {
+    let cases = [
+        (Some(vec![]), None),
+        (Some(vec![f64::NAN]), None),
+        (Some(vec![f64::INFINITY]), None),
+        (None, Some(vec![])),
+        (None, Some(vec![0.0])),
+        (None, Some(vec![-0.0])),
+        (None, Some(vec![-1.0])),
+        (None, Some(vec![f64::NAN])),
+        (None, Some(vec![f64::INFINITY])),
+    ];
+    for (centers, scales) in cases {
+        let source = Source {
+            values: [1.0, 2.0],
+            calls: Cell::new(0),
+            statistics: Err(ReadFailure),
+        };
+        let mut model = Lasso::new(0.1);
+        if let Some(centers) = centers {
+            model = model.with_centers(centers);
+        }
+        if let Some(scales) = scales {
+            model = model.with_scales(scales);
+        }
+        assert!(matches!(
+            model.fit(&source, &[1.0, 2.0]),
+            Err(LassoError::InvalidInput { .. })
+        ));
+        assert_eq!(source.calls.get(), 0);
     }
 }

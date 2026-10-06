@@ -160,6 +160,57 @@ fn explicit_normalization_and_lazy_fit_preserve_predictions() {
 }
 
 #[test]
+fn supplied_centers_and_scales_preserve_original_scale_predictions() {
+    let x = Matrix::from_rows(&[&[0.0], &[2.0], &[4.0]]);
+    let y = [-2.0, 0.0, 2.0];
+    let fit = Lasso::new(0.0)
+        .normalize(Normalization::None)
+        .fit_intercept(false)
+        .with_centers(vec![2.0])
+        .with_scales(vec![2.0])
+        .fit(&x, &y)
+        .unwrap();
+    close(fit.coefficients()[0], 1.0);
+    close(fit.intercept(), -2.0);
+    assert_eq!(fit.preprocessing().centers(), Some([2.0].as_slice()));
+    assert_eq!(fit.preprocessing().scales(), Some([2.0].as_slice()));
+    assert!(fit.preprocessing().centers_were_supplied());
+    assert!(fit.preprocessing().scales_were_supplied());
+    for (&actual, &expected) in fit.predict(&x).unwrap().iter().zip(&y) {
+        close(actual, expected);
+    }
+}
+
+#[test]
+fn supplied_vector_overrides_only_its_own_axis() {
+    let x = Matrix::from_rows(&[&[0.0], &[2.0], &[4.0]]);
+    let y = [-2.0, 0.0, 2.0];
+    let center_only = Lasso::new(0.0)
+        .fit_intercept(false)
+        .with_centers(vec![2.0])
+        .fit(&x, &y)
+        .unwrap();
+    assert_eq!(
+        center_only.preprocessing().centers(),
+        Some([2.0].as_slice())
+    );
+    close(
+        center_only.preprocessing().scales().unwrap()[0],
+        (8.0_f64 / 3.0).sqrt(),
+    );
+    assert!(!center_only.preprocessing().scales_were_supplied());
+    let scale_only = Lasso::new(0.0).with_scales(vec![2.0]).fit(&x, &y).unwrap();
+    assert_eq!(scale_only.preprocessing().centers(), Some([2.0].as_slice()));
+    assert_eq!(scale_only.preprocessing().scales(), Some([2.0].as_slice()));
+    assert!(!scale_only.preprocessing().centers_were_supplied());
+    for fit in [&center_only, &scale_only] {
+        for (&actual, &expected) in fit.predict(&x).unwrap().iter().zip(&y) {
+            close(actual, expected);
+        }
+    }
+}
+
+#[test]
 fn iteration_limit_returns_a_finite_fit_with_diagnostics() {
     let x = Matrix::from_rows(&[&[1.0], &[2.0], &[3.0]]);
     let fit = Lasso::new(0.1)

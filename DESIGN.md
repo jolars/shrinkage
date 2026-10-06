@@ -294,8 +294,10 @@ the intercept under `Auto` disables centering while retaining scaling. `None`
 uses the raw design. All explicit presets and custom choices are independent of
 the intercept option and builder call order. Explicit centering without a fitted
 intercept must retain the induced original-scale intercept. Fitted preprocessing
-records the resolved centering and scaling rules and values. User-supplied
-center and scale vectors remain later work.
+records the resolved centering and scaling rules, values, and whether vectors
+were supplied. User-supplied center and scale vectors independently override the
+corresponding rule. Nontranslation-invariant computed scales use supplied
+centers.
 
 The initial penalty always acts on the optimization coefficients. Original-scale
 penalties under nontrivial scaling are deferred until their transformed
@@ -339,8 +341,8 @@ convergence. An initially optimal fit takes zero sweeps.
 `LassoFit` owns original-scale parameters, fitted centers and scales, and final
 objective and KKT diagnostics. A finite fit that exhausts its budget returns
 `Termination::IterationLimit`. Invalid inputs, nonfinite arithmetic, and backend
-preprocessing errors return distinct `LassoError` variants. User-supplied center
-and scale vectors and the compositional typed API remain later work.
+preprocessing errors return distinct `LassoError` variants. The compositional
+typed API remains later work.
 
 Paths support warm starts, reusable working sets, and full optimality checks.
 Automatic maximum-penalty calculations and sequences are

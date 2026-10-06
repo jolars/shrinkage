@@ -39,11 +39,11 @@ boundaries only when an implemented consumer needs them.
   LazyMatrix's enums. Honor explicit choices independently of intercept
   fitting, preserve induced intercepts, and test dense/sparse and
   explicit/lazy equivalence.
-- [ ] Validate dimensions, nonempty observations, finite inputs, penalty
+- [x] Validate dimensions, nonempty observations, finite inputs, penalty
   strengths, and explicit scales before constructing LazyMatrix views.
   Replace computed zero scales with one and hold zero-norm normalized
-  columns at zero. Convenience-API validation is implemented; user-supplied
-  center and scale vectors remain pending.
+  columns at zero. Supplied center and scale vectors override their
+  respective rules and are validated before preprocessing.
 - [x] Implement sparse residual state with a scalar centering offset, cached
   base sum, and column summaries. Keep coordinate updates and cached-sum
   column dots at `O(nnz_j)`, and periodically refresh residuals to control
