@@ -2,7 +2,7 @@
 //!
 //! [`Lasso`] fits Gaussian lasso models using dense or sparse CSC columns.
 //! Fits return original-scale parameters, reusable training preprocessing,
-//! and explicit convergence diagnostics. See [`Lasso::tolerance`] for the
+//! and explicit convergence diagnostics. See [`Lasso::terminate_on`] for the
 //! stopping criterion and [`LassoFit::termination`] before using a fit.
 //!
 //! No matrix backend is enabled by default. Versioned features select
@@ -56,7 +56,7 @@ pub mod lasso;
 pub mod normalization;
 pub mod problem;
 
-pub use lasso::{Lasso, LassoError, LassoFit, Preprocessing, Termination};
+pub use lasso::{Lasso, LassoError, LassoFit, Preprocessing, StoppingCriterion, Termination};
 pub use normalization::{Centering, Normalization, Scaling};
 pub use problem::{CoordinateDescent, Gaussian, L1, Problem};
 

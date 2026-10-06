@@ -54,11 +54,11 @@ boundaries only when an implemented consumer needs them.
 - [x] Add a documented KKT convergence check and report termination reason,
   iterations, and objective diagnostics. Distinguish iteration limits,
   numerical failures, and invalid input from convergence.
-- [ ] Implement a valid Gaussian lasso dual certificate and duality gap. Test
+- [x] Implement a valid Gaussian lasso dual certificate and duality gap. Test
   feasibility, objective scaling, intercept and normalization policies, zero
   penalty, and zero reference loss before making relative duality gap the
   default convergence criterion.
-- [ ] Introduce `terminate_on(StoppingCriterion)` with criterion-specific
+- [x] Introduce `terminate_on(StoppingCriterion)` with criterion-specific
   tolerances, concise duality-gap and KKT constructors, and explicit
   absolute and relative gap tolerances. Document the reference scale and
   migrate the existing absolute-KKT `tolerance` setter without silently

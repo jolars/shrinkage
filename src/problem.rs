@@ -2,7 +2,7 @@
 
 use lazymatrix::{ColumnStats, RawColumns};
 
-use crate::{Lasso, LassoError, LassoFit, Normalization};
+use crate::{Lasso, LassoError, LassoFit, Normalization, StoppingCriterion};
 
 /// A Gaussian response with an optional unpenalized fitted intercept.
 #[derive(Clone, Copy, Debug)]
@@ -45,22 +45,29 @@ impl L1 {
 /// Cyclic coordinate descent settings for Gaussian lasso.
 #[derive(Clone, Copy, Debug)]
 pub struct CoordinateDescent {
-    tolerance: f64,
+    stopping_criterion: Option<StoppingCriterion>,
     max_iterations: usize,
 }
 
 impl CoordinateDescent {
-    /// Use an absolute KKT tolerance of `1e-6` and at most 10,000 sweeps.
+    /// Use a relative duality-gap tolerance of `1e-6` and at most 10,000 sweeps.
+    /// Zero-penalty problems use the lasso's absolute KKT default instead.
     pub fn new() -> Self {
         Self {
-            tolerance: 1e-6,
+            stopping_criterion: None,
             max_iterations: 10_000,
         }
     }
 
     /// Set the absolute KKT tolerance, checked when fitting.
     pub fn tolerance(mut self, tolerance: f64) -> Self {
-        self.tolerance = tolerance;
+        self.stopping_criterion = Some(StoppingCriterion::kkt_violation(tolerance));
+        self
+    }
+
+    /// Select a stopping criterion with its own tolerances.
+    pub fn terminate_on(mut self, criterion: StoppingCriterion) -> Self {
+        self.stopping_criterion = Some(criterion);
         self
     }
 
@@ -156,8 +163,10 @@ where
         let mut model = Lasso::new(self.penalty.lambda)
             .fit_intercept(self.datafit.fit_intercept)
             .normalize(self.normalization)
-            .tolerance(solver.tolerance)
             .max_iterations(solver.max_iterations);
+        if let Some(criterion) = solver.stopping_criterion {
+            model = model.terminate_on(criterion);
+        }
         if let Some(centers) = &self.supplied_centers {
             model = model.with_centers(centers.clone());
         }

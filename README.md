@@ -42,8 +42,10 @@ predictions use the original design scale, including an intercept induced by
 explicit centering when fitted intercepts are disabled.
 
 `Lasso::new(lambda)` defaults to an unpenalized intercept, training-column means
-and population standard deviations, an absolute KKT tolerance of `1e-6`, and a
-limit of 10,000 coordinate sweeps. The objective is
+and population standard deviations, a relative duality-gap tolerance of `1e-6`,
+and a limit of 10,000 coordinate sweeps. At zero penalty, the default uses an
+absolute KKT tolerance of `1e-6`; a residual-scaled certificate can be loose
+when the dual constraint requires exact orthogonality. The objective is
 
 $$
   \frac{1}{2n}\|y - \widetilde X\theta
@@ -98,11 +100,17 @@ zero. Inputs must be finite, and the solver does not impute missing values.
 
 A successful `Result` contains a finite fit, which may have reached the
 iteration limit. Check `termination()` before treating it as converged. The
-result reports `iterations()`, `objective()`, and `kkt_violation()`. The KKT
-check uses the averaged loss gradient and includes the intercept condition; it
-is confirmed on reconstructed residuals before reporting convergence. Invalid
-input, numerical failures, and backend preprocessing failures return distinct
-`LassoError` variants, with backend error sources preserved.
+result reports `iterations()`, `objective()`, `kkt_violation()`,
+`dual_objective()`, and `duality_gap()`. The dual certificate satisfies the
+constraints for the normalized design and an unpenalized intercept. The relative
+gap uses the loss at zero coefficients with the intercept optimized as a fixed
+reference scale. When this loss is zero, the threshold is zero. Select another
+criterion with `terminate_on(StoppingCriterion::...)`; `tolerance()` retains its
+original meaning as an absolute KKT tolerance. The fit reports its selected
+criterion, final value, and threshold. A passing check is confirmed after
+reconstructing residuals. Invalid input, numerical failures, and backend
+preprocessing failures return distinct `LassoError` variants, with backend error
+sources preserved.
 
 The solver keeps sparse centering in a scalar residual offset. Coordinate dots
 and updates touch stored column entries, with residual refreshes every 50 sweeps

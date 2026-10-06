@@ -45,15 +45,17 @@ pub struct Lasso {
     normalization: Normalization,
     supplied_centers: Option<Vec<f64>>,
     supplied_scales: Option<Vec<f64>>,
-    tolerance: f64,
+    stopping_criterion: StoppingCriterion,
     max_iterations: usize,
 }
 
 impl Lasso {
     /// Configure a fit with a finite, nonnegative penalty strength.
     ///
-    /// Defaults to an intercept, [`Normalization::Auto`], an absolute KKT
-    /// tolerance of `1e-6`, and at most `10_000` complete coordinate sweeps.
+    /// Defaults to an intercept, [`Normalization::Auto`], a relative duality
+    /// gap tolerance of `1e-6`, and at most `10_000` complete coordinate sweeps.
+    /// At zero penalty, the default is absolute KKT tolerance `1e-6`: scaling
+    /// a residual cannot generally construct a useful zero-penalty dual vector.
     pub fn new(lambda: f64) -> Self {
         Self {
             lambda,
@@ -61,7 +63,11 @@ impl Lasso {
             normalization: Normalization::Auto,
             supplied_centers: None,
             supplied_scales: None,
-            tolerance: 1e-6,
+            stopping_criterion: if lambda == 0.0 {
+                StoppingCriterion::kkt_violation(1e-6)
+            } else {
+                StoppingCriterion::duality_gap(1e-6)
+            },
             max_iterations: 10_000,
         }
     }
@@ -119,7 +125,17 @@ impl Lasso {
     /// `|mean(residual)|`. Convergence requires the largest violation to be at
     /// most this tolerance, confirmed after reconstructing the residual.
     pub fn tolerance(mut self, tolerance: f64) -> Self {
-        self.tolerance = tolerance;
+        self.stopping_criterion = StoppingCriterion::kkt_violation(tolerance);
+        self
+    }
+
+    /// Select the stopping criterion and its tolerances.
+    ///
+    /// The duality gap uses a fixed reference loss from the zero-coefficient
+    /// model, with the intercept optimized when enabled. The legacy
+    /// [`Self::tolerance`] setter selects absolute KKT violation.
+    pub fn terminate_on(mut self, criterion: StoppingCriterion) -> Self {
+        self.stopping_criterion = criterion;
         self
     }
 
@@ -275,6 +291,13 @@ impl Lasso {
             iterations: solution.iterations,
             objective: solution.objective,
             kkt_violation: solution.kkt_violation,
+            dual_certificate: solution.dual_certificate,
+            dual_objective: solution.dual_objective,
+            duality_gap: solution.duality_gap,
+            reference_loss: solution.reference_loss,
+            stopping_criterion: solution.stopping_criterion,
+            stopping_value: solution.stopping_value,
+            stopping_threshold: solution.stopping_threshold,
         })
     }
 
@@ -282,13 +305,64 @@ impl Lasso {
         if !self.lambda.is_finite() || self.lambda < 0.0 {
             return Err(invalid("lambda must be finite and nonnegative"));
         }
-        if !self.tolerance.is_finite() || self.tolerance <= 0.0 {
-            return Err(invalid("tolerance must be finite and strictly positive"));
+        match self.stopping_criterion {
+            StoppingCriterion::KktViolation { absolute } => {
+                if !absolute.is_finite() || absolute <= 0.0 {
+                    return Err(invalid(
+                        "KKT tolerance must be finite and strictly positive",
+                    ));
+                }
+            }
+            StoppingCriterion::DualityGap { absolute, relative } => {
+                if !absolute.is_finite()
+                    || !relative.is_finite()
+                    || absolute < 0.0
+                    || relative < 0.0
+                    || (absolute == 0.0 && relative == 0.0)
+                {
+                    return Err(invalid(
+                        "duality-gap tolerances must be finite, nonnegative, and at least one positive",
+                    ));
+                }
+            }
         }
         if self.max_iterations == 0 {
             return Err(invalid("max_iterations must be strictly positive"));
         }
         Ok(())
+    }
+}
+
+/// A convergence check with tolerances in its own units.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum StoppingCriterion {
+    /// Stop when the absolute Gaussian lasso duality gap is at most
+    /// `absolute + relative * reference_loss`.
+    DualityGap {
+        /// Absolute gap tolerance.
+        absolute: f64,
+        /// Gap tolerance relative to the fixed zero-coefficient loss.
+        relative: f64,
+    },
+    /// Stop when the maximum absolute KKT violation is at most `absolute`.
+    KktViolation {
+        /// Absolute KKT tolerance.
+        absolute: f64,
+    },
+}
+
+impl StoppingCriterion {
+    /// Select a relative duality-gap tolerance.
+    pub const fn duality_gap(relative: f64) -> Self {
+        Self::DualityGap {
+            absolute: 0.0,
+            relative,
+        }
+    }
+
+    /// Select an absolute KKT tolerance.
+    pub const fn kkt_violation(absolute: f64) -> Self {
+        Self::KktViolation { absolute }
     }
 }
 
@@ -339,9 +413,9 @@ impl Preprocessing {
 /// Why a finite fit stopped. An iteration limit does not certify optimality.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Termination {
-    /// The full KKT check passed on a freshly reconstructed residual.
+    /// The selected check passed on a freshly reconstructed residual.
     Converged,
-    /// The sweep budget was exhausted before meeting the KKT tolerance.
+    /// The sweep budget was exhausted before meeting the selected threshold.
     IterationLimit,
 }
 
@@ -360,6 +434,13 @@ pub struct LassoFit {
     iterations: usize,
     objective: f64,
     kkt_violation: f64,
+    dual_certificate: Vec<f64>,
+    dual_objective: f64,
+    duality_gap: f64,
+    reference_loss: f64,
+    stopping_criterion: StoppingCriterion,
+    stopping_value: f64,
+    stopping_threshold: f64,
 }
 
 impl LassoFit {
@@ -396,6 +477,43 @@ impl LassoFit {
     /// Maximum absolute KKT violation, as defined by [`Lasso::tolerance`].
     pub fn kkt_violation(&self) -> f64 {
         self.kkt_violation
+    }
+
+    /// Feasible dual vector `u`, with `||X_tilde' u||_inf <= lambda` and
+    /// `sum(u) = 0` when an intercept was fitted, up to floating-point error.
+    /// At zero penalty, the certificate can be zero and its gap can be loose.
+    pub fn dual_certificate(&self) -> &[f64] {
+        &self.dual_certificate
+    }
+
+    /// Gaussian dual objective `y' u - n ||u||² / 2`.
+    pub fn dual_objective(&self) -> f64 {
+        self.dual_objective
+    }
+
+    /// Nonnegative primal minus dual objective.
+    pub fn duality_gap(&self) -> f64 {
+        self.duality_gap
+    }
+
+    /// Averaged loss at zero coefficients and the optimal enabled intercept.
+    pub fn reference_loss(&self) -> f64 {
+        self.reference_loss
+    }
+
+    /// Criterion selected for this fit.
+    pub fn stopping_criterion(&self) -> StoppingCriterion {
+        self.stopping_criterion
+    }
+
+    /// Final value of the selected criterion.
+    pub fn stopping_value(&self) -> f64 {
+        self.stopping_value
+    }
+
+    /// Threshold applied to the selected criterion.
+    pub fn stopping_threshold(&self) -> f64 {
+        self.stopping_threshold
     }
 
     /// Predict from raw columns in the same order as the training design.

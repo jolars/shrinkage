@@ -1,6 +1,6 @@
 use lazymatrix::{LazyColumn, LazyMatrix, RawColumn, RawColumns};
 
-use super::{Lasso, Termination};
+use super::{Lasso, StoppingCriterion, Termination};
 
 #[cfg(test)]
 mod tests;
@@ -178,6 +178,160 @@ pub(super) struct Solution {
     pub iterations: usize,
     pub objective: f64,
     pub kkt_violation: f64,
+    pub dual_certificate: Vec<f64>,
+    pub dual_objective: f64,
+    pub duality_gap: f64,
+    pub reference_loss: f64,
+    pub stopping_criterion: StoppingCriterion,
+    pub stopping_value: f64,
+    pub stopping_threshold: f64,
+}
+
+struct Diagnostics {
+    objective: f64,
+    kkt_violation: f64,
+    dual_certificate: Vec<f64>,
+    dual_objective: f64,
+    duality_gap: f64,
+}
+
+fn diagnostics<M: RawColumns<f64>>(
+    matrix: &LazyMatrix<M>,
+    y: &[f64],
+    parameters: (&[f64], f64),
+    residual: &Residual,
+    summaries: &[ColumnSummary],
+    options: &Lasso,
+    iteration: usize,
+) -> Result<Diagnostics, NumericalFailure> {
+    let (coefficients, intercept) = parameters;
+    let kkt_violation = kkt_violation(
+        matrix,
+        coefficients,
+        residual,
+        summaries,
+        options,
+        iteration,
+    )?;
+    let penalty = if options.lambda == 0.0 {
+        0.0
+    } else {
+        finite(
+            coefficients
+                .iter()
+                .map(|value| options.lambda * value.abs())
+                .sum(),
+            "computing the penalty",
+            iteration,
+        )?
+    };
+    let objective = finite(
+        residual.loss(iteration)? + penalty,
+        "computing the objective",
+        iteration,
+    )?;
+
+    // The residual divided by n is the unconstrained dual candidate. Center
+    // it when the intercept is free, then shrink it toward zero to satisfy
+    // every normalized-column constraint without changing its direction.
+    let n = y.len() as f64;
+    let mean = if options.fit_intercept {
+        residual.mean(iteration)?
+    } else {
+        0.0
+    };
+    let mut dual_certificate = residual
+        .base
+        .iter()
+        .map(|&base| {
+            finite(
+                (base + residual.offset - mean) / n,
+                "constructing a dual certificate",
+                iteration,
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    if options.fit_intercept {
+        let last = dual_certificate.len() - 1;
+        let prefix_sum: f64 = dual_certificate[..last].iter().sum();
+        dual_certificate[last] = finite(-prefix_sum, "centering a dual certificate", iteration)?;
+    }
+    let dual_sum = finite(
+        dual_certificate.iter().sum(),
+        "summing a dual certificate",
+        iteration,
+    )?;
+    let mut max_correlation: f64 = 0.0;
+    let mut correlations = Vec::with_capacity(matrix.ncols());
+    for j in 0..matrix.ncols() {
+        let correlation = finite(
+            matrix.column(j).dot_with_sum(&dual_certificate, dual_sum),
+            "checking dual feasibility",
+            iteration,
+        )?;
+        max_correlation = max_correlation.max(correlation.abs());
+        correlations.push(correlation);
+    }
+    let factor = if max_correlation > 0.0 {
+        (options.lambda / max_correlation).min(1.0) * (1.0 - 16.0 * f64::EPSILON)
+    } else {
+        1.0
+    };
+    for value in &mut dual_certificate {
+        *value = finite(*value * factor, "scaling a dual certificate", iteration)?;
+    }
+    let inner_product = finite(
+        y.iter()
+            .zip(&dual_certificate)
+            .map(|(&target, &dual)| target * dual)
+            .sum(),
+        "computing the dual objective",
+        iteration,
+    )?;
+    let squared_norm = finite(
+        dual_certificate.iter().map(|value| value * value).sum(),
+        "computing the dual norm",
+        iteration,
+    )?;
+    let dual_objective = finite(
+        inner_product - 0.5 * n * squared_norm,
+        "computing the dual objective",
+        iteration,
+    )?;
+    // Fenchel's identity avoids subtracting nearly equal objectives. The norm
+    // and coordinatewise terms are nonnegative for an exactly feasible vector.
+    let mut duality_gap = 0.0;
+    for (&base, &dual) in residual.base.iter().zip(&dual_certificate) {
+        let difference = finite(
+            base + residual.offset - n * dual,
+            "computing the duality gap",
+            iteration,
+        )?;
+        duality_gap += 0.5 * (difference / n.sqrt()).powi(2);
+    }
+    for (&coefficient, &correlation) in coefficients.iter().zip(&correlations) {
+        let slack = options.lambda * coefficient.abs() - coefficient * factor * correlation;
+        duality_gap += slack.max(0.0);
+    }
+    if options.fit_intercept {
+        let scaled_sum: f64 = dual_certificate.iter().sum();
+        duality_gap -= intercept * scaled_sum;
+    }
+    duality_gap = finite(duality_gap.max(0.0), "computing the duality gap", iteration)?;
+    Ok(Diagnostics {
+        objective,
+        kkt_violation,
+        dual_certificate,
+        dual_objective,
+        duality_gap,
+    })
+}
+
+fn stopping_value(diagnostics: &Diagnostics, criterion: StoppingCriterion) -> f64 {
+    match criterion {
+        StoppingCriterion::DualityGap { .. } => diagnostics.duality_gap,
+        StoppingCriterion::KktViolation { .. } => diagnostics.kkt_violation,
+    }
 }
 
 fn soft_threshold(value: f64, lambda: f64) -> f64 {
@@ -241,9 +395,28 @@ pub(super) fn solve<M: RawColumns<f64>>(
         0.0
     };
     let mut residual = Residual::new(y, intercept)?;
-    let mut violation = kkt_violation(matrix, &coefficients, &residual, &summaries, options, 0)?;
+    let reference_loss = residual.loss(0)?;
+    let threshold = match options.stopping_criterion {
+        StoppingCriterion::DualityGap { absolute, relative } => finite(
+            absolute + relative * reference_loss,
+            "computing the duality-gap threshold",
+            0,
+        )?,
+        StoppingCriterion::KktViolation { absolute } => absolute,
+    };
+    let mut check = diagnostics(
+        matrix,
+        y,
+        (&coefficients, intercept),
+        &residual,
+        &summaries,
+        options,
+        0,
+    )?;
     let mut iterations = 0;
-    while violation > options.tolerance && iterations < options.max_iterations {
+    while stopping_value(&check, options.stopping_criterion) > threshold
+        && iterations < options.max_iterations
+    {
         iterations += 1;
         for (j, coefficient) in coefficients.iter_mut().enumerate() {
             let summary = &summaries[j];
@@ -285,19 +458,21 @@ pub(super) fn solve<M: RawColumns<f64>>(
         if refreshed {
             residual.refresh(matrix, y, &coefficients, intercept, &summaries, iterations)?;
         }
-        violation = kkt_violation(
+        check = diagnostics(
             matrix,
-            &coefficients,
+            y,
+            (&coefficients, intercept),
             &residual,
             &summaries,
             options,
             iterations,
         )?;
-        if violation <= options.tolerance && !refreshed {
+        if stopping_value(&check, options.stopping_criterion) <= threshold && !refreshed {
             residual.refresh(matrix, y, &coefficients, intercept, &summaries, iterations)?;
-            violation = kkt_violation(
+            check = diagnostics(
                 matrix,
-                &coefficients,
+                y,
+                (&coefficients, intercept),
                 &residual,
                 &summaries,
                 options,
@@ -305,29 +480,24 @@ pub(super) fn solve<M: RawColumns<f64>>(
             )?;
         }
     }
-    let penalty = if options.lambda == 0.0 {
-        0.0
-    } else {
-        coefficients
-            .iter()
-            .map(|value| options.lambda * value.abs())
-            .sum()
-    };
-    let objective = finite(
-        residual.loss(iterations)? + penalty,
-        "computing the objective",
-        iterations,
-    )?;
+    let final_value = stopping_value(&check, options.stopping_criterion);
     Ok(Solution {
         coefficients,
         intercept,
-        termination: if violation <= options.tolerance {
+        termination: if final_value <= threshold {
             Termination::Converged
         } else {
             Termination::IterationLimit
         },
         iterations,
-        objective,
-        kkt_violation: violation,
+        objective: check.objective,
+        kkt_violation: check.kkt_violation,
+        dual_certificate: check.dual_certificate,
+        dual_objective: check.dual_objective,
+        duality_gap: check.duality_gap,
+        reference_loss,
+        stopping_criterion: options.stopping_criterion,
+        stopping_value: final_value,
+        stopping_threshold: threshold,
     })
 }

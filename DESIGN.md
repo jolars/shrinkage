@@ -331,8 +331,10 @@ and hold zero-norm normalized columns at zero. Validate inputs before invoking
 LazyMatrix constructors: the matrix library deliberately preserves nonfinite
 statistics and does not supply the statistical fit's validation policy.
 
-The implemented `Lasso` builder defaults to an absolute KKT tolerance of `1e-6`
-and at most 10,000 complete cyclic sweeps. For `c_j = X_tilde_j' r / n`, use
+The implemented `Lasso` builder defaults to a relative duality-gap tolerance of
+`1e-6` and at most 10,000 complete cyclic sweeps. At zero penalty, the default
+uses absolute KKT tolerance `1e-6`, because a residual-scaled feasible dual
+vector can give a loose lower bound. For `c_j = X_tilde_j' r / n`, use
 `|c_j - lambda sign(theta_j)|` on active coordinates and
 `max(|c_j| - lambda, 0)` on zero coordinates, together with `|mean(r)|` when
 fitting an intercept. Check the maximum violation after each sweep. Reconstruct
@@ -433,11 +435,10 @@ fixed-point residual, or another justified criterion. Do not fabricate a duality
 gap for objectives lacking an implemented valid dual. Include solver selection,
 objective conventions, and available work counters in diagnostics.
 
-The planned convergence API is `.terminate_on(StoppingCriterion)`. Each
-criterion owns its tolerances, so changing criteria cannot silently reuse a
-tolerance with a different meaning. Provide concise constructors for common
-choices and explicit absolute and relative tolerances where applicable.
-Illustrative calls are:
+The convergence API is `.terminate_on(StoppingCriterion)`. Each criterion owns
+its tolerances, so changing criteria cannot silently reuse a tolerance with a
+different meaning. Provide concise constructors for common choices and explicit
+absolute and relative tolerances where applicable. Illustrative calls are:
 
 ```rust,ignore
 let model = Lasso::new(0.1)
@@ -461,14 +462,17 @@ intercept optimized when enabled. Keep this scale fixed during a fit, and define
 zero-scale behavior without dividing by it. Validate finite, nonnegative
 tolerances with at least one positive component.
 
-Duality gap is the intended default for Gaussian lasso and other supported
-convex problems once valid dual certificates are implemented and tested. The
-current `.tolerance(...)` API still controls absolute KKT violation; do not
-silently reinterpret it as a gap tolerance. Introduce `terminate_on` when
-implementing the criteria, with an explicit migration from the existing setter.
-Unsupported criteria must be rejected before iteration, without silently
-substituting another criterion. Nonconvex models require an appropriate
-stationarity criterion.
+Duality gap is the default for positive-penalty Gaussian lasso. The
+`.tolerance(...)` API still controls absolute KKT violation. A feasible dual
+vector `u` satisfies `||X_tilde' u||_inf <= lambda` and, when fitting an
+intercept, `1' u = 0`. Its objective is `y' u - n ||u||² / 2`. The solver
+centers `r/n` when fitting an intercept and scales it to satisfy the column
+constraints. At zero penalty this construction can yield the zero vector and a
+loose gap, so the default uses KKT violation. The gap is evaluated using a
+Fenchel decomposition to avoid subtracting nearly equal objectives. Unsupported
+criteria must be rejected before iteration, without silently substituting
+another criterion. Nonconvex models require an appropriate stationarity
+criterion.
 
 Iteration limits remain independent budgets and report `IterationLimit`, not
 convergence. Report the selected criterion, its final value, and its threshold.

@@ -273,7 +273,7 @@ fn overflow_during_iteration_or_prediction_is_not_a_successful_fit() {
             .normalize(Normalization::None)
             .fit_intercept(false)
             .fit(&tiny, &[1e160, 0.0]),
-        Err(LassoError::NumericalFailure { iteration: 1, .. })
+        Err(LassoError::NumericalFailure { .. })
     ));
     let x = Matrix::from_rows(&[&[-1.0], &[1.0]]);
     let fit = Lasso::new(0.0).fit(&x, &[-2.0, 2.0]).unwrap();
