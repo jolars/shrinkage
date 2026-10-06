@@ -65,11 +65,10 @@ boundaries only when an implemented consumer needs them.
   changing its meaning. Keep iteration budgets independent, reject
   unsupported criteria, and report the selected criterion, final value, and
   threshold.
-- [ ] Verify analytical cases, independent reference fixtures, agreement between
+- [x] Verify analytical cases, independent reference fixtures, agreement between
   dense and sparse fits, and agreement between explicit and lazy
   normalization. Test intercept policies, constant columns, penalty scaling,
-  invalid inputs, and nonconvergence. Analytical and independently solved
-  small cases are covered; external reference fixtures remain pending.
+  invalid inputs, and nonconvergence.
 - [ ] Add the benchmark harness and a lean consumer benchmark. Test sparse
   operation counts and reconstructed residuals, and measure time,
   allocations, and memory without forming a Gram matrix by default. Timing

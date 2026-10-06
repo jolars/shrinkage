@@ -2,6 +2,8 @@
 
 #[path = "common/matrix.rs"]
 mod matrix;
+#[path = "lasso/reference.rs"]
+mod reference;
 
 use matrix::Matrix;
 use shrinkage::{Lasso, LassoError, Normalization, Termination};
