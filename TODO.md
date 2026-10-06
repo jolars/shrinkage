@@ -69,11 +69,11 @@ boundaries only when an implemented consumer needs them.
   dense and sparse fits, and agreement between explicit and lazy
   normalization. Test intercept policies, constant columns, penalty scaling,
   invalid inputs, and nonconvergence.
-- [ ] Add the benchmark harness and a lean consumer benchmark. Test sparse
+- [x] Add the benchmark harness and a lean consumer benchmark. Test sparse
   operation counts and reconstructed residuals, and measure time,
-  allocations, and memory without forming a Gram matrix by default. Timing
-  benchmarks, operation counts, and residual tests are implemented;
-  allocation and memory profiling remain pending.
+  allocations, and memory without forming a Gram matrix by default. Separate
+  timing and heap harnesses cover dense and CSC fits; heap checks enforce
+  linear memory budgets and release of fitted-result storage.
 
 ## 3. Composition proof
 

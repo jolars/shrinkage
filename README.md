@@ -208,12 +208,37 @@ task format
 task lint
 task test
 task bench
+task bench:heap
 ```
 
 `task bench` measures end-to-end dense and CSC fitting time, including
 validation and preprocessing, with only the faer backend enabled. Dataset
-construction is outside the timed region. Allocation and memory profiling remain
-later work.
+construction is outside the timed region.
+
+`task bench:heap` runs a separate release-mode harness with the [DHAT
+allocator](https://docs.rs/dhat/0.3.3/dhat/). It reports CSV rows for dense and
+CSC fits at three sizes: 1,024 by 64, 4,096 by 64, and 1,024 by 1,024. Both
+harnesses use the same deterministic data generator and require converged fits.
+The heap harness reports allocation count, cumulative allocated bytes, peak live
+bytes, and bytes retained by the fitted result, including its dual certificate.
+It profiles validation, preprocessing, and solving, excluding input construction
+and report printing. All tracked bytes must be released when the fit is dropped.
+
+The heap harness also checks a loose linear budget of `128 * (n + p)` bytes. The
+wide case makes both a dense normalized design and a full Gram matrix larger
+than this budget. This guards against those materializations for the measured
+cases; it is not a universal memory guarantee. These figures measure requested
+heap bytes, not process RSS, allocator overhead, or stack usage. Keep timing
+runs separate because allocation tracking adds overhead. DHAT is a development
+dependency and does not change the library's default dependencies.
+
+The heap checks run in `task check` and CI. On x86-64 with Rust 1.89.0, the
+1,024-by-64 fixture takes 70 allocations for dense input and 69 for CSC input;
+both peak at 28,160 live bytes. Increasing the row count to 4,096 raises the
+peak to 101,888 bytes. Increasing the column count to 1,024 instead raises it to
+81,920 bytes, compared with 8,388,608 bytes for a full Gram matrix. These are
+fixture measurements, not allocation-free iteration claims or guarantees for
+other datasets.
 
 Modules use `name.rs` and `name/child.rs`; the repository does not use `mod.rs`.
 

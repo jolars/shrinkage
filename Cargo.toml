@@ -31,6 +31,7 @@ sprs_v0_11 = ["lazymatrix/sprs_v0_11"]
 
 [dev-dependencies]
 criterion = { version = "0.8.2", default-features = false }
+dhat = "0.3.3"
 nalgebra = { version = "0.34", default-features = false, features = ["std"] }
 nalgebra-sparse = "0.11"
 ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
@@ -46,6 +47,11 @@ required-features = ["faer_v0_24"]
 
 [[bench]]
 name = "lasso"
+harness = false
+required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "lasso_heap"
 harness = false
 required-features = ["faer_v0_24"]
 

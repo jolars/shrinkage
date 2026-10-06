@@ -38,6 +38,11 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso
 
+  bench:heap:
+    desc: Measure lasso allocations and peak live heap with linear memory budgets
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso_heap
+
   check:
     desc: Run all required checks
     cmds:
@@ -46,6 +51,7 @@ tasks:
       - cargo build --locked --no-default-features
       - task: test
       - task: example
+      - task: bench:heap
       - RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
       - panache format --check .
       - panache lint .
