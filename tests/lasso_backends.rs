@@ -9,6 +9,8 @@
 
 use shrinkage::lazymatrix::{ColumnStats, RawColumns};
 use shrinkage::{Centering, Lasso, LassoFit, Normalization, Scaling, Termination};
+#[cfg(feature = "faer_v0_24")]
+use shrinkage::{CoordinateDescent, Gaussian, L1, Problem};
 
 const ROWS: [[f64; 4]; 6] = [
     [0.0, 1.0, 5.0, 0.0],
@@ -151,6 +153,55 @@ fn faer_matrices() -> (faer::Mat<f64>, faer::sparse::SparseColMat<usize, f64>) {
         dense,
         faer::sparse::SparseColMat::try_new_from_triplets(6, 4, &triplets).unwrap(),
     )
+}
+
+#[cfg(feature = "faer_v0_24")]
+#[test]
+fn typed_faer_dense_and_csc_preserve_original_scale() {
+    let (dense, sparse) = faer_matrices();
+    let normalization = Normalization::Custom {
+        center: Centering::Min,
+        scale: Scaling::L2,
+    };
+    let solver = CoordinateDescent::new().tolerance(1e-10);
+    let reference = Lasso::new(0.15)
+        .fit_intercept(false)
+        .normalize(normalization)
+        .tolerance(1e-10)
+        .fit(&dense, &Y)
+        .unwrap();
+    for fit in [
+        Problem::new(
+            &dense,
+            Gaussian::new(&Y).fit_intercept(false),
+            L1::new(0.15),
+        )
+        .normalize(normalization)
+        .fit_with(&solver)
+        .unwrap(),
+        Problem::new(
+            &sparse,
+            Gaussian::new(&Y).fit_intercept(false),
+            L1::new(0.15),
+        )
+        .normalize(normalization)
+        .fit_with(&solver)
+        .unwrap(),
+    ] {
+        assert_eq!(fit.termination(), Termination::Converged);
+        for (&actual, &expected) in fit.coefficients().iter().zip(reference.coefficients()) {
+            close(actual, expected);
+        }
+        close(fit.intercept(), reference.intercept());
+        for (&actual, &expected) in fit
+            .predict(&sparse)
+            .unwrap()
+            .iter()
+            .zip(reference.predict(&dense).unwrap().iter())
+        {
+            close(actual, expected);
+        }
+    }
 }
 
 #[cfg(feature = "nalgebra_v0_34")]

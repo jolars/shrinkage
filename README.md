@@ -2,10 +2,10 @@
 
 Shrinkage is a Rust library for regularized statistical models. It currently
 fits Gaussian lasso models with dense or sparse CSC input through a statically
-dispatched coordinate-descent solver. Compositional and runtime APIs are planned
-for later milestones. See [DESIGN.md](DESIGN.md) for the architecture and
-statistical conventions, and [TODO.md](TODO.md) for the implementation
-checklist.
+dispatched coordinate-descent solver. A typed Gaussian/L1 composition is
+available; broader composition and runtime APIs remain later milestones. See
+[DESIGN.md](DESIGN.md) for the architecture and statistical conventions, and
+[TODO.md](TODO.md) for the implementation checklist.
 
 ## Gaussian lasso
 
@@ -20,6 +20,26 @@ let fit = Lasso::new(0.1).fit(&x, &[1.0, 3.0, 5.0])?;
 assert_eq!(fit.termination(), Termination::Converged);
 let predictions = fit.predict(&x)?;
 ```
+
+The typed API composes the design, Gaussian response, L1 penalty, and coordinate
+solver. It returns the same `LassoFit` as the convenience API:
+
+```rust
+use faer::Mat;
+use shrinkage::{CoordinateDescent, Gaussian, L1, Normalization, Problem};
+
+let x = Mat::from_fn(3, 1, |i, _| i as f64);
+let y = [1.0, 3.0, 5.0];
+let fit = Problem::new(&x, Gaussian::new(&y), L1::new(0.1))
+    .normalize(Normalization::Standardize)
+    .fit_with(&CoordinateDescent::new())?;
+let predictions = fit.predict(&x)?;
+```
+
+`Gaussian::fit_intercept(false)` controls the fitted intercept. The typed
+problem also accepts `with_centers` and `with_scales`. Its parameters and
+predictions use the original design scale, including an intercept induced by
+explicit centering when fitted intercepts are disabled.
 
 `Lasso::new(lambda)` defaults to an unpenalized intercept, training-column means
 and population standard deviations, an absolute KKT tolerance of `1e-6`, and a

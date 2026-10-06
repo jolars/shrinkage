@@ -1,8 +1,9 @@
 # Shrinkage: design
 
-Status: Gaussian lasso convenience API implemented; composition is the next
-architectural milestone. This document records architectural commitments and an
-implementation sequence; illustrative API names are not frozen interfaces.
+Status: Gaussian lasso convenience API and typed Gaussian/L1 coordinate-descent
+composition implemented; broader composition is the next architectural
+milestone. This document records architectural commitments and an implementation
+sequence; illustrative API names are not frozen interfaces.
 
 ## 1. Purpose
 
@@ -341,8 +342,11 @@ convergence. An initially optimal fit takes zero sweeps.
 `LassoFit` owns original-scale parameters, fitted centers and scales, and final
 objective and KKT diagnostics. A finite fit that exhausts its budget returns
 `Termination::IterationLimit`. Invalid inputs, nonfinite arithmetic, and backend
-preprocessing errors return distinct `LassoError` variants. The compositional
-typed API remains later work.
+preprocessing errors return distinct `LassoError` variants. The initial typed
+`Problem<Design, Gaussian, L1>` pairs these components with `CoordinateDescent`
+and uses the same fitting and back-transformation path as `Lasso`. This first
+combination does not yet provide generic solver capabilities or runtime
+selection; those belong to the composition milestone.
 
 Paths support warm starts, reusable working sets, and full optimality checks.
 Automatic maximum-penalty calculations and sequences are

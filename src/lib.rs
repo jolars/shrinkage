@@ -54,9 +54,11 @@
 
 pub mod lasso;
 pub mod normalization;
+pub mod problem;
 
 pub use lasso::{Lasso, LassoError, LassoFit, Preprocessing, Termination};
 pub use normalization::{Centering, Normalization, Scaling};
+pub use problem::{CoordinateDescent, Gaussian, L1, Problem};
 
 /// Matrix capabilities, borrowed columns, and lazy normalization.
 pub use lazymatrix;

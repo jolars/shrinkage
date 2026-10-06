@@ -48,10 +48,9 @@ boundaries only when an implemented consumer needs them.
   base sum, and column summaries. Keep coordinate updates and cached-sum
   column dots at `O(nnz_j)`, and periodically refresh residuals to control
   drift.
-- [ ] Return original-scale coefficients and predictions while preserving any
-  intercept induced by preprocessing, including through the typed API. The
-  convenience API is implemented; the compositional typed API remains
-  pending.
+- [x] Return original-scale coefficients and predictions while preserving any
+  intercept induced by preprocessing, including through the typed
+  Gaussian/L1 coordinate-descent API.
 - [x] Add a documented KKT convergence check and report termination reason,
   iterations, and objective diagnostics. Distinguish iteration limits,
   numerical failures, and invalid input from convergence.
