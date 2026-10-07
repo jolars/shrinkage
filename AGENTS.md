@@ -7,10 +7,15 @@ provides the convenience API in `src/lasso.rs`; `src/solver/coordinate.rs` owns
 Gaussian coordinate descent and its residual state. Typed composition, datafits,
 penalties, and fitted results live in their respective modules. Model fitting
 follows `DESIGN.md`. The `normalization` and `lasso` examples exercise dense and
-sparse CSC input through LazyMatrix 0.3.0. Optional `faer_v0_24`,
+sparse CSC input through LazyMatrix 0.5.0. Optional `faer_v0_24`,
 `nalgebra_v0_34`, `ndarray_v0_17`, and `sprs_v0_11` features expose its matrix
 integrations. The short names `faer`, `nalgebra`, `ndarray`, and `sprs` are
 aliases. sprs input uses LazyMatrix's checked `SprsCsc` wrapper.
+
+`experimental-block-reader` enables a provisional buffered proximal consumer in
+`src/experimental.rs`. `zarrs_v0_22` and its `zarrs` alias support the
+file-backed demonstration through the published LazyMatrix `ReadBlock`
+capability. Solver iteration stays in `src/solver/proximal.rs`.
 
 Start with modules in this crate. Use `name.rs` and `name/child.rs`, never
 `mod.rs`. Add solver tests and benchmarks with the numerical implementations.
@@ -49,9 +54,14 @@ cargo test --locked --no-default-features --features faer
 cargo test --locked --no-default-features --features nalgebra
 cargo test --locked --no-default-features --features ndarray
 cargo test --locked --no-default-features --features sprs
+cargo test --locked --no-default-features --features zarrs_v0_22
+cargo test --locked --no-default-features --features zarrs
+cargo test --locked --no-default-features --features experimental-block-reader,zarrs_v0_22
 cargo test --locked --all-features
 cargo run --locked --example normalization --features faer_v0_24
 cargo run --locked --example lasso --features faer_v0_24
+cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
+cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso_heap
 RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
 ```
 

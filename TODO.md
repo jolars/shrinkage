@@ -90,12 +90,12 @@ boundaries only when an implemented consumer needs them.
   unsupported combinations.
 - [ ] Establish reusable workspace ownership across iterations and path points.
   Measure normalized-product and proximal allocations, including LazyMatrix
-  0.3.0's scaled input clone. Verify reusable normalization scratch storage
+  0.5.0's scaled input clone. Verify reusable normalization scratch storage
   upstream before claiming allocation-free normalized iterations.
-- [ ] Prototype a separate fallible block-reader capability with bounded buffer
+- [x] Prototype a separate fallible block-reader capability with bounded buffer
   reuse and explicit borrowing contracts before stabilizing solver
   interfaces.
-- [ ] Propagate backend errors with their source and operation context. Inject
+- [x] Propagate backend errors with their source and operation context. Inject
   read failures during preprocessing and a later solver iteration, and
   verify that partially written outputs are neither consumed nor reported as
   success.

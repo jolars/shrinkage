@@ -12,16 +12,20 @@ keywords = ["statistics", "optimization", "regression", "regularization"]
 categories = ["mathematics", "science"]
 
 [dependencies]
-lazymatrix = { version = "=0.3.0", default-features = false }
+lazymatrix = { version = "=0.5.0", default-features = false }
 faer = { version = "0.24", optional = true, default-features = false, features = [
   "std",
   "linalg",
 ] }
 nalgebra = { version = "0.34", optional = true, default-features = false, features = ["std"] }
 ndarray = { version = "0.17.2", optional = true, default-features = false, features = ["std"] }
+zarrs = { version = "0.22.10", optional = true, default-features = false, features = ["filesystem", "gzip"] }
 
 [features]
 default = []
+experimental-block-reader = []
+zarrs = ["zarrs_v0_22"]
+zarrs_v0_22 = ["dep:zarrs", "lazymatrix/zarrs_v0_22"]
 faer = ["faer_v0_24"]
 faer_v0_24 = ["dep:faer", "lazymatrix/faer_v0_24"]
 nalgebra = ["nalgebra_v0_34"]
@@ -32,6 +36,7 @@ sprs = ["sprs_v0_11"]
 sprs_v0_11 = ["lazymatrix/sprs_v0_11"]
 
 [dev-dependencies]
+tempfile = "3"
 criterion = { version = "0.8.2", default-features = false }
 dhat = "0.3.3"
 nalgebra = { version = "0.34", default-features = false, features = ["std"] }
@@ -46,6 +51,10 @@ required-features = ["faer_v0_24"]
 [[example]]
 name = "lasso"
 required-features = ["faer_v0_24"]
+
+[[example]]
+name = "zarrs_buffered"
+required-features = ["experimental-block-reader", "zarrs_v0_22"]
 
 [[bench]]
 name = "lasso"

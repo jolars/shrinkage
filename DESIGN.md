@@ -87,8 +87,9 @@ whose residual caches and dual certificate remain Gaussian/L1-specific.
 `LassoFit` retains the specialized diagnostics and owns original-scale
 prediction and back-transformation. `FitError` preserves backend sources;
 `LassoError` remains an alias, and existing root, `lasso`, and `problem` import
-paths still work. These interfaces are provisional. Runtime-oracle and fallible
-block-reader capabilities belong to the subsequent composition steps.
+paths still work. These interfaces are provisional. Runtime-oracle capabilities
+belong to the subsequent composition steps; an experimental block-reader
+consumer now exercises fallible storage access.
 
 `SmoothDatafit` adds a fallible predictor gradient, observation count, and
 intercept policy. `ProximalPenalty` requires an exact prox for the complete
@@ -111,7 +112,8 @@ the mapping's infinity norm and the absolute free-intercept derivative at the
 returned iterate. It reports no duality gap. Unsupported criteria are rejected,
 line-search exhaustion returns a distinct error, and iteration limits remain
 finite unconverged results. Runtime oracles, workspace reuse across path points,
-allocation measurements, and fallible block reading remain subsequent steps.
+and allocation measurements remain subsequent steps. Experimental block reading
+reuses this solver with caller-owned storage buffers.
 
 Build working numerical code before stabilizing abstractions. Do not introduce
 an elaborate type system or one crate per prospective feature at bootstrap.
@@ -159,7 +161,7 @@ dense and sparse integrations, rather than defining a competing matrix API.
 Inspect dependency upgrades before changing the pinned release or relying on new
 capabilities.
 
-The crate pins the inspected release `lazymatrix = "=0.3.0"`, with default
+The crate pins the inspected release `lazymatrix = "=0.5.0"`, with default
 features disabled. Shrinkage's versioned features `faer_v0_24`,
 `nalgebra_v0_34`, `ndarray_v0_17`, and `sprs_v0_11` forward to the matching
 LazyMatrix features. The short names `faer`, `nalgebra`, `ndarray`, and `sprs`
@@ -168,17 +170,26 @@ benchmarks on the versioned features so either entry point works. These retain
 faer 0.24, nalgebra 0.34 with nalgebra-sparse 0.11, ndarray 0.17, and sprs 0.11.
 ndarray arrays and borrowed views support row-major, column-major, and strided
 storage. sprs CSC matrices and views use LazyMatrix's checked `SprsCsc` wrapper;
-callers explicitly convert CSR input to CSC before fitting. Version 0.3.0
+callers explicitly convert CSR input to CSC before fitting. Version 0.5.0
 supplies fallible statistics and products, including a combined
-normalization-statistics hook. Other backends and storage capabilities remain
-outside this solver's public feature set. Keep upstream development overrides
-local so a clean checkout builds without the sibling repository.
+normalization-statistics hook. Keep upstream development overrides local so the
+regular fitting APIs build without the sibling repository.
 
-Expose only one release line per backend until LazyMatrix supports concurrent
-implementations for multiple versions. In release 0.3.0, Cargo feature
-unification can enable a newer adapter through another dependency and remove the
-trait implementations for older matrix types. Versioned feature names do not
-isolate a consumer from this upstream limitation.
+Shrinkage exposes one release line per backend. LazyMatrix 0.5.0 implements
+every enabled release independently, retaining older matrix types when feature
+unification enables another release.
+
+The `experimental-block-reader` feature prototypes caller-buffered rectangular
+access with the published LazyMatrix `ReadBlock` trait.
+`experimental::BufferedDesign` borrows one reusable buffer, implements raw
+forward and transpose products, and forwards column statistics without changing
+their combined scan hook. `experimental::fit_buffered` validates finite entries,
+shares normalization preparation, and reuses proximal iteration and fitted
+parameter transformation. The `zarrs_v0_22` feature and `zarrs` alias supply its
+storage backend. This path keeps decoding out of borrowed-column traits and
+discards failed blocks before accumulation. Observation and coefficient vectors
+remain in RAM. Strict byte budgets, caching, and reader stabilization remain
+future work.
 
 For centering vector `c` and diagonal scale matrix `S`, optimize using
 
@@ -208,7 +219,7 @@ residual refreshes, and full convergence checks are separate passes. Test these
 operation counts and compare reconstructed residuals against dense references;
 periodically refresh cached state to control floating-point drift.
 
-Reusable output does not imply allocation-free execution. In release 0.3.0,
+Reusable output does not imply allocation-free execution. In release 0.5.0,
 `LazyMatrix::matvec_into` clones its input when scaling is active. Measure that
 allocation in the proximal-gradient consumer. Before claiming an allocation-free
 normalized iteration, add and verify reusable normalization scratch storage in
@@ -237,14 +248,14 @@ File-backed failures must propagate as errors rather than panic or corrupt a
 fit.
 
 Products, column statistics, and computed normalization return `Result` in
-LazyMatrix 0.3.0. The lasso uses the combined `normalization_stats` hook and
+LazyMatrix 0.5.0. The lasso uses the combined `normalization_stats` hook and
 preserves preprocessing errors with their operation context and source type.
-Borrowed column views remain infallible and must not hide I/O or decoding. A
-fallible block reader still needs a separate capability. Establish its borrowing
-and buffer-reuse contracts during the composition milestone, before solver
-interfaces stabilize. The prototype must use a bounded block buffer and an
-injected read failure, including during preprocessing and a later solver
-iteration. Full file-format support remains a later milestone.
+Borrowed column views remain infallible and must not hide I/O or decoding. The
+separate `ReadBlock` capability binds each successful block to caller-owned
+storage. The experimental consumer reuses a bounded buffer and tests injected
+read failures during preprocessing, backtracking, and later solver iterations.
+Failed blocks never reach accumulation or loss evaluation. Broader file-format
+support remains a later milestone.
 
 ## 6. Datafits, penalties, and solver oracles
 

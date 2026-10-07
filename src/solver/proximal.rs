@@ -90,7 +90,7 @@ impl ProximalVector for ndarray::Array1<f64> {
 ///
 /// `V` is the design backend's owned vector: `faer::Col<f64>`,
 /// `nalgebra::DVector<f64>`, `ndarray::Array1<f64>`, or `Vec<f64>` for sprs.
-/// No normalized design or Gram matrix is formed. LazyMatrix 0.3.0 still
+/// No normalized design or Gram matrix is formed. LazyMatrix 0.5.0 still
 /// clones the input to scaled forward products.
 ///
 /// ```
@@ -158,7 +158,7 @@ impl<V> ProximalGradient<V> {
         self
     }
 
-    fn validate<E>(&self) -> Result<f64, FitError<E>> {
+    pub(crate) fn validate<E>(&self) -> Result<f64, FitError<E>> {
         let StoppingCriterion::ProximalGradientMapping { absolute } = self.criterion else {
             return Err(invalid(
                 "proximal gradient supports proximal-gradient mapping only; select StoppingCriterion::proximal_gradient_mapping",
@@ -283,7 +283,7 @@ impl<V: ProximalVector> Workspace<V> {
     }
 }
 
-fn iterate<M, D, P, V>(
+pub(crate) fn iterate<M, D, P, V>(
     matrix: &LazyMatrix<M>,
     datafit: &D,
     penalty: &P,

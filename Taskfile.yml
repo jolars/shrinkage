@@ -25,13 +25,17 @@ tasks:
       - cargo test --locked --no-default-features --features nalgebra
       - cargo test --locked --no-default-features --features ndarray
       - cargo test --locked --no-default-features --features sprs
+      - cargo test --locked --no-default-features --features zarrs_v0_22
+      - cargo test --locked --no-default-features --features zarrs
+      - cargo test --locked --no-default-features --features experimental-block-reader,zarrs_v0_22
       - cargo test --locked --all-features
 
   example:
-    desc: Verify dense and sparse normalization and lasso fitting
+    desc: Verify normalization, lasso fitting, and buffered Zarr fitting
     cmds:
       - cargo run --locked --example normalization --features faer_v0_24
       - cargo run --locked --example lasso --features faer_v0_24
+      - cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
 
   bench:
     desc: Benchmark Gaussian lasso with only the faer backend enabled

@@ -173,14 +173,39 @@ directly.
 
 The solver shares the lasso's normalization preparation and
 prediction-preserving parameter transformation. It reuses CPU work buffers and
-never forms a Gram matrix or a normalized design. LazyMatrix 0.3.0 clones the
+never forms a Gram matrix or a normalized design. LazyMatrix 0.5.0 clones the
 coefficient input on each scaled forward product, so normalized iterations still
 allocate. Run `task bench:proximal` to measure dense and CSC lasso, ridge, and
 elastic-net fitting, including validation and preprocessing.
 
+## Experimental block reads
+
+The `experimental-block-reader` feature exposes `experimental::fit_buffered` and
+`experimental::BufferedDesign`. Supply a positive rectangular block shape and an
+initialized `&mut [f64]` large enough for that shape. Validation and forward and
+transpose products reuse the buffer; normalization statistics retain the
+backend's combined scan hook. Proximal iteration, backtracking, and fitted
+coefficient transformations use the existing solver.
+
+The prototype uses the published LazyMatrix `ReadBlock` capability:
+
+```sh
+cargo test --locked --features experimental-block-reader,zarrs_v0_22
+cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
+```
+
+The example writes a temporary file-backed Zarr design one chunk at a time, fits
+ridge regression, and predicts through the buffered operator. `ProximalFit`'s
+regular `predict` method still requires borrowed columns. Reader and adapter
+interfaces remain provisional. A failed read yields no usable block; product
+outputs may be partial and must be discarded. Observation and coefficient
+vectors remain in RAM, and storage-chunk and codec workspace is additional to
+the caller's buffer. Rectangles crossing chunk boundaries can repeat decoding
+across successive reads.
+
 ## Matrix dependency
 
-The crate pins LazyMatrix 0.3.0 from crates.io. No matrix backend is enabled by
+The crate pins LazyMatrix 0.5.0 from crates.io. No matrix backend is enabled by
 default. Versioned features select LazyMatrix's integrations for a particular
 release line; the short names remain convenience aliases:
 
@@ -190,13 +215,13 @@ release line; the short names remain convenience aliases:
   | `nalgebra_v0_34`  | `nalgebra` | nalgebra 0.34 and nalgebra-sparse 0.11 | Dense matrices, dense views, and sparse CSC matrices |
   | `ndarray_v0_17`   | `ndarray`  | ndarray 0.17                           | Two-dimensional arrays and borrowed views            |
   | `sprs_v0_11`      | `sprs`     | sprs 0.11                              | Sparse CSC matrices and views wrapped in `SprsCsc`   |
+  | `zarrs_v0_22`     | `zarrs`    | zarrs 0.22                             | Chunked arrays through the experimental adapter      |
 
 Match your direct matrix dependency to the selected release line. Each versioned
 feature works independently of its alias, including the faer examples and
 benchmarks. Shrinkage currently exposes one release line per backend. LazyMatrix
-0.3.0 implements traits only for the newest enabled release of each backend, so
-another dependency enabling a newer adapter on the same LazyMatrix package can
-remove support for older matrix types.
+0.5.0 implements every enabled backend release independently, preserving the
+selected matrix types under feature unification.
 
 With `ndarray_v0_17` or its `ndarray` alias, fit directly against an array or
 borrowed view:

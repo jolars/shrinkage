@@ -43,12 +43,16 @@ jobs:
           cargo test --locked --no-default-features --features nalgebra
           cargo test --locked --no-default-features --features ndarray
           cargo test --locked --no-default-features --features sprs
+          cargo test --locked --no-default-features --features zarrs_v0_22
+          cargo test --locked --no-default-features --features zarrs
+          cargo test --locked --no-default-features --features experimental-block-reader,zarrs_v0_22
           cargo test --locked --all-features
 
       - name: Verify matrix integration and fitting
         run: |
           cargo run --locked --example normalization --features faer_v0_24
           cargo run --locked --example lasso --features faer_v0_24
+          cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
 
       - name: Check fitting heap budgets
         run: cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso_heap

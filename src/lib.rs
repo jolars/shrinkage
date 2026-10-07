@@ -12,9 +12,8 @@
 //! `sprs` are aliases for these features. Match your direct matrix dependency
 //! to the selected release line.
 //!
-//! LazyMatrix 0.3.0 implements traits only for the newest enabled release of
-//! each backend. Another dependency enabling a newer adapter on the same
-//! LazyMatrix package can remove support for older matrix types.
+//! LazyMatrix 0.5.0 implements each enabled backend release independently, so
+//! feature unification retains support for the selected matrix types.
 //!
 //! With `ndarray_v0_17` or its `ndarray` alias, fit directly against an array or
 //! borrowed view:
@@ -54,6 +53,8 @@
 
 pub mod datafit;
 pub mod error;
+#[cfg(feature = "experimental-block-reader")]
+pub mod experimental;
 pub mod fit;
 pub mod lasso;
 pub mod normalization;

@@ -147,6 +147,22 @@ where
             return Err(invalid("training data must have at least one observation"));
         }
         validate_matrix(x)?;
+        self.prepare_normalization(fit_intercept)
+    }
+}
+
+impl<M, D, P> Problem<&M, D, P>
+where
+    M: lazymatrix::MatrixShape + ColumnStats<f64> + ?Sized,
+{
+    pub(crate) fn prepare_normalization(
+        &self,
+        fit_intercept: bool,
+    ) -> Result<Prepared<&M>, LassoError<M::Error>> {
+        let x = self.design;
+        if x.nrows() == 0 {
+            return Err(invalid("training data must have at least one observation"));
+        }
         let spec = self.normalization.specification(fit_intercept);
         validate_supplied(&self.supplied_centers, x.ncols(), false)?;
         validate_supplied(&self.supplied_scales, x.ncols(), true)?;
@@ -238,6 +254,20 @@ pub(crate) struct Prepared<M> {
 }
 
 impl<M: lazymatrix::MatrixShape> Prepared<M> {
+    #[cfg(feature = "experimental-block-reader")]
+    pub(crate) fn map_data<N: lazymatrix::MatrixShape>(
+        self,
+        transform: impl FnOnce(M) -> N,
+    ) -> Prepared<N> {
+        let (matrix, centers, scales) = self.matrix.into_parts();
+        Prepared {
+            matrix: LazyMatrix::from_parts(transform(matrix), centers, scales),
+            spec: self.spec,
+            supplied_centers: self.supplied_centers,
+            supplied_scales: self.supplied_scales,
+        }
+    }
+
     pub fn into_preprocessing(self) -> Preprocessing {
         let (_, centers, scales) = self.matrix.into_parts();
         Preprocessing {
