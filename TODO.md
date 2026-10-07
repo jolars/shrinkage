@@ -86,7 +86,7 @@ boundaries only when an implemented consumer needs them.
   Construct runtime problems by independently selecting the design operator,
   predictor datafit, and complete proximal term; keep dispatch outside
   scalar loops and generic column views inside concrete adapters.
-- [ ] Compare typed and runtime fits and return actionable errors for
+- [x] Compare typed and runtime fits and return actionable errors for
   unsupported combinations.
 - [ ] Establish reusable workspace ownership across iterations and path points.
   Measure normalized-product and proximal allocations, including LazyMatrix

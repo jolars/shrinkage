@@ -77,8 +77,9 @@ The initial extraction separates `problem`, `datafit`, `penalty`, `fit`,
 `CoordinateDescent` implements `Solver<Problem<&M, Gaussian, L1>>` and owns the
 iteration machinery. `Problem::fit_with` accepts external solvers with their own
 result and error types. Component accessors expose the design, datafit, penalty,
-and normalization settings to those solvers. Unsupported coordinate-descent
-compositions have no `Solver` implementation.
+and normalization settings to those solvers. Unsupported typed compositions have
+no `Solver` implementation for coordinate descent. Selecting coordinate descent
+for runtime proximal oracles returns a compatibility error.
 
 `Datafit` and `Penalty` provide fallible value evaluation. Gaussian residual
 loss and L1 coordinate minimization are shared with the specialized solver,
@@ -162,6 +163,16 @@ An `auto` policy considers mathematical compatibility, storage access, memory,
 and available implementations. Initially use a documented deterministic policy;
 defer a sophisticated planner. Report the chosen solver and allow overrides.
 Unsupported combinations must produce actionable errors.
+
+The initial runtime API requires smooth datafits and complete proximal terms at
+construction through trait bounds. `FitError::UnsupportedCombination` identifies
+the selected solver, the incompatible selection or missing capability, and a
+supported alternative. Unsupported stopping rules return this error in both
+typed and runtime fits. `CoordinateDescent` rejects `RuntimeProblem` before
+preparation because the proximal oracles lack its Gaussian/L1 coordinate updates
+and dual certificate. Its error directs callers to runtime proximal gradient or
+a typed Gaussian/L1 problem. External components can return the same error for
+their own compatibility requirements, and runtime dispatch preserves it.
 
 ## 5. Matrices and LazyMatrix
 

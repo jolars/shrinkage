@@ -4,12 +4,13 @@ use std::{error::Error, marker::PhantomData};
 
 use lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, RawColumns};
 
-use crate::error::invalid;
+use crate::error::{invalid, unsupported};
 use crate::problem::{prepare_normalization, validate_matrix};
 use crate::solver::proximal::{NativeDesign, iterate};
 use crate::{
-    BackendError, FitError, Normalization, Preprocessing, Problem, ProximalDesign, ProximalFit,
-    ProximalGradient, ProximalPenalty, ProximalVector, SmoothDatafit, Solver,
+    BackendError, CoordinateDescent, FitError, LassoFit, Normalization, Preprocessing, Problem,
+    ProximalDesign, ProximalFit, ProximalGradient, ProximalPenalty, ProximalVector, SmoothDatafit,
+    Solver,
 };
 
 /// A problem whose design, smooth datafit, and complete proximal term are
@@ -23,6 +24,29 @@ use crate::{
 /// [`ProximalGradient<Vec<f64>>`] fits this problem, while adapters retain each
 /// backend's native vector type. Normalization and supplied vectors use the
 /// same builders and semantics as the typed [`Problem`].
+/// Selecting [`CoordinateDescent`] returns [`FitError::UnsupportedCombination`]
+/// before preparing the design: these oracles do not expose its Gaussian/L1
+/// coordinate updates and dual certificate. Use proximal gradient here, or a
+/// typed Gaussian/L1 problem with coordinate descent. A value-only datafit or
+/// penalty cannot be boxed into the required capability traits.
+///
+/// ```compile_fail
+/// use shrinkage::{FitError, Penalty, ProximalPenalty};
+/// fn select_penalty<P: Penalty<Error = FitError> + 'static>(penalty: P)
+///     -> Box<dyn ProximalPenalty>
+/// {
+///     Box::new(penalty)
+/// }
+/// ```
+///
+/// ```compile_fail
+/// use shrinkage::{Datafit, FitError, SmoothDatafit};
+/// fn select_datafit<D: Datafit<Error = FitError> + 'static>(datafit: D)
+///     -> Box<dyn SmoothDatafit>
+/// {
+///     Box::new(datafit)
+/// }
+/// ```
 ///
 /// ```
 /// # #[cfg(feature = "faer_v0_24")] {
@@ -187,5 +211,18 @@ impl Solver<RuntimeProblem<'_>> for ProximalGradient<Vec<f64>> {
             threshold,
         )?;
         ProximalFit::from_solution(solution, design.into_preprocessing())
+    }
+}
+
+impl Solver<RuntimeProblem<'_>> for CoordinateDescent {
+    type Fit = LassoFit;
+    type Error = FitError<BackendError>;
+
+    fn solve(&self, _problem: &RuntimeProblem<'_>) -> Result<Self::Fit, Self::Error> {
+        Err(unsupported(
+            "CoordinateDescent",
+            "runtime proximal oracles do not expose Gaussian/L1 coordinate updates or a dual certificate",
+            "use ProximalGradient<Vec<f64>> for RuntimeProblem, or a typed Problem with Gaussian and L1 for CoordinateDescent",
+        ))
     }
 }

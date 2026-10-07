@@ -163,8 +163,9 @@ tolerance of `1e-6`. For step `t`, the mapping is
 the absolute intercept derivative, is evaluated at the returned parameters. Set
 it with `tolerance` or
 `terminate_on(StoppingCriterion::proximal_gradient_mapping(...))`. Other
-criteria are rejected. `ProximalFit` reports the criterion, value, threshold,
-objective, and final step without claiming a duality gap.
+criteria return `FitError::UnsupportedCombination` with a supported alternative.
+`ProximalFit` reports the criterion, value, threshold, objective, and final step
+without claiming a duality gap.
 
 External components implement `SmoothDatafit` and `ProximalPenalty`. The latter
 requires the prox of the entire term; individual proximal maps do not establish
@@ -221,6 +222,22 @@ Runtime backend failures return `FitError<BackendError>` with their operation
 context and original error accessible through `BackendError::as_error` and the
 error source chain. Product buffers are reused within a fit; ownership across
 fits and regularization paths remains future work.
+
+Typed and runtime fits use the same component contracts and return matching
+parameters, predictions, normalization metadata, and stopping diagnostics,
+including when they reach an iteration limit. Runtime components must implement
+`SmoothDatafit` and `ProximalPenalty`; value-only components are rejected by
+Rust's trait bounds. A sum of penalties needs a proximal map for its complete
+term.
+
+Selecting `CoordinateDescent` for a `RuntimeProblem` returns
+`FitError::UnsupportedCombination` before preparing the design. Runtime proximal
+oracles do not expose its Gaussian/L1 coordinate updates or dual certificate.
+Use `ProximalGradient<Vec<f64>>` for runtime composition, or pass a typed
+`Problem` with `Gaussian` and `L1` to `CoordinateDescent`. Compatibility errors
+provide the solver, reason, and suggested alternative. Invalid data and option
+values still return `FitError::InvalidInput`, while iteration limits remain
+fitted results with `Termination::IterationLimit`.
 
 ## Experimental block reads
 

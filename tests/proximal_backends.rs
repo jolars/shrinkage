@@ -12,8 +12,8 @@ mod matrix;
 
 use shrinkage::lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, RawColumns};
 use shrinkage::{
-    ElasticNet, Gaussian, MatrixDesign, Normalization, Problem, ProximalGradient, ProximalVector,
-    RuntimeProblem, Termination,
+    Centering, ElasticNet, Gaussian, MatrixDesign, Normalization, Problem, ProximalGradient,
+    ProximalVector, RuntimeProblem, Scaling, Termination,
 };
 
 const ROWS: [[f64; 3]; 5] = [
@@ -43,6 +43,14 @@ where
             Normalization::None,
             Normalization::Center,
             Normalization::Standardize,
+            Normalization::MinMax,
+            Normalization::MaxAbs,
+            Normalization::L1,
+            Normalization::L2,
+            Normalization::Custom {
+                center: Centering::Mean,
+                scale: Scaling::L2,
+            },
         ] {
             for (l1, l2) in [(0.1, 0.0), (0.0, 0.3), (0.1, 0.3)] {
                 let datafit = Gaussian::new(&Y).fit_intercept(intercept);
@@ -51,14 +59,6 @@ where
                     .normalize(normalization)
                     .fit_with(
                         &ProximalGradient::<V>::new()
-                            .tolerance(1e-9)
-                            .max_iterations(200_000),
-                    )
-                    .unwrap();
-                let expected = Problem::new(&reference, datafit, penalty)
-                    .normalize(normalization)
-                    .fit_with(
-                        &ProximalGradient::<Vec<f64>>::new()
                             .tolerance(1e-9)
                             .max_iterations(200_000),
                     )
@@ -80,6 +80,8 @@ where
                 assert_eq!(runtime.objective(), actual.objective());
                 assert_eq!(runtime.termination(), actual.termination());
                 assert_eq!(runtime.iterations(), actual.iterations());
+                assert_eq!(runtime.stopping_criterion(), actual.stopping_criterion());
+                assert_eq!(runtime.stopping_threshold(), actual.stopping_threshold());
                 assert_eq!(runtime.stopping_value(), actual.stopping_value());
                 assert_eq!(runtime.step_size(), actual.step_size());
                 assert_eq!(
@@ -91,30 +93,68 @@ where
                     actual.preprocessing().scales()
                 );
                 assert_eq!(
+                    runtime.preprocessing().centering(),
+                    actual.preprocessing().centering()
+                );
+                assert_eq!(
+                    runtime.preprocessing().scaling(),
+                    actual.preprocessing().scaling()
+                );
+                assert_eq!(
+                    runtime.preprocessing().centers_were_supplied(),
+                    actual.preprocessing().centers_were_supplied()
+                );
+                assert_eq!(
+                    runtime.preprocessing().scales_were_supplied(),
+                    actual.preprocessing().scales_were_supplied()
+                );
+                assert_eq!(
+                    runtime.predict(design).unwrap(),
+                    actual.predict(design).unwrap()
+                );
+                assert_eq!(
                     actual.termination(),
                     Termination::Converged,
                     "intercept={intercept}, normalization={normalization:?}, penalty=({l1}, {l2}), fit={actual:?}"
                 );
-                assert_eq!(expected.termination(), Termination::Converged);
-                close(actual.objective(), expected.objective());
-                close(actual.intercept(), expected.intercept());
-                for (a, b) in actual.coefficients().iter().zip(expected.coefficients()) {
-                    close(*a, *b);
-                }
-                for (a, b) in actual
-                    .predict(design)
-                    .unwrap()
-                    .iter()
-                    .zip(expected.predict(&reference).unwrap())
-                {
-                    close(*a, b);
-                }
                 assert!(
                     actual
                         .predict(&matrix::Matrix::empty(0, 3))
                         .unwrap()
                         .is_empty()
                 );
+                // The independent CSC fixture implements only means and standard
+                // deviations; every policy still compares typed and runtime fits.
+                if matches!(
+                    normalization,
+                    Normalization::Auto
+                        | Normalization::None
+                        | Normalization::Center
+                        | Normalization::Standardize
+                ) {
+                    let expected = Problem::new(&reference, datafit, penalty)
+                        .normalize(normalization)
+                        .fit_with(
+                            &ProximalGradient::<Vec<f64>>::new()
+                                .tolerance(1e-9)
+                                .max_iterations(200_000),
+                        )
+                        .unwrap();
+                    assert_eq!(expected.termination(), Termination::Converged);
+                    close(actual.objective(), expected.objective());
+                    close(actual.intercept(), expected.intercept());
+                    for (a, b) in actual.coefficients().iter().zip(expected.coefficients()) {
+                        close(*a, *b);
+                    }
+                    for (a, b) in actual
+                        .predict(design)
+                        .unwrap()
+                        .iter()
+                        .zip(expected.predict(&reference).unwrap())
+                    {
+                        close(*a, b);
+                    }
+                }
             }
         }
     }

@@ -251,8 +251,6 @@ fn solver_validates_options_and_reports_line_search_failure() {
         ProximalGradient::new().initial_step(-1.0),
         ProximalGradient::new().initial_step(f64::INFINITY),
         ProximalGradient::new().max_iterations(0),
-        ProximalGradient::new().terminate_on(StoppingCriterion::kkt_violation(1e-6)),
-        ProximalGradient::new().terminate_on(StoppingCriterion::duality_gap(1e-6)),
     ] {
         assert!(matches!(
             problem.fit_with(&solver),

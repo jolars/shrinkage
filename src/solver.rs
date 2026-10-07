@@ -5,13 +5,14 @@ pub(crate) mod proximal;
 
 pub use proximal::{ProximalDesign, ProximalGradient, ProximalVector};
 
-use crate::error::invalid;
+use crate::error::{invalid, unsupported};
 use crate::{FitError, L1};
 
 /// A solver for a supported problem type.
 ///
 /// Implementations own their compatibility bounds and result and error types.
-/// Unsupported combinations have no implementation.
+/// Unsupported typed combinations have no implementation. Runtime selections
+/// may return [`FitError::UnsupportedCombination`] with a supported alternative.
 pub trait Solver<P> {
     /// Owned result returned after fitting.
     type Fit;
@@ -125,8 +126,10 @@ impl CoordinateDescent {
     pub(crate) fn validate<E>(&self, criterion: StoppingCriterion) -> Result<(), FitError<E>> {
         match criterion {
             StoppingCriterion::ProximalGradientMapping { .. } => {
-                return Err(invalid(
-                    "coordinate descent does not support proximal-gradient mapping; select KKT violation or duality gap",
+                return Err(unsupported(
+                    "CoordinateDescent",
+                    "proximal-gradient mapping is not implemented for coordinate descent",
+                    "select KKT violation or duality gap",
                 ));
             }
             StoppingCriterion::KktViolation { absolute } => {

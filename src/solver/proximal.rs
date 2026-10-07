@@ -11,7 +11,7 @@ use lazymatrix::{
     ScaledSubSlice, SubScalarAssign, SumEntries,
 };
 
-use crate::error::{finite, invalid};
+use crate::error::{finite, invalid, unsupported};
 use crate::{
     FitError, Problem, ProximalFit, ProximalPenalty, SmoothDatafit, Solver, StoppingCriterion,
     Termination,
@@ -164,8 +164,13 @@ impl<V> ProximalGradient<V> {
 
     pub(crate) fn validate<E>(&self) -> Result<f64, FitError<E>> {
         let StoppingCriterion::ProximalGradientMapping { absolute } = self.criterion else {
-            return Err(invalid(
-                "proximal gradient supports proximal-gradient mapping only; select StoppingCriterion::proximal_gradient_mapping",
+            return Err(unsupported(
+                "ProximalGradient",
+                format!(
+                    "stopping criterion {:?} is not implemented for proximal gradient",
+                    self.criterion
+                ),
+                "select StoppingCriterion::proximal_gradient_mapping",
             ));
         };
         if !absolute.is_finite() || absolute <= 0.0 {

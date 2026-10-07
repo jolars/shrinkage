@@ -41,6 +41,15 @@ pub enum FitError<E = Infallible> {
         /// Description of the invalid input, including its location when available.
         message: String,
     },
+    /// The selected solver cannot support a component or stopping rule.
+    UnsupportedCombination {
+        /// Solver whose requirements were not met.
+        solver: &'static str,
+        /// Missing capability or incompatible selection.
+        reason: String,
+        /// A supported alternative or the capability needed to proceed.
+        suggestion: &'static str,
+    },
     /// Arithmetic produced a nonfinite value from finite inputs.
     NumericalFailure {
         /// Operation that encountered the nonfinite value.
@@ -68,6 +77,14 @@ impl<E: fmt::Display> fmt::Display for FitError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidInput { message } => write!(f, "invalid fit input: {message}"),
+            Self::UnsupportedCombination {
+                solver,
+                reason,
+                suggestion,
+            } => write!(
+                f,
+                "unsupported fit combination for {solver}: {reason}; {suggestion}"
+            ),
             Self::NumericalFailure {
                 operation,
                 iteration,
@@ -93,6 +110,15 @@ impl<E> FitError<E> {
     {
         match self {
             Self::InvalidInput { message } => FitError::InvalidInput { message },
+            Self::UnsupportedCombination {
+                solver,
+                reason,
+                suggestion,
+            } => FitError::UnsupportedCombination {
+                solver,
+                reason,
+                suggestion,
+            },
             Self::NumericalFailure {
                 operation,
                 iteration,
@@ -113,6 +139,15 @@ impl<E> FitError<E> {
     pub(crate) fn from_component(error: FitError, iteration: usize) -> Self {
         match error {
             FitError::InvalidInput { message } => Self::InvalidInput { message },
+            FitError::UnsupportedCombination {
+                solver,
+                reason,
+                suggestion,
+            } => Self::UnsupportedCombination {
+                solver,
+                reason,
+                suggestion,
+            },
             FitError::NumericalFailure { operation, .. } => Self::NumericalFailure {
                 operation,
                 iteration,
@@ -146,6 +181,18 @@ impl<E> From<NumericalFailure> for FitError<E> {
 pub(crate) fn invalid<E>(message: impl Into<String>) -> FitError<E> {
     FitError::InvalidInput {
         message: message.into(),
+    }
+}
+
+pub(crate) fn unsupported<E>(
+    solver: &'static str,
+    reason: impl Into<String>,
+    suggestion: &'static str,
+) -> FitError<E> {
+    FitError::UnsupportedCombination {
+        solver,
+        reason: reason.into(),
+        suggestion,
     }
 }
 
