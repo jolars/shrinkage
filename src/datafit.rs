@@ -43,6 +43,53 @@ pub trait Datafit {
     fn value(&self, predictor: &[f64]) -> Result<f64, Self::Error>;
 }
 
+/// A differentiable convex loss on the complete linear predictor.
+///
+/// Proximal gradient uses this derivative with forward and transposed design
+/// products. Implementations must use the same normalization in both methods.
+pub trait SmoothDatafit: Datafit<Error = FitError> {
+    /// Number of training observations.
+    fn nobs(&self) -> usize;
+
+    /// Whether the solver should fit a free, unpenalized intercept.
+    fn fits_intercept(&self) -> bool;
+
+    /// Write the predictor gradient into reusable output storage.
+    ///
+    /// # Errors
+    /// Reject invalid response data, dimensions, predictor values, or arithmetic.
+    /// Output is unspecified after an error.
+    fn gradient(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError>;
+}
+
+impl SmoothDatafit for Gaussian<'_> {
+    fn nobs(&self) -> usize {
+        self.response.len()
+    }
+
+    fn fits_intercept(&self) -> bool {
+        self.fit_intercept
+    }
+
+    fn gradient(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError> {
+        self.validate(predictor.len())?;
+        if output.len() != predictor.len() {
+            return Err(invalid("predictor and gradient lengths must match"));
+        }
+        for ((&value, &target), derivative) in predictor.iter().zip(self.response).zip(output) {
+            if !value.is_finite() {
+                return Err(invalid("predictor values must be finite"));
+            }
+            *derivative = finite(
+                (value - target) / predictor.len() as f64,
+                "computing the predictor gradient",
+                0,
+            )?;
+        }
+        Ok(())
+    }
+}
+
 impl Gaussian<'_> {
     /// Borrow the observed response.
     pub fn response(&self) -> &[f64] {

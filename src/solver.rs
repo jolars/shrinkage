@@ -1,6 +1,9 @@
 //! Solver capabilities, configuration, and stopping rules.
 
 pub(crate) mod coordinate;
+pub(crate) mod proximal;
+
+pub use proximal::{ProximalGradient, ProximalVector};
 
 use crate::error::invalid;
 use crate::{FitError, L1};
@@ -80,6 +83,12 @@ pub enum StoppingCriterion {
         /// Absolute KKT tolerance.
         absolute: f64,
     },
+    /// Stop when the infinity norm of the proximal-gradient mapping, including
+    /// the unpenalized intercept derivative, is at most `absolute`.
+    ProximalGradientMapping {
+        /// Absolute stationarity tolerance on the optimization scale.
+        absolute: f64,
+    },
 }
 
 impl StoppingCriterion {
@@ -94,6 +103,11 @@ impl StoppingCriterion {
     /// Select an absolute KKT tolerance.
     pub const fn kkt_violation(absolute: f64) -> Self {
         Self::KktViolation { absolute }
+    }
+
+    /// Select an absolute proximal-gradient mapping tolerance.
+    pub const fn proximal_gradient_mapping(absolute: f64) -> Self {
+        Self::ProximalGradientMapping { absolute }
     }
 }
 
@@ -110,6 +124,11 @@ impl CoordinateDescent {
 
     pub(crate) fn validate<E>(&self, criterion: StoppingCriterion) -> Result<(), FitError<E>> {
         match criterion {
+            StoppingCriterion::ProximalGradientMapping { .. } => {
+                return Err(invalid(
+                    "coordinate descent does not support proximal-gradient mapping; select KKT violation or duality gap",
+                ));
+            }
             StoppingCriterion::KktViolation { absolute } => {
                 if !absolute.is_finite() || absolute <= 0.0 {
                     return Err(invalid(

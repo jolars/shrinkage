@@ -5,7 +5,7 @@ use std::{convert::Infallible, error::Error, fmt};
 /// Input, numerical, or backend failure. Backend errors retain their type.
 ///
 /// The default source type is [`Infallible`], used by prediction and in-memory
-/// matrix backends. Optimization iteration limits are reported in [`crate::LassoFit`].
+/// matrix backends. Optimization iteration limits are reported in the fitted result.
 #[derive(Debug)]
 pub enum FitError<E = Infallible> {
     /// Invalid data, dimensions, options, or backend-provided statistics.
@@ -17,32 +17,59 @@ pub enum FitError<E = Infallible> {
     NumericalFailure {
         /// Operation that encountered the nonfinite value.
         operation: &'static str,
-        /// Sweep during which the failure occurred; zero denotes initialization.
+        /// Iteration during which the failure occurred; zero denotes initialization.
         iteration: usize,
     },
-    /// A matrix backend failed while computing preprocessing statistics.
+    /// A matrix backend failed while computing statistics or a design product.
     Backend {
         /// Operation that requested the backend capability.
         operation: &'static str,
         /// Original backend error.
         source: E,
     },
+    /// Backtracking could not establish a valid smooth quadratic upper bound.
+    LineSearchFailure {
+        /// Iteration whose trial steps were rejected.
+        iteration: usize,
+        /// Last attempted step size.
+        step: f64,
+    },
 }
 
 impl<E: fmt::Display> fmt::Display for FitError<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidInput { message } => write!(f, "invalid lasso input: {message}"),
+            Self::InvalidInput { message } => write!(f, "invalid fit input: {message}"),
             Self::NumericalFailure {
                 operation,
                 iteration,
             } => write!(
                 f,
-                "nonfinite arithmetic while {operation} at sweep {iteration}"
+                "nonfinite arithmetic while {operation} at iteration {iteration}"
             ),
             Self::Backend { operation, source } => {
                 write!(f, "backend failed while {operation}: {source}")
             }
+            Self::LineSearchFailure { iteration, step } => write!(
+                f,
+                "proximal line search failed at iteration {iteration} with step {step}; reduce the initial step or increase max_backtracks"
+            ),
+        }
+    }
+}
+
+impl<E> FitError<E> {
+    pub(crate) fn from_component(error: FitError, iteration: usize) -> Self {
+        match error {
+            FitError::InvalidInput { message } => Self::InvalidInput { message },
+            FitError::NumericalFailure { operation, .. } => Self::NumericalFailure {
+                operation,
+                iteration,
+            },
+            FitError::LineSearchFailure { iteration, step } => {
+                Self::LineSearchFailure { iteration, step }
+            }
+            FitError::Backend { source, .. } => match source {},
         }
     }
 }

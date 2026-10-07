@@ -43,6 +43,11 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso_heap
 
+  bench:proximal:
+    desc: Benchmark proximal lasso, ridge, and elastic net with dense and CSC input
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench proximal
+
   check:
     desc: Run all required checks
     cmds:

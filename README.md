@@ -1,11 +1,12 @@
 # Shrinkage
 
 Shrinkage is a Rust library for regularized statistical models. It currently
-fits Gaussian lasso models with dense or sparse CSC input through a statically
-dispatched coordinate-descent solver. A typed Gaussian/L1 composition is
-available; broader composition and runtime APIs remain later milestones. See
-[DESIGN.md](DESIGN.md) for the architecture and statistical conventions, and
-[TODO.md](TODO.md) for the implementation checklist.
+fits Gaussian lasso models with dense or sparse CSC input through coordinate
+descent and fits lasso, ridge, and elastic net through proximal gradient. The
+typed API also accepts external smooth datafits and complete proximal penalties;
+runtime APIs remain later milestones. See [DESIGN.md](DESIGN.md) for the
+architecture and statistical conventions, and [TODO.md](TODO.md) for the
+implementation checklist.
 
 ## Gaussian lasso
 
@@ -122,6 +123,60 @@ Run the dense and CSC fitting example:
 ```console
 cargo run --locked --example lasso --features faer
 ```
+
+## Proximal gradient, ridge, and elastic net
+
+Use `ProximalGradient` with a differentiable convex predictor loss and an exact
+proximal map for the complete convex penalty. The built-in terms are
+`L1::new(lambda)`, `Ridge::new(lambda)` for `lambda * ||theta||² / 2`, and
+`ElasticNet::new(l1, l2)` for `l1 * ||theta||₁ + l2 * ||theta||² / 2`. Strengths
+are finite and nonnegative, and penalties act on normalized coefficients. The
+fitted intercept remains unpenalized.
+
+```rust
+use faer::{Col, Mat};
+use shrinkage::{ElasticNet, Gaussian, Problem, ProximalGradient, Termination};
+
+let x = Mat::from_fn(3, 1, |i, _| i as f64);
+let y = [1.0, 3.0, 5.0];
+let fit = Problem::new(&x, Gaussian::new(&y), ElasticNet::new(0.1, 0.2))
+    .fit_with(&ProximalGradient::<Col<f64>>::new())?;
+assert_eq!(fit.termination(), Termination::Converged);
+let predictions = fit.predict(&x)?;
+```
+
+Select the vector type supported by the design's LazyMatrix products: `Col<f64>`
+for faer, `DVector<f64>` for nalgebra, `Array1<f64>` for ndarray, or `Vec<f64>`
+for sprs. `ProximalVector` supplies owned CPU buffers for these types. Custom
+matrices implement LazyMatrix's fallible `MatVecInto` and `MatTransposeVecInto`
+in addition to the training-column capabilities.
+
+The solver starts at zero, backtracks by halving the step until the smooth loss
+satisfies its quadratic upper bound, and retains the accepted step. Configure
+`initial_step`, `max_backtracks`, and `max_iterations` independently. Exhausting
+the line search returns `FitError::LineSearchFailure`; exhausting accepted
+updates returns a finite `ProximalFit` with `Termination::IterationLimit`.
+
+The default stopping criterion is an absolute proximal-gradient mapping
+tolerance of `1e-6`. For step `t`, the mapping is
+`(theta - prox(theta - t * gradient)) / t`. Its infinity norm, maximized with
+the absolute intercept derivative, is evaluated at the returned parameters. Set
+it with `tolerance` or
+`terminate_on(StoppingCriterion::proximal_gradient_mapping(...))`. Other
+criteria are rejected. `ProximalFit` reports the criterion, value, threshold,
+objective, and final step without claiming a duality gap.
+
+External components implement `SmoothDatafit` and `ProximalPenalty`. The latter
+requires the prox of the entire term; individual proximal maps do not establish
+a valid prox for their sum. Elastic net implements its complete formula
+directly.
+
+The solver shares the lasso's normalization preparation and
+prediction-preserving parameter transformation. It reuses CPU work buffers and
+never forms a Gram matrix or a normalized design. LazyMatrix 0.3.0 clones the
+coefficient input on each scaled forward product, so normalized iterations still
+allocate. Run `task bench:proximal` to measure dense and CSC lasso, ridge, and
+elastic-net fitting, including validation and preprocessing.
 
 ## Matrix dependency
 

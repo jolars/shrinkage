@@ -80,7 +80,7 @@ boundaries only when an implemented consumer needs them.
 - [x] Extract small problem, datafit, penalty, result, and solver capabilities
   from the working lasso implementation. Keep matrix operations in
   LazyMatrix and solver state in Shrinkage.
-- [ ] Add proximal gradient, ridge (squared L2), and elastic net. Require a
+- [x] Add proximal gradient, ridge (squared L2), and elastic net. Require a
   valid proximal map for the complete nonsmooth term.
 - [ ] Run the same iteration routine with concrete and object-safe oracles.
   Construct runtime problems by independently selecting the design operator,

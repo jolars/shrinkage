@@ -1,7 +1,10 @@
 use std::cell::Cell;
 use std::convert::Infallible;
 
-use shrinkage::lazymatrix::{ColumnStats, MatrixErrorType, MatrixShape, RawColumn, RawColumns};
+use shrinkage::lazymatrix::{
+    ColumnStats, MatTransposeVecInto, MatVecInto, MatrixErrorType, MatrixShape, RawColumn,
+    RawColumns,
+};
 
 /// Small CSC oracle that also works without a matrix backend feature.
 pub struct Matrix {
@@ -90,6 +93,35 @@ macro_rules! unused_stats {
 
 impl MatrixErrorType for Matrix {
     type Error = Infallible;
+}
+
+impl MatVecInto<Vec<f64>> for Matrix {
+    fn matvec_into(&self, input: &Vec<f64>, output: &mut Vec<f64>) -> Result<(), Infallible> {
+        assert_eq!(input.len(), self.ncols());
+        assert_eq!(output.len(), self.nrows());
+        output.fill(0.0);
+        for (j, &value) in input.iter().enumerate() {
+            self.raw_column(j).affine_add_to(value, 0.0, output);
+        }
+        Ok(())
+    }
+}
+
+impl MatTransposeVecInto<Vec<f64>> for Matrix {
+    fn mat_transpose_vec_into(
+        &self,
+        input: &Vec<f64>,
+        output: &mut Vec<f64>,
+    ) -> Result<(), Infallible> {
+        assert_eq!(input.len(), self.nrows());
+        assert_eq!(output.len(), self.ncols());
+        output.fill(0.0);
+        for (j, value) in output.iter_mut().enumerate() {
+            self.raw_column(j)
+                .for_each_stored(|i, entry| *value += input[i] * entry);
+        }
+        Ok(())
+    }
 }
 
 impl ColumnStats<f64> for Matrix {

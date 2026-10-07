@@ -1,9 +1,10 @@
 # Shrinkage: design
 
-Status: Gaussian lasso convenience API and typed Gaussian/L1 coordinate-descent
-composition implemented; broader composition is the next architectural
-milestone. This document records architectural commitments and an implementation
-sequence; illustrative API names are not frozen interfaces.
+Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
+and proximal gradient with ridge and elastic net are implemented. Runtime
+composition is the next architectural step. This document records commitments
+and an implementation sequence; illustrative API names are not frozen
+interfaces.
 
 ## 1. Purpose
 
@@ -86,9 +87,31 @@ whose residual caches and dual certificate remain Gaussian/L1-specific.
 `LassoFit` retains the specialized diagnostics and owns original-scale
 prediction and back-transformation. `FitError` preserves backend sources;
 `LassoError` remains an alias, and existing root, `lasso`, and `problem` import
-paths still work. These interfaces are provisional. Derivative,
-complete-proximal, runtime-oracle, and fallible block-reader capabilities belong
-to the subsequent composition steps.
+paths still work. These interfaces are provisional. Runtime-oracle and fallible
+block-reader capabilities belong to the subsequent composition steps.
+
+`SmoothDatafit` adds a fallible predictor gradient, observation count, and
+intercept policy. `ProximalPenalty` requires an exact prox for the complete
+convex term. `L1`, `Ridge`, and `ElasticNet` implement this capability. Ridge
+means `lambda * ||theta||² / 2`; elastic net accepts separate strengths for
+`l1 * ||theta||₁ + l2 * ||theta||² / 2`. There is no inferred prox for a sum.
+
+`ProximalGradient<V>` uses LazyMatrix's fallible native-vector products and
+backtracking against the smooth quadratic upper bound. `ProximalVector` supplies
+owned CPU work buffers for `Vec`, faer `Col`, nalgebra `DVector`, and ndarray
+`Array1`. Slice buffers bridge predictor derivatives and complete proximal maps
+to those native buffers, with storage reused within a fit. This CPU capability
+does not prescribe future device storage. Shared problem preparation retains
+normalization metadata without copying its vectors. All normalization algebra
+remains in LazyMatrix, including its scaled forward-product input clone.
+
+`ProximalFit` owns original-scale parameters, preprocessing, objective, final
+step, and stopping diagnostics. The absolute proximal-gradient criterion uses
+the mapping's infinity norm and the absolute free-intercept derivative at the
+returned iterate. It reports no duality gap. Unsupported criteria are rejected,
+line-search exhaustion returns a distinct error, and iteration limits remain
+finite unconverged results. Runtime oracles, workspace reuse across path points,
+allocation measurements, and fallible block reading remain subsequent steps.
 
 Build working numerical code before stabilizing abstractions. Do not introduce
 an elaborate type system or one crate per prospective feature at bootstrap.

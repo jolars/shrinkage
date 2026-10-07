@@ -61,15 +61,15 @@ pub mod penalty;
 pub mod problem;
 pub mod solver;
 
-pub use datafit::{Datafit, Gaussian};
+pub use datafit::{Datafit, Gaussian, SmoothDatafit};
 pub use error::FitError;
 pub use error::FitError as LassoError;
-pub use fit::{LassoFit, Preprocessing, Termination};
+pub use fit::{LassoFit, Preprocessing, ProximalFit, Termination};
 pub use lasso::Lasso;
 pub use normalization::{Centering, Normalization, Scaling};
-pub use penalty::{L1, Penalty};
+pub use penalty::{ElasticNet, L1, Penalty, ProximalPenalty, Ridge};
 pub use problem::Problem;
-pub use solver::{CoordinateDescent, Solver, StoppingCriterion};
+pub use solver::{CoordinateDescent, ProximalGradient, ProximalVector, Solver, StoppingCriterion};
 
 /// Matrix capabilities, borrowed columns, and lazy normalization.
 pub use lazymatrix;

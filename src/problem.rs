@@ -8,9 +8,11 @@ use lazymatrix::{ColumnStats, LazyMatrix, RawColumn, RawColumns};
 
 /// A typed design, datafit, and penalty with training normalization settings.
 ///
-/// The implemented combination is a borrowed [`RawColumns`] design,
-/// [`Gaussian`] response, and [`L1`] penalty, fitted by [`CoordinateDescent`].
-/// Its result is an owned [`LassoFit`] with original-scale parameters.
+/// [`CoordinateDescent`] supports a borrowed [`RawColumns`] design with
+/// [`Gaussian`] and [`L1`], returning [`LassoFit`]. [`crate::ProximalGradient`]
+/// uses native forward and transposed products with [`crate::SmoothDatafit`]
+/// and a complete [`crate::ProximalPenalty`], returning [`crate::ProximalFit`].
+/// Both results retain original-scale parameters and training normalization.
 ///
 /// ```
 /// # #[cfg(feature = "faer_v0_24")] {
@@ -125,10 +127,27 @@ where
     fn fit_coordinate(&self, solver: &CoordinateDescent) -> Result<LassoFit, LassoError<M::Error>> {
         self.penalty.validate()?;
         solver.validate(solver.criterion(self.penalty))?;
+        self.datafit.validate(self.design.nrows())?;
+        let prepared = self.prepare(self.datafit.fit_intercept)?;
+        let solution = coordinate::solve(&prepared.matrix, self.datafit, self.penalty, solver)?;
+        LassoFit::from_solution(solution, prepared.into_preprocessing())
+    }
+}
+
+impl<M, D, P> Problem<&M, D, P>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
+{
+    pub(crate) fn prepare(
+        &self,
+        fit_intercept: bool,
+    ) -> Result<Prepared<&M>, LassoError<M::Error>> {
         let x = self.design;
-        self.datafit.validate(x.nrows())?;
+        if x.nrows() == 0 {
+            return Err(invalid("training data must have at least one observation"));
+        }
         validate_matrix(x)?;
-        let spec = self.normalization.specification(self.datafit.fit_intercept);
+        let spec = self.normalization.specification(fit_intercept);
         validate_supplied(&self.supplied_centers, x.ncols(), false)?;
         validate_supplied(&self.supplied_scales, x.ncols(), true)?;
         let center_rule = if self.supplied_centers.is_some() {
@@ -202,19 +221,32 @@ where
                 }
             }
         }
-        let matrix = LazyMatrix::from_parts(x, centers, scales);
-        let solution = coordinate::solve(&matrix, self.datafit, self.penalty, solver)?;
-        let (_, centers, scales) = matrix.into_parts();
-        LassoFit::from_solution(
-            solution,
-            Preprocessing {
-                spec,
-                centers,
-                scales,
-                supplied_centers: self.supplied_centers.is_some(),
-                supplied_scales: self.supplied_scales.is_some(),
-            },
-        )
+        Ok(Prepared {
+            matrix: LazyMatrix::from_parts(x, centers, scales),
+            spec,
+            supplied_centers: self.supplied_centers.is_some(),
+            supplied_scales: self.supplied_scales.is_some(),
+        })
+    }
+}
+
+pub(crate) struct Prepared<M> {
+    pub matrix: LazyMatrix<M>,
+    spec: lazymatrix::Normalization,
+    supplied_centers: bool,
+    supplied_scales: bool,
+}
+
+impl<M: lazymatrix::MatrixShape> Prepared<M> {
+    pub fn into_preprocessing(self) -> Preprocessing {
+        let (_, centers, scales) = self.matrix.into_parts();
+        Preprocessing {
+            spec: self.spec,
+            centers,
+            scales,
+            supplied_centers: self.supplied_centers,
+            supplied_scales: self.supplied_scales,
+        }
     }
 }
 

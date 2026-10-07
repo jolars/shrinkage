@@ -304,6 +304,9 @@ fn stopping_value(diagnostics: &Diagnostics, criterion: StoppingCriterion) -> f6
     match criterion {
         StoppingCriterion::DualityGap { .. } => diagnostics.duality_gap,
         StoppingCriterion::KktViolation { .. } => diagnostics.kkt_violation,
+        StoppingCriterion::ProximalGradientMapping { .. } => {
+            unreachable!("criterion was validated before iteration")
+        }
     }
 }
 
@@ -370,6 +373,9 @@ pub(crate) fn solve<M: RawColumns<f64>>(
             0,
         )?,
         StoppingCriterion::KktViolation { absolute } => absolute,
+        StoppingCriterion::ProximalGradientMapping { .. } => {
+            unreachable!("criterion was validated before iteration")
+        }
     };
     let mut check = diagnostics(
         matrix,

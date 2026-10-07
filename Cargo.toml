@@ -17,15 +17,17 @@ faer = { version = "0.24", optional = true, default-features = false, features =
   "std",
   "linalg",
 ] }
+nalgebra = { version = "0.34", optional = true, default-features = false, features = ["std"] }
+ndarray = { version = "0.17.2", optional = true, default-features = false, features = ["std"] }
 
 [features]
 default = []
 faer = ["faer_v0_24"]
 faer_v0_24 = ["dep:faer", "lazymatrix/faer_v0_24"]
 nalgebra = ["nalgebra_v0_34"]
-nalgebra_v0_34 = ["lazymatrix/nalgebra_v0_34"]
+nalgebra_v0_34 = ["dep:nalgebra", "lazymatrix/nalgebra_v0_34"]
 ndarray = ["ndarray_v0_17"]
-ndarray_v0_17 = ["lazymatrix/ndarray_v0_17"]
+ndarray_v0_17 = ["dep:ndarray", "lazymatrix/ndarray_v0_17"]
 sprs = ["sprs_v0_11"]
 sprs_v0_11 = ["lazymatrix/sprs_v0_11"]
 
@@ -52,6 +54,11 @@ required-features = ["faer_v0_24"]
 
 [[bench]]
 name = "lasso_heap"
+harness = false
+required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "proximal"
 harness = false
 required-features = ["faer_v0_24"]
 
