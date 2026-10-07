@@ -5,9 +5,9 @@ mod matrix;
 
 use matrix::Matrix;
 use shrinkage::{
-    CoordinateDescent, Datafit, ElasticNet, FitError, Gaussian, L1, Normalization, Penalty,
-    Problem, ProximalGradient, ProximalPenalty, Ridge, SmoothDatafit, StoppingCriterion,
-    Termination,
+    CoordinateDescent, Datafit, ElasticNet, FitError, Gaussian, L1, MatrixDesign, Normalization,
+    Penalty, Problem, ProximalGradient, ProximalPenalty, Ridge, RuntimeProblem, SmoothDatafit,
+    StoppingCriterion, Termination,
 };
 
 fn close(actual: f64, expected: f64) {
@@ -378,6 +378,7 @@ struct FailingProducts {
     forward_calls: std::cell::Cell<usize>,
     fail_forward: usize,
     fail_transpose: bool,
+    fail_statistics: bool,
 }
 
 impl shrinkage::lazymatrix::MatrixShape for FailingProducts {
@@ -403,6 +404,9 @@ impl shrinkage::lazymatrix::RawColumns<f64> for FailingProducts {
 macro_rules! delegate_stats {
     ($($name:ident $(($arg:ident))?),* $(,)?) => {
         $(fn $name(&self $(, $arg: &[f64])?) -> Result<Vec<f64>, std::io::Error> {
+            if self.fail_statistics {
+                return Err(std::io::Error::other("injected statistics failure"));
+            }
             Ok(shrinkage::lazymatrix::ColumnStats::$name(&self.matrix $(, $arg)?).unwrap())
         })*
     };
@@ -469,6 +473,7 @@ fn product_errors_preserve_sources_and_stop_after_partial_writes() {
             forward_calls: std::cell::Cell::new(0),
             fail_forward,
             fail_transpose,
+            fail_statistics: false,
         };
         let error = Problem::new(&matrix, Gaussian::new(&[1.0, 3.0, 5.0]), Ridge::new(0.1))
             .fit_with(&ProximalGradient::<Vec<f64>>::new().initial_step(0.1))
@@ -478,6 +483,53 @@ fn product_errors_preserve_sources_and_stop_after_partial_writes() {
             matches!(error, FitError::Backend { operation: actual, .. } if actual == operation)
         );
         if !fail_transpose {
+            assert_eq!(matrix.forward_calls.get(), fail_forward);
+        }
+    }
+}
+
+#[test]
+fn runtime_backend_errors_retain_original_sources_and_discard_partial_outputs() {
+    use std::error::Error;
+    for (fail_forward, fail_transpose, fail_statistics, operation) in [
+        (1, false, false, "computing a forward design product"),
+        (3, false, false, "computing a forward design product"),
+        (
+            usize::MAX,
+            true,
+            false,
+            "computing a transposed design product",
+        ),
+        (
+            usize::MAX,
+            false,
+            true,
+            "computing training normalization statistics",
+        ),
+    ] {
+        let matrix = FailingProducts {
+            matrix: Matrix::from_rows(&[&[0.0], &[1.0], &[2.0]]),
+            forward_calls: std::cell::Cell::new(0),
+            fail_forward,
+            fail_transpose,
+            fail_statistics,
+        };
+        let error = RuntimeProblem::new(
+            Box::new(MatrixDesign::<_, Vec<f64>>::new(&matrix)),
+            Box::new(Gaussian::new(&[1.0, 3.0, 5.0])),
+            Box::new(Ridge::new(0.1)),
+        )
+        .fit_with(&ProximalGradient::new().initial_step(0.1))
+        .unwrap_err();
+        let original = error.source().unwrap().source().unwrap();
+        assert!(original.downcast_ref::<std::io::Error>().is_some());
+        assert!(original.to_string().contains("injected"));
+        assert!(
+            matches!(error, FitError::Backend { operation: actual, .. } if actual == operation)
+        );
+        if fail_statistics {
+            assert_eq!(matrix.forward_calls.get(), 0);
+        } else if !fail_transpose {
             assert_eq!(matrix.forward_calls.get(), fail_forward);
         }
     }

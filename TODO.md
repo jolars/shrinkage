@@ -82,7 +82,7 @@ boundaries only when an implemented consumer needs them.
   LazyMatrix and solver state in Shrinkage.
 - [x] Add proximal gradient, ridge (squared L2), and elastic net. Require a
   valid proximal map for the complete nonsmooth term.
-- [ ] Run the same iteration routine with concrete and object-safe oracles.
+- [x] Run the same iteration routine with concrete and object-safe oracles.
   Construct runtime problems by independently selecting the design operator,
   predictor datafit, and complete proximal term; keep dispatch outside
   scalar loops and generic column views inside concrete adapters.

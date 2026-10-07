@@ -1,10 +1,9 @@
 # Shrinkage: design
 
 Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
-and proximal gradient with ridge and elastic net are implemented. Runtime
-composition is the next architectural step. This document records commitments
-and an implementation sequence; illustrative API names are not frozen
-interfaces.
+and typed and runtime proximal gradient with ridge and elastic net are
+implemented. This document records commitments and an implementation sequence;
+illustrative API names are not frozen interfaces.
 
 ## 1. Purpose
 
@@ -87,9 +86,8 @@ whose residual caches and dual certificate remain Gaussian/L1-specific.
 `LassoFit` retains the specialized diagnostics and owns original-scale
 prediction and back-transformation. `FitError` preserves backend sources;
 `LassoError` remains an alias, and existing root, `lasso`, and `problem` import
-paths still work. These interfaces are provisional. Runtime-oracle capabilities
-belong to the subsequent composition steps; an experimental block-reader
-consumer now exercises fallible storage access.
+paths still work. These interfaces are provisional. Runtime proximal oracles and
+an experimental block-reader consumer exercise fallible storage access.
 
 `SmoothDatafit` adds a fallible predictor gradient, observation count, and
 intercept policy. `ProximalPenalty` requires an exact prox for the complete
@@ -98,8 +96,11 @@ means `lambda * ||theta||² / 2`; elastic net accepts separate strengths for
 `l1 * ||theta||₁ + l2 * ||theta||² / 2`. There is no inferred prox for a sum.
 
 `ProximalGradient<V>` uses LazyMatrix's fallible native-vector products and
-backtracking against the smooth quadratic upper bound. `ProximalVector` supplies
-owned CPU work buffers for `Vec`, faer `Col`, nalgebra `DVector`, and ndarray
+backtracking against the smooth quadratic upper bound. `ProximalDesign` exposes
+complete slice-based forward and transposed products to the shared iteration.
+Concrete adapters own normalized LazyMatrix views and native buffers, while
+iteration owns slice buffers for scalar updates. `ProximalVector` supplies owned
+CPU work buffers for `Vec`, faer `Col`, nalgebra `DVector`, and ndarray
 `Array1`. Slice buffers bridge predictor derivatives and complete proximal maps
 to those native buffers, with storage reused within a fit. This CPU capability
 does not prescribe future device storage. Shared problem preparation retains
@@ -111,9 +112,9 @@ step, and stopping diagnostics. The absolute proximal-gradient criterion uses
 the mapping's infinity norm and the absolute free-intercept derivative at the
 returned iterate. It reports no duality gap. Unsupported criteria are rejected,
 line-search exhaustion returns a distinct error, and iteration limits remain
-finite unconverged results. Runtime oracles, workspace reuse across path points,
-and allocation measurements remain subsequent steps. Experimental block reading
-reuses this solver with caller-owned storage buffers.
+finite unconverged results. Workspace reuse across path points and allocation
+measurements remain subsequent steps. Experimental block reading reuses this
+solver with caller-owned storage buffers.
 
 Build working numerical code before stabilizing abstractions. Do not introduce
 an elaborate type system or one crate per prospective feature at bootstrap.
@@ -134,13 +135,22 @@ and solver types for R/Python. General solvers should accept object-safe oracles
 where practical, while important specialized combinations can be explicitly
 monomorphized. Keep both paths backed by the same mathematical components.
 
-For the initial CPU proximal solver, erase the design operator, predictor
-datafit, and complete proximal term independently when constructing a runtime
-problem. Each adapter retains its concrete backend and workspace internally.
-Erasing a fully instantiated `Problem<Matrix, Datafit, Penalty>` afterward does
-not avoid constructing the Cartesian product. The same iteration routine must
-accept concrete and erased solver oracles, with no runtime dispatch inside
-scalar loops. Specialized coordinate solvers may erase a complete sweep.
+For the initial CPU proximal solver, `RuntimeProblem` composes independently
+boxed `RuntimeDesign`, `SmoothDatafit`, and `ProximalPenalty` objects.
+`MatrixDesign<M, V>` adapts a borrowed backend independently of the other
+components. Its object-safe preparation resolves normalization using the
+datafit's intercept policy, validates concrete columns, and constructs a
+`ProximalDesign` oracle with native product buffers. Consuming this oracle moves
+the fitted normalization vectors into `ProximalFit` without cloning them.
+
+The same iteration routine accepts concrete and erased design, datafit, and
+penalty oracles. Runtime iteration uses `ProximalGradient<Vec<f64>>` options and
+concrete slice storage, regardless of backend vector types. Virtual calls occur
+at whole-operation boundaries, outside scalar loops. Backend errors erase to
+`BackendError`, which retains the original error and its source chain. Erasing a
+fully instantiated `Problem<Matrix, Datafit, Penalty>` afterward does not avoid
+constructing the Cartesian product. Specialized coordinate solvers may erase a
+complete sweep.
 
 LazyMatrix's `Columns` and `RawColumns` use generic associated view types, and
 `LogicalColumn` has generic methods. They are static capabilities, not runtime

@@ -1,9 +1,13 @@
-//! Backtracking proximal gradient over native LazyMatrix products.
+//! Backtracking proximal gradient over concrete or object-safe design oracles.
+
+mod design;
+pub(crate) use design::NativeDesign;
+pub use design::ProximalDesign;
 
 use std::marker::PhantomData;
 
 use lazymatrix::{
-    ColumnStats, DotSlice, ElemDivAssign, LazyMatrix, MatTransposeVecInto, MatVecInto, RawColumns,
+    ColumnStats, DotSlice, ElemDivAssign, MatTransposeVecInto, MatVecInto, RawColumns,
     ScaledSubSlice, SubScalarAssign, SumEntries,
 };
 
@@ -215,66 +219,50 @@ where
             ));
         }
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
+        let mut design = NativeDesign::<_, V>::new(prepared);
         let solution = iterate(
-            &prepared.matrix,
+            &mut design,
             problem.datafit(),
             problem.penalty(),
             self,
             threshold,
         )?;
-        ProximalFit::from_solution(solution, prepared.into_preprocessing())
+        ProximalFit::from_solution(solution, design.into_preprocessing())
     }
 }
 
-// Native product buffers and slice-based component buffers are allocated once.
-// Keeping this bridge here lets LazyMatrix own all normalization algebra.
-struct Workspace<V> {
-    parameters: V,
-    predictor: V,
-    derivative: V,
-    gradient: V,
+// Slice buffers keep scalar loops concrete even when components are erased.
+// Native product buffers belong to the design adapter.
+struct Workspace {
     eta: Vec<f64>,
     predictor_gradient: Vec<f64>,
+    gradient: Vec<f64>,
     input: Vec<f64>,
     candidate: Vec<f64>,
 }
 
-impl<V: ProximalVector> Workspace<V> {
+impl Workspace {
     fn new(n: usize, p: usize) -> Self {
         Self {
-            parameters: V::zeros(p),
-            predictor: V::zeros(n),
-            derivative: V::zeros(n),
-            gradient: V::zeros(p),
             eta: vec![0.0; n],
             predictor_gradient: vec![0.0; n],
+            gradient: vec![0.0; p],
             input: vec![0.0; p],
             candidate: vec![0.0; p],
         }
     }
 
-    fn predict<M>(
+    fn predict<O: ProximalDesign + ?Sized>(
         &mut self,
-        matrix: &M,
+        design: &mut O,
         coefficients: &[f64],
         intercept: f64,
         iteration: usize,
-    ) -> Result<(), FitError<M::Error>>
-    where
-        M: MatVecInto<V>,
-    {
-        for (j, &value) in coefficients.iter().enumerate() {
-            self.parameters.set(j, value);
-        }
-        matrix
-            .matvec_into(&self.parameters, &mut self.predictor)
-            .map_err(|source| FitError::Backend {
-                operation: "computing a forward design product",
-                source,
-            })?;
-        for (i, value) in self.eta.iter_mut().enumerate() {
+    ) -> Result<(), FitError<O::Error>> {
+        design.forward(coefficients, &mut self.eta)?;
+        for value in &mut self.eta {
             *value = finite(
-                self.predictor.get(i) + intercept,
+                *value + intercept,
                 "computing the linear predictor",
                 iteration,
             )?;
@@ -283,26 +271,25 @@ impl<V: ProximalVector> Workspace<V> {
     }
 }
 
-pub(crate) fn iterate<M, D, P, V>(
-    matrix: &LazyMatrix<M>,
+pub(crate) fn iterate<O, D, P, V>(
+    design: &mut O,
     datafit: &D,
     penalty: &P,
     options: &ProximalGradient<V>,
     threshold: f64,
-) -> Result<Solution, FitError<M::Error>>
+) -> Result<Solution, FitError<O::Error>>
 where
-    M: MatVecInto<V> + MatTransposeVecInto<V>,
-    D: SmoothDatafit,
-    P: ProximalPenalty,
-    V: ProximalVector,
+    O: ProximalDesign + ?Sized,
+    D: SmoothDatafit + ?Sized,
+    P: ProximalPenalty + ?Sized,
 {
-    let mut work = Workspace::<V>::new(matrix.nrows(), matrix.ncols());
-    let mut coefficients = vec![0.0; matrix.ncols()];
+    let mut work = Workspace::new(design.nrows(), design.ncols());
+    let mut coefficients = vec![0.0; design.ncols()];
     let mut intercept = 0.0;
     let mut step = options.initial_step;
     let mut iteration = 0;
     loop {
-        work.predict(matrix, &coefficients, intercept, iteration)?;
+        work.predict(design, &coefficients, intercept, iteration)?;
         let loss = datafit
             .value(&work.eta)
             .map_err(|error| FitError::from_component(error, iteration))?;
@@ -316,18 +303,10 @@ where
         datafit
             .gradient(&work.eta, &mut work.predictor_gradient)
             .map_err(|error| FitError::from_component(error, iteration))?;
-        for (i, &value) in work.predictor_gradient.iter().enumerate() {
-            work.derivative.set(
-                i,
-                finite(value, "checking the predictor gradient", iteration)?,
-            );
+        for &value in &work.predictor_gradient {
+            finite(value, "checking the predictor gradient", iteration)?;
         }
-        matrix
-            .mat_transpose_vec_into(&work.derivative, &mut work.gradient)
-            .map_err(|source| FitError::Backend {
-                operation: "computing a transposed design product",
-                source,
-            })?;
+        design.transpose(&work.predictor_gradient, &mut work.gradient)?;
         let intercept_gradient = if datafit.fits_intercept() {
             finite(
                 work.predictor_gradient.iter().sum(),
@@ -341,7 +320,7 @@ where
         for backtrack in 0..=options.max_backtracks {
             for (j, (&coefficient, value)) in coefficients.iter().zip(&mut work.input).enumerate() {
                 *value = finite(
-                    coefficient - step * work.gradient.get(j),
+                    coefficient - step * work.gradient[j],
                     "taking a gradient step",
                     iteration,
                 )?;
@@ -371,13 +350,13 @@ where
                     iteration,
                 )?;
                 mapping = mapping.max(entry.abs());
-                linear += work.gradient.get(j) * delta;
+                linear += work.gradient[j] * delta;
                 quadratic += delta * entry;
             }
             // Temporarily take the candidate out to keep all storage reusable
             // while a forward product mutably borrows the workspace.
             let candidate = std::mem::take(&mut work.candidate);
-            let predicted = work.predict(matrix, &candidate, candidate_intercept, iteration);
+            let predicted = work.predict(design, &candidate, candidate_intercept, iteration);
             work.candidate = candidate;
             predicted?;
             let candidate_loss = datafit

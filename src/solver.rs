@@ -3,7 +3,7 @@
 pub(crate) mod coordinate;
 pub(crate) mod proximal;
 
-pub use proximal::{ProximalGradient, ProximalVector};
+pub use proximal::{ProximalDesign, ProximalGradient, ProximalVector};
 
 use crate::error::invalid;
 use crate::{FitError, L1};

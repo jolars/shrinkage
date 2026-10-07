@@ -3,10 +3,10 @@
 Shrinkage is a Rust library for regularized statistical models. It currently
 fits Gaussian lasso models with dense or sparse CSC input through coordinate
 descent and fits lasso, ridge, and elastic net through proximal gradient. The
-typed API also accepts external smooth datafits and complete proximal penalties;
-runtime APIs remain later milestones. See [DESIGN.md](DESIGN.md) for the
-architecture and statistical conventions, and [TODO.md](TODO.md) for the
-implementation checklist.
+typed and runtime APIs also accept external smooth datafits and complete
+proximal penalties. See [DESIGN.md](DESIGN.md) for the architecture and
+statistical conventions, and [TODO.md](TODO.md) for the implementation
+checklist.
 
 ## Gaussian lasso
 
@@ -176,7 +176,51 @@ prediction-preserving parameter transformation. It reuses CPU work buffers and
 never forms a Gram matrix or a normalized design. LazyMatrix 0.5.0 clones the
 coefficient input on each scaled forward product, so normalized iterations still
 allocate. Run `task bench:proximal` to measure dense and CSC lasso, ridge, and
-elastic-net fitting, including validation and preprocessing.
+elastic-net fitting through typed and runtime problems, including validation and
+preprocessing.
+
+## Runtime composition
+
+`RuntimeProblem` owns independently selected design, smooth datafit, and
+complete proximal penalty objects. `MatrixDesign` adapts a concrete LazyMatrix
+backend without depending on the datafit or penalty type:
+
+```rust
+use faer::{Col, Mat};
+use shrinkage::{
+    ElasticNet, Gaussian, L1, MatrixDesign, ProximalGradient, ProximalPenalty,
+    RuntimeDesign, RuntimeProblem, SmoothDatafit,
+};
+
+let x = Mat::from_fn(3, 1, |i, _| i as f64);
+let y = [1.0, 3.0, 5.0];
+let design: Box<dyn RuntimeDesign> = Box::new(MatrixDesign::<_, Col<f64>>::new(&x));
+let datafit: Box<dyn SmoothDatafit + '_> = Box::new(Gaussian::new(&y));
+let use_elastic_net = true;
+let penalty: Box<dyn ProximalPenalty> = if use_elastic_net {
+    Box::new(ElasticNet::new(0.1, 0.2))
+} else {
+    Box::new(L1::new(0.1))
+};
+let fit = RuntimeProblem::new(design, datafit, penalty)
+    .fit_with(&ProximalGradient::new())?;
+let predictions = fit.predict(&x)?;
+```
+
+Choose `MatrixDesign`'s vector type to match the concrete backend. Runtime
+iteration uses slice buffers, so its solver is `ProximalGradient<Vec<f64>>`,
+regardless of the selected backend. The adapters retain native vectors and
+generic column views. The same iteration function handles typed and runtime
+problems, with virtual calls only for whole products, datafit evaluations, and
+proximal operations. It never boxes an already composed typed problem.
+
+Normalization, supplied centers and scales, the unpenalized intercept, and
+original-scale fitted parameters follow the typed API's conventions. Automatic
+centering resolves during fitting using the selected datafit's intercept policy.
+Runtime backend failures return `FitError<BackendError>` with their operation
+context and original error accessible through `BackendError::as_error` and the
+error source chain. Product buffers are reused within a fit; ownership across
+fits and regularization paths remains future work.
 
 ## Experimental block reads
 

@@ -1,5 +1,8 @@
 //! Composition and validated preparation of training problems.
 
+pub mod runtime;
+pub use runtime::{MatrixDesign, RuntimeDesign, RuntimeProblem};
+
 use crate::error::{finite, invalid};
 use crate::solver::{Solver, coordinate};
 use crate::{Centering, LassoError, LassoFit, Normalization, Preprocessing, Scaling};
@@ -159,91 +162,109 @@ where
         &self,
         fit_intercept: bool,
     ) -> Result<Prepared<&M>, LassoError<M::Error>> {
-        let x = self.design;
-        if x.nrows() == 0 {
-            return Err(invalid("training data must have at least one observation"));
-        }
-        let spec = self.normalization.specification(fit_intercept);
-        validate_supplied(&self.supplied_centers, x.ncols(), false)?;
-        validate_supplied(&self.supplied_scales, x.ncols(), true)?;
-        let center_rule = if self.supplied_centers.is_some() {
-            Centering::None
-        } else {
-            spec.center
-        };
-        let scale_rule = if self.supplied_scales.is_some() {
+        prepare_normalization(
+            self.design,
+            self.normalization,
+            self.centers(),
+            self.scales(),
+            fit_intercept,
+        )
+    }
+}
+
+pub(crate) fn prepare_normalization<'a, M>(
+    x: &'a M,
+    normalization: Normalization,
+    supplied_centers: Option<&[f64]>,
+    supplied_scales: Option<&[f64]>,
+    fit_intercept: bool,
+) -> Result<Prepared<&'a M>, LassoError<M::Error>>
+where
+    M: lazymatrix::MatrixShape + ColumnStats<f64> + ?Sized,
+{
+    if x.nrows() == 0 {
+        return Err(invalid("training data must have at least one observation"));
+    }
+    let spec = normalization.specification(fit_intercept);
+    validate_supplied(supplied_centers, x.ncols(), false)?;
+    validate_supplied(supplied_scales, x.ncols(), true)?;
+    let center_rule = if supplied_centers.is_some() {
+        Centering::None
+    } else {
+        spec.center
+    };
+    let scale_rule = if supplied_scales.is_some() {
+        Scaling::None
+    } else {
+        spec.scale
+    };
+    let centered_scale = supplied_centers.is_some()
+        && matches!(scale_rule, Scaling::L1 | Scaling::L2 | Scaling::MaxAbs);
+    let stats_spec = lazymatrix::Normalization::new(
+        center_rule,
+        if centered_scale {
             Scaling::None
         } else {
-            spec.scale
-        };
-        let centered_scale = self.supplied_centers.is_some()
-            && matches!(scale_rule, Scaling::L1 | Scaling::L2 | Scaling::MaxAbs);
-        let stats_spec = lazymatrix::Normalization::new(
-            center_rule,
-            if centered_scale {
-                Scaling::None
-            } else {
-                scale_rule
-            },
-        );
-        let (computed_centers, mut computed_scales) =
-            if stats_spec.center != Centering::None || stats_spec.scale != Scaling::None {
-                x.normalization_stats(stats_spec)
-                    .map_err(|source| LassoError::Backend {
-                        operation: "computing training normalization statistics",
-                        source,
-                    })?
-            } else {
-                (None, None)
-            };
-        if centered_scale {
-            let centers = self.supplied_centers.as_deref().unwrap();
-            computed_scales = Some(
-                match scale_rule {
-                    Scaling::L1 => x.col_l1_centered(centers),
-                    Scaling::L2 => x.col_l2_centered(centers),
-                    Scaling::MaxAbs => x.col_maxabs_centered(centers),
-                    _ => unreachable!(),
-                }
+            scale_rule
+        },
+    );
+    let (computed_centers, mut computed_scales) =
+        if stats_spec.center != Centering::None || stats_spec.scale != Scaling::None {
+            x.normalization_stats(stats_spec)
                 .map_err(|source| LassoError::Backend {
                     operation: "computing training normalization statistics",
                     source,
-                })?,
-            );
-        }
-        let centers = self.supplied_centers.clone().or(computed_centers);
-        let mut scales = self.supplied_scales.clone().or(computed_scales);
-        validate_statistics(
-            &centers,
-            x.ncols(),
-            self.supplied_centers.is_some() || spec.center != Centering::None,
-            "column centers",
-        )?;
-        validate_statistics(
-            &scales,
-            x.ncols(),
-            self.supplied_scales.is_some() || spec.scale != Scaling::None,
-            "column scales",
-        )?;
-        if let Some(scales) = &mut scales {
-            for scale in scales {
-                if *scale < 0.0 {
-                    return Err(invalid(
-                        "matrix backend returned a negative normalization scale",
-                    ));
-                }
-                if *scale == 0.0 {
-                    *scale = 1.0;
-                }
+                })?
+        } else {
+            (None, None)
+        };
+    if centered_scale {
+        let centers = supplied_centers.unwrap();
+        computed_scales = Some(
+            match scale_rule {
+                Scaling::L1 => x.col_l1_centered(centers),
+                Scaling::L2 => x.col_l2_centered(centers),
+                Scaling::MaxAbs => x.col_maxabs_centered(centers),
+                _ => unreachable!(),
+            }
+            .map_err(|source| LassoError::Backend {
+                operation: "computing training normalization statistics",
+                source,
+            })?,
+        );
+    }
+    let centers = supplied_centers.map(<[f64]>::to_vec).or(computed_centers);
+    let mut scales = supplied_scales.map(<[f64]>::to_vec).or(computed_scales);
+    validate_statistics(
+        &centers,
+        x.ncols(),
+        supplied_centers.is_some() || spec.center != Centering::None,
+        "column centers",
+    )?;
+    validate_statistics(
+        &scales,
+        x.ncols(),
+        supplied_scales.is_some() || spec.scale != Scaling::None,
+        "column scales",
+    )?;
+    if let Some(scales) = &mut scales {
+        for scale in scales {
+            if *scale < 0.0 {
+                return Err(invalid(
+                    "matrix backend returned a negative normalization scale",
+                ));
+            }
+            if *scale == 0.0 {
+                *scale = 1.0;
             }
         }
-        Ok(Prepared {
-            matrix: LazyMatrix::from_parts(x, centers, scales),
-            spec,
-            supplied_centers: self.supplied_centers.is_some(),
-            supplied_scales: self.supplied_scales.is_some(),
-        })
     }
+    Ok(Prepared {
+        matrix: LazyMatrix::from_parts(x, centers, scales),
+        spec,
+        supplied_centers: supplied_centers.is_some(),
+        supplied_scales: supplied_scales.is_some(),
+    })
 }
 
 pub(crate) struct Prepared<M> {
@@ -323,7 +344,7 @@ fn validate_statistics<E>(
 }
 
 fn validate_supplied<E>(
-    values: &Option<Vec<f64>>,
+    values: Option<&[f64]>,
     ncols: usize,
     scales: bool,
 ) -> Result<(), LassoError<E>> {

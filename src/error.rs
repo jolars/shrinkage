@@ -2,6 +2,34 @@
 
 use std::{convert::Infallible, error::Error, fmt};
 
+/// A runtime-selected backend error with its original source preserved.
+#[derive(Debug)]
+pub struct BackendError(Box<dyn Error>);
+
+impl BackendError {
+    /// Erase a concrete backend error while retaining its type and source chain.
+    pub fn new<E: Error + 'static>(source: E) -> Self {
+        Self(Box::new(source))
+    }
+
+    /// Borrow the original error, including for downcasting.
+    pub fn as_error(&self) -> &(dyn Error + 'static) {
+        self.0.as_ref()
+    }
+}
+
+impl fmt::Display for BackendError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl Error for BackendError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(self.as_error())
+    }
+}
+
 /// Input, numerical, or backend failure. Backend errors retain their type.
 ///
 /// The default source type is [`Infallible`], used by prediction and in-memory
@@ -59,6 +87,29 @@ impl<E: fmt::Display> fmt::Display for FitError<E> {
 }
 
 impl<E> FitError<E> {
+    pub(crate) fn erase_backend(self) -> FitError<BackendError>
+    where
+        E: Error + 'static,
+    {
+        match self {
+            Self::InvalidInput { message } => FitError::InvalidInput { message },
+            Self::NumericalFailure {
+                operation,
+                iteration,
+            } => FitError::NumericalFailure {
+                operation,
+                iteration,
+            },
+            Self::Backend { operation, source } => FitError::Backend {
+                operation,
+                source: BackendError::new(source),
+            },
+            Self::LineSearchFailure { iteration, step } => {
+                FitError::LineSearchFailure { iteration, step }
+            }
+        }
+    }
+
     pub(crate) fn from_component(error: FitError, iteration: usize) -> Self {
         match error {
             FitError::InvalidInput { message } => Self::InvalidInput { message },

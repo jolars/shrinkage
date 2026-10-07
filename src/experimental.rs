@@ -11,7 +11,7 @@ use lazymatrix::{
 };
 
 use crate::error::invalid;
-use crate::solver::proximal::iterate;
+use crate::solver::proximal::{NativeDesign, iterate};
 use crate::{FitError, Problem, ProximalFit, ProximalGradient, ProximalPenalty, SmoothDatafit};
 
 /// A borrowed design with one caller-owned block buffer for sequential scans.
@@ -237,12 +237,13 @@ where
     let prepared = problem
         .prepare_normalization(problem.datafit().fits_intercept())?
         .map_data(|_| design);
+    let mut design = NativeDesign::<_, Vec<f64>>::new(prepared);
     let solution = iterate(
-        &prepared.matrix,
+        &mut design,
         problem.datafit(),
         problem.penalty(),
         options,
         threshold,
     )?;
-    ProximalFit::from_solution(solution, prepared.into_preprocessing())
+    ProximalFit::from_solution(solution, design.into_preprocessing())
 }

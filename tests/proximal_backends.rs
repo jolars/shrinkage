@@ -12,7 +12,8 @@ mod matrix;
 
 use shrinkage::lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, RawColumns};
 use shrinkage::{
-    ElasticNet, Gaussian, Normalization, Problem, ProximalGradient, ProximalVector, Termination,
+    ElasticNet, Gaussian, MatrixDesign, Normalization, Problem, ProximalGradient, ProximalVector,
+    RuntimeProblem, Termination,
 };
 
 const ROWS: [[f64; 3]; 5] = [
@@ -31,7 +32,8 @@ fn close(a: f64, b: f64) {
 fn verify<M, V>(design: &M)
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
-    V: ProximalVector,
+    M::Error: std::error::Error + 'static,
+    V: ProximalVector + 'static,
 {
     let rows: Vec<_> = ROWS.iter().map(|row| row.as_slice()).collect();
     let reference = matrix::Matrix::from_rows(&rows);
@@ -61,6 +63,33 @@ where
                             .max_iterations(200_000),
                     )
                     .unwrap();
+                let runtime = RuntimeProblem::new(
+                    Box::new(MatrixDesign::<_, V>::new(design)),
+                    Box::new(datafit),
+                    Box::new(penalty),
+                )
+                .normalize(normalization)
+                .fit_with(
+                    &ProximalGradient::new()
+                        .tolerance(1e-9)
+                        .max_iterations(200_000),
+                )
+                .unwrap();
+                assert_eq!(runtime.coefficients(), actual.coefficients());
+                assert_eq!(runtime.intercept(), actual.intercept());
+                assert_eq!(runtime.objective(), actual.objective());
+                assert_eq!(runtime.termination(), actual.termination());
+                assert_eq!(runtime.iterations(), actual.iterations());
+                assert_eq!(runtime.stopping_value(), actual.stopping_value());
+                assert_eq!(runtime.step_size(), actual.step_size());
+                assert_eq!(
+                    runtime.preprocessing().centers(),
+                    actual.preprocessing().centers()
+                );
+                assert_eq!(
+                    runtime.preprocessing().scales(),
+                    actual.preprocessing().scales()
+                );
                 assert_eq!(
                     actual.termination(),
                     Termination::Converged,
