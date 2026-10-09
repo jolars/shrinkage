@@ -40,7 +40,7 @@ tempfile = "3"
 criterion = { version = "0.8.2", default-features = false }
 dhat = "0.3.3"
 nalgebra = { version = "0.34", default-features = false, features = ["std"] }
-nalgebra-sparse = "0.11"
+nalgebra-sparse = "0.12"
 ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
 sprs = { version = "0.11.4", default-features = false }
 
