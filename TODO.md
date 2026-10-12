@@ -88,7 +88,7 @@ boundaries only when an implemented consumer needs them.
   scalar loops and generic column views inside concrete adapters.
 - [x] Compare typed and runtime fits and return actionable errors for
   unsupported combinations.
-- [ ] Establish reusable workspace ownership across iterations and path points.
+- [x] Establish reusable workspace ownership across iterations and path points.
   Measure normalized-product and proximal allocations, including LazyMatrix
   0.5.0's scaled input clone. Verify reusable normalization scratch storage
   upstream before claiming allocation-free normalized iterations.

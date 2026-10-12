@@ -63,6 +63,21 @@ where
                             .max_iterations(200_000),
                     )
                     .unwrap();
+                let path = ProximalGradient::<V>::new()
+                    .tolerance(1e-9)
+                    .max_iterations(200_000)
+                    .solve_path(
+                        &Problem::new(design, datafit, penalty).normalize(normalization),
+                        &[ElasticNet::new(l1 + 0.1, l2 + 0.1), penalty],
+                    )
+                    .unwrap();
+                let last = &path[1];
+                assert_eq!(last.termination(), actual.termination());
+                for (&a, &b) in last.coefficients().iter().zip(actual.coefficients()) {
+                    close(a, b);
+                }
+                close(last.intercept(), actual.intercept());
+                close(last.objective(), actual.objective());
                 let runtime = RuntimeProblem::new(
                     Box::new(MatrixDesign::<_, V>::new(design)),
                     Box::new(datafit),

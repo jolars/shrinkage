@@ -6,7 +6,7 @@ use lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, RawColumns};
 
 use crate::error::{invalid, unsupported};
 use crate::problem::{prepare_normalization, validate_matrix};
-use crate::solver::proximal::{NativeDesign, iterate};
+use crate::solver::proximal::{NativeDesign, iterate, iterate_path};
 use crate::{
     BackendError, CoordinateDescent, FitError, LassoFit, Normalization, Preprocessing, Problem,
     ProximalDesign, ProximalFit, ProximalGradient, ProximalPenalty, ProximalVector, SmoothDatafit,
@@ -183,6 +183,51 @@ where
 
     fn into_preprocessing(self: Box<Self>) -> Preprocessing {
         self.0.into_preprocessing()
+    }
+}
+
+impl ProximalGradient<Vec<f64>> {
+    /// Fit runtime-selected penalties in order with one prepared design.
+    ///
+    /// Reuses native products and iteration storage and warms each point from
+    /// the preceding optimization-scale parameters. The problem's penalty is
+    /// replaced by the path entries. Steps and iteration budgets reset at each
+    /// point; iteration-limit fits are retained as warm starts.
+    ///
+    /// # Errors
+    /// Returns validation or fitting errors without a partial path.
+    pub fn solve_runtime_path(
+        &self,
+        problem: &RuntimeProblem<'_>,
+        penalties: &[Box<dyn ProximalPenalty + '_>],
+    ) -> Result<Vec<ProximalFit>, FitError<BackendError>> {
+        let threshold = self.validate()?;
+        if problem.datafit().nobs() != problem.design().nrows() {
+            return Err(invalid(
+                "datafit observation count must match training rows",
+            ));
+        }
+        if penalties.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut design = problem.design().prepare(
+            problem.normalization(),
+            problem.centers(),
+            problem.scales(),
+            problem.datafit().fits_intercept(),
+        )?;
+        let solutions = iterate_path(
+            design.as_mut(),
+            problem.datafit().as_ref(),
+            penalties,
+            self,
+            threshold,
+        )?;
+        let preprocessing = design.into_preprocessing();
+        solutions
+            .into_iter()
+            .map(|solution| ProximalFit::from_solution(solution, preprocessing.clone()))
+            .collect()
     }
 }
 

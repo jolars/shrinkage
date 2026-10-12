@@ -218,3 +218,17 @@ impl ProximalPenalty for ElasticNet {
         Ok(())
     }
 }
+
+impl<P: Penalty + ?Sized> Penalty for Box<P> {
+    type Error = P::Error;
+
+    fn value(&self, coefficients: &[f64]) -> Result<f64, Self::Error> {
+        (**self).value(coefficients)
+    }
+}
+
+impl<P: ProximalPenalty + ?Sized> ProximalPenalty for Box<P> {
+    fn prox(&self, input: &[f64], step: f64, output: &mut [f64]) -> Result<(), FitError> {
+        (**self).prox(input, step, output)
+    }
+}

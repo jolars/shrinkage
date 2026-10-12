@@ -180,6 +180,23 @@ allocate. Run `task bench:proximal` to measure dense and CSC lasso, ridge, and
 elastic-net fitting through typed and runtime problems, including validation and
 preprocessing.
 
+Use `solver.solve_path(&problem, &penalties)` to fit penalties in their supplied
+order. It prepares the design once, reuses native and iteration buffers, and
+warms each point from the preceding optimization-scale coefficients and
+intercept. Each point resets its step and iteration budget. Returned fits own
+independent parameters and preprocessing. For runtime-selected penalties, use
+`solve_runtime_path` with boxed `ProximalPenalty` entries. Check each fit's
+termination status; an iteration-limit point still supplies the next warm start.
+
+Run `task bench:proximal:heap` for isolated allocation measurements. On the
+1,024-by-64 faer fixtures, 100 scaled forward products allocate 100 input clones
+(51,200 bytes); transposed products and elastic-net proximal calls allocate
+nothing. The published LazyMatrix 0.5.0 caller-owned scratch API also allocates
+nothing for the measured dense and CSC forward products. Shrinkage's current
+adapter uses the cloning product API. A three-point dense path uses 750
+allocations versus 924 for independent fits; CSC uses 749 versus 921. These
+counts include preparation and owned results and depend on convergence.
+
 ## Runtime composition
 
 `RuntimeProblem` owns independently selected design, smooth datafit, and

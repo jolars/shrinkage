@@ -103,19 +103,35 @@ Concrete adapters own normalized LazyMatrix views and native buffers, while
 iteration owns slice buffers for scalar updates. `ProximalVector` supplies owned
 CPU work buffers for `Vec`, faer `Col`, nalgebra `DVector`, and ndarray
 `Array1`. Slice buffers bridge predictor derivatives and complete proximal maps
-to those native buffers, with storage reused within a fit. This CPU capability
-does not prescribe future device storage. Shared problem preparation retains
-normalization metadata without copying its vectors. All normalization algebra
-remains in LazyMatrix, including its scaled forward-product input clone.
+to those native buffers, with storage reused within a fit and along a penalty
+path. This CPU capability does not prescribe future device storage. Shared
+problem preparation retains normalization metadata without copying its vectors.
+All normalization algebra remains in LazyMatrix, including its scaled
+forward-product input clone.
 
 `ProximalFit` owns original-scale parameters, preprocessing, objective, final
 step, and stopping diagnostics. The absolute proximal-gradient criterion uses
 the mapping's infinity norm and the absolute free-intercept derivative at the
 returned iterate. It reports no duality gap. Unsupported criteria are rejected,
 line-search exhaustion returns a distinct error, and iteration limits remain
-finite unconverged results. Workspace reuse across path points and allocation
-measurements remain subsequent steps. Experimental block reading reuses this
-solver with caller-owned storage buffers.
+finite unconverged results. `ProximalGradient::solve_path` and
+`solve_runtime_path` prepare the design once and retain native product buffers
+and slice storage across penalty points. Each point starts from the preceding
+optimization-scale coefficients and intercept, including after an iteration
+limit. The step and iteration budget reset at each point. Results own
+independent original-scale parameters and preprocessing; result storage still
+allocates. Experimental block reading reuses this solver with caller-owned
+storage buffers.
+
+`task bench:proximal:heap` measures normalized forward and transposed products,
+the elastic-net proximal map, and a path against independent cold fits. It also
+checks LazyMatrix 0.5.0's published `matvec_scaled_with_workspace` API with
+dense and CSC faer input. The current native adapter uses `MatVecInto`, whose
+scaled forward product clones its input. The separate upstream scratch API
+avoids that normalization allocation on the measured backends. This does not
+establish allocation-free Shrinkage iterations or allocation-free products for
+every backend; adopting that API requires its additional fused-product
+capabilities.
 
 Build working numerical code before stabilizing abstractions. Do not introduce
 an elaborate type system or one crate per prospective feature at bootstrap.

@@ -162,6 +162,48 @@ impl<V> ProximalGradient<V> {
         self
     }
 
+    /// Fit penalties in the supplied order, preparing the design once.
+    ///
+    /// The problem's penalty is replaced by each path entry. Native product
+    /// buffers and iteration storage are reused; each point starts from the
+    /// preceding optimization-scale coefficients and intercept. Each point
+    /// resets its step and iteration budget. Results own independent parameters
+    /// and preprocessing. An empty path returns no fits.
+    ///
+    /// # Errors
+    /// Returns validation, component, line-search, or backend errors without
+    /// returning a partial path. Iteration-limit results remain in the path and
+    /// provide the next warm start.
+    pub fn solve_path<M, D, P, Q>(
+        &self,
+        problem: &Problem<&M, D, P>,
+        penalties: &[Q],
+    ) -> Result<Vec<ProximalFit>, FitError<M::Error>>
+    where
+        M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+        D: SmoothDatafit,
+        Q: ProximalPenalty,
+        V: ProximalVector,
+    {
+        let threshold = self.validate()?;
+        if problem.datafit().nobs() != problem.design().nrows() {
+            return Err(invalid(
+                "datafit observation count must match training rows",
+            ));
+        }
+        if penalties.is_empty() {
+            return Ok(Vec::new());
+        }
+        let prepared = problem.prepare(problem.datafit().fits_intercept())?;
+        let mut design = NativeDesign::<_, V>::new(prepared);
+        let solutions = iterate_path(&mut design, problem.datafit(), penalties, self, threshold)?;
+        let preprocessing = design.into_preprocessing();
+        solutions
+            .into_iter()
+            .map(|solution| ProximalFit::from_solution(solution, preprocessing.clone()))
+            .collect()
+    }
+
     pub(crate) fn validate<E>(&self) -> Result<f64, FitError<E>> {
         let StoppingCriterion::ProximalGradientMapping { absolute } = self.criterion else {
             return Err(unsupported(
@@ -239,6 +281,8 @@ where
 // Slice buffers keep scalar loops concrete even when components are erased.
 // Native product buffers belong to the design adapter.
 struct Workspace {
+    coefficients: Vec<f64>,
+    intercept: f64,
     eta: Vec<f64>,
     predictor_gradient: Vec<f64>,
     gradient: Vec<f64>,
@@ -249,6 +293,8 @@ struct Workspace {
 impl Workspace {
     fn new(n: usize, p: usize) -> Self {
         Self {
+            coefficients: vec![0.0; p],
+            intercept: 0.0,
             eta: vec![0.0; n],
             predictor_gradient: vec![0.0; n],
             gradient: vec![0.0; p],
@@ -289,8 +335,45 @@ where
     P: ProximalPenalty + ?Sized,
 {
     let mut work = Workspace::new(design.nrows(), design.ncols());
-    let mut coefficients = vec![0.0; design.ncols()];
-    let mut intercept = 0.0;
+    iterate_with_workspace(design, datafit, penalty, options, threshold, &mut work)
+}
+
+pub(crate) fn iterate_path<O, D, P, V>(
+    design: &mut O,
+    datafit: &D,
+    penalties: &[P],
+    options: &ProximalGradient<V>,
+    threshold: f64,
+) -> Result<Vec<Solution>, FitError<O::Error>>
+where
+    O: ProximalDesign + ?Sized,
+    D: SmoothDatafit + ?Sized,
+    P: ProximalPenalty,
+{
+    let mut work = Workspace::new(design.nrows(), design.ncols());
+    penalties
+        .iter()
+        .map(|penalty| {
+            iterate_with_workspace(design, datafit, penalty, options, threshold, &mut work)
+        })
+        .collect()
+}
+
+fn iterate_with_workspace<O, D, P, V>(
+    design: &mut O,
+    datafit: &D,
+    penalty: &P,
+    options: &ProximalGradient<V>,
+    threshold: f64,
+    work: &mut Workspace,
+) -> Result<Solution, FitError<O::Error>>
+where
+    O: ProximalDesign + ?Sized,
+    D: SmoothDatafit + ?Sized,
+    P: ProximalPenalty + ?Sized,
+{
+    let mut coefficients = std::mem::take(&mut work.coefficients);
+    let mut intercept = work.intercept;
     let mut step = options.initial_step;
     let mut iteration = 0;
     loop {
@@ -392,8 +475,10 @@ where
         // The mapping belongs to the current coefficients, not the trial
         // point. Check it before accepting the next update, including at budget.
         if mapping <= threshold || iteration == options.max_iterations {
+            work.coefficients = coefficients;
+            work.intercept = intercept;
             return Ok(Solution {
-                coefficients,
+                coefficients: work.coefficients.clone(),
                 intercept,
                 termination: if mapping <= threshold {
                     Termination::Converged
@@ -411,5 +496,91 @@ where
         std::mem::swap(&mut coefficients, &mut work.candidate);
         intercept = candidate_intercept;
         iteration += 1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Gaussian, Preprocessing, Ridge};
+    use std::convert::Infallible;
+
+    struct Identity;
+    impl ProximalDesign for Identity {
+        type Error = Infallible;
+        fn nrows(&self) -> usize {
+            2
+        }
+        fn ncols(&self) -> usize {
+            2
+        }
+        fn forward(
+            &mut self,
+            input: &[f64],
+            output: &mut [f64],
+        ) -> Result<(), FitError<Infallible>> {
+            output.copy_from_slice(input);
+            Ok(())
+        }
+        fn transpose(
+            &mut self,
+            input: &[f64],
+            output: &mut [f64],
+        ) -> Result<(), FitError<Infallible>> {
+            output.copy_from_slice(input);
+            Ok(())
+        }
+        fn into_preprocessing(self: Box<Self>) -> Preprocessing {
+            unreachable!()
+        }
+    }
+
+    #[test]
+    fn path_points_retain_all_iteration_buffers_and_warm_start() {
+        let mut design = Identity;
+        let mut work = Workspace::new(2, 2);
+        let fixed = (
+            work.eta.as_ptr(),
+            work.predictor_gradient.as_ptr(),
+            work.gradient.as_ptr(),
+            work.input.as_ptr(),
+        );
+        let mut rotating = [work.coefficients.as_ptr(), work.candidate.as_ptr()];
+        rotating.sort();
+        let datafit = Gaussian::new(&[1.0, 3.0]).fit_intercept(false);
+        let options = ProximalGradient::<Vec<f64>>::new().tolerance(1e-10);
+        let first = iterate_with_workspace(
+            &mut design,
+            &datafit,
+            &Ridge::new(0.2),
+            &options,
+            1e-10,
+            &mut work,
+        )
+        .unwrap();
+        assert!(first.iterations > 0);
+        let second = iterate_with_workspace(
+            &mut design,
+            &datafit,
+            &Ridge::new(0.2),
+            &options,
+            1e-10,
+            &mut work,
+        )
+        .unwrap();
+        assert_eq!(second.iterations, 0);
+        assert_eq!(first.coefficients, second.coefficients);
+        assert_eq!(
+            fixed,
+            (
+                work.eta.as_ptr(),
+                work.predictor_gradient.as_ptr(),
+                work.gradient.as_ptr(),
+                work.input.as_ptr()
+            )
+        );
+        let mut after = [work.coefficients.as_ptr(), work.candidate.as_ptr()];
+        after.sort();
+        assert_eq!(rotating, after);
     }
 }

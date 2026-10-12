@@ -74,3 +74,8 @@ required-features = ["faer_v0_24"]
 [lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
+
+[[bench]]
+name = "proximal_heap"
+harness = false
+required-features = ["faer_v0_24"]

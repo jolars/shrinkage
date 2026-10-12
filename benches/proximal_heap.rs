@@ -1,0 +1,191 @@
+//! Isolated allocation measurements for normalized products, prox, and paths.
+
+use faer::Col;
+use shrinkage::lazymatrix::{LazyMatrix, MatTransposeVecInto, MatVecInto};
+use shrinkage::{ElasticNet, Gaussian, Problem, ProximalGradient, ProximalPenalty, Termination};
+use std::hint::black_box;
+
+#[path = "common/fixture.rs"]
+mod fixture;
+
+#[global_allocator]
+static ALLOCATOR: dhat::Alloc = dhat::Alloc;
+
+fn measure(name: &str, calls: usize, mut operation: impl FnMut(), expected_blocks: Option<u64>) {
+    let profiler = dhat::Profiler::builder().testing().build();
+    for _ in 0..calls {
+        operation();
+    }
+    let stats = dhat::HeapStats::get();
+    if let Some(expected) = expected_blocks {
+        dhat::assert_eq!(stats.total_blocks, expected);
+    }
+    dhat::assert_eq!(stats.curr_bytes, 0);
+    dhat::assert!(stats.max_bytes <= 128 * (1_024 + 64));
+    drop(profiler);
+    println!(
+        "{name},{calls},{},{},{}",
+        stats.total_blocks, stats.total_bytes, stats.max_bytes
+    );
+}
+
+fn main() {
+    let (dense, sparse, y) = fixture::dataset(1_024, 64);
+    let input = Col::from_fn(64, |j| j as f64 / 64.0);
+    let mut output = Col::zeros(1_024);
+    let mut transpose = Col::zeros(64);
+    let mut scratch = Col::zeros(64);
+    let input_slice = vec![0.5; 64];
+    let mut prox_output = vec![0.0; 64];
+    let penalty = ElasticNet::new(0.03, 0.1);
+    let normalized_dense = LazyMatrix::from_parts(&dense, Some(vec![0.1; 64]), Some(vec![2.0; 64]));
+    let normalized_sparse =
+        LazyMatrix::from_parts(&sparse, Some(vec![0.1; 64]), Some(vec![2.0; 64]));
+    println!("operation,calls,allocations,allocated_bytes,peak_live_bytes");
+    measure(
+        "dense_forward_legacy",
+        100,
+        || {
+            normalized_dense
+                .matvec_into(black_box(&input), &mut output)
+                .unwrap()
+        },
+        Some(100),
+    );
+    measure(
+        "csc_forward_legacy",
+        100,
+        || {
+            normalized_sparse
+                .matvec_into(black_box(&input), &mut output)
+                .unwrap()
+        },
+        Some(100),
+    );
+    measure(
+        "dense_transpose",
+        100,
+        || {
+            normalized_dense
+                .mat_transpose_vec_into(black_box(&output), &mut transpose)
+                .unwrap()
+        },
+        Some(0),
+    );
+    measure(
+        "csc_transpose",
+        100,
+        || {
+            normalized_sparse
+                .mat_transpose_vec_into(black_box(&output), &mut transpose)
+                .unwrap()
+        },
+        Some(0),
+    );
+    measure(
+        "dense_forward_upstream_scratch",
+        100,
+        || {
+            normalized_dense
+                .matvec_scaled_with_workspace(
+                    1.0,
+                    black_box(&input),
+                    0.0,
+                    &mut output,
+                    &mut scratch,
+                )
+                .unwrap()
+        },
+        Some(0),
+    );
+    measure(
+        "csc_forward_upstream_scratch",
+        100,
+        || {
+            normalized_sparse
+                .matvec_scaled_with_workspace(
+                    1.0,
+                    black_box(&input),
+                    0.0,
+                    &mut output,
+                    &mut scratch,
+                )
+                .unwrap()
+        },
+        Some(0),
+    );
+    measure(
+        "elastic_net_prox",
+        100,
+        || {
+            penalty
+                .prox(black_box(&input_slice), 0.5, &mut prox_output)
+                .unwrap()
+        },
+        Some(0),
+    );
+    let solver = ProximalGradient::<Col<f64>>::new();
+    let problem = Problem::new(&dense, Gaussian::new(&y), penalty);
+    let penalties = [
+        ElasticNet::new(0.1, 0.1),
+        penalty,
+        ElasticNet::new(0.01, 0.1),
+    ];
+    measure(
+        "dense_path",
+        1,
+        || {
+            let fits = solver.solve_path(&problem, black_box(&penalties)).unwrap();
+            assert!(
+                fits.iter()
+                    .all(|fit| fit.termination() == Termination::Converged)
+            );
+            black_box(fits);
+        },
+        None,
+    );
+    measure(
+        "dense_cold_points",
+        1,
+        || {
+            for penalty in penalties {
+                let _ = black_box(
+                    Problem::new(&dense, Gaussian::new(&y), penalty)
+                        .fit_with(&solver)
+                        .unwrap(),
+                );
+            }
+        },
+        None,
+    );
+    let sparse_problem = Problem::new(&sparse, Gaussian::new(&y), penalty);
+    measure(
+        "csc_path",
+        1,
+        || {
+            let fits = solver
+                .solve_path(&sparse_problem, black_box(&penalties))
+                .unwrap();
+            assert!(
+                fits.iter()
+                    .all(|fit| fit.termination() == Termination::Converged)
+            );
+            black_box(fits);
+        },
+        None,
+    );
+    measure(
+        "csc_cold_points",
+        1,
+        || {
+            for penalty in penalties {
+                let _ = black_box(
+                    Problem::new(&sparse, Gaussian::new(&y), penalty)
+                        .fit_with(&solver)
+                        .unwrap(),
+                );
+            }
+        },
+        None,
+    );
+}

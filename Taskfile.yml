@@ -52,6 +52,11 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench proximal
 
+  bench:proximal:heap:
+    desc: Measure normalized products, proximal maps, and path allocations
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench proximal_heap
+
   check:
     desc: Run all required checks
     cmds:
@@ -61,6 +66,7 @@ tasks:
       - task: test
       - task: example
       - task: bench:heap
+      - task: bench:proximal:heap
       - RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
       - panache format --check .
       - panache lint .

@@ -622,3 +622,91 @@ fn orthogonal_ridge_and_elastic_net_have_analytic_solutions() {
     close(net.coefficients()[0], 1.75 / 1.5);
     close(net.coefficients()[1], -2.75 / 1.5);
 }
+
+#[test]
+fn paths_match_independent_fits_on_original_scale() {
+    let x = Matrix::from_rows(&[
+        &[1.0, -2.0],
+        &[2.0, 1.0],
+        &[4.0, 0.0],
+        &[7.0, 3.0],
+        &[9.0, 2.0],
+    ]);
+    let y = [2.0, 3.0, 5.0, 8.0, 10.0];
+    let solver = ProximalGradient::new().tolerance(1e-9);
+    let penalties = [Ridge::new(1.0), Ridge::new(0.1), Ridge::new(0.0)];
+    let problem = Problem::new(&x, Gaussian::new(&y), Ridge::new(99.0));
+    let fits = solver.solve_path(&problem, &penalties).unwrap();
+    assert_eq!(fits.len(), penalties.len());
+    for (fit, penalty) in fits.iter().zip(penalties) {
+        let cold = Problem::new(&x, Gaussian::new(&y), penalty)
+            .fit_with(&solver)
+            .unwrap();
+        assert_eq!(fit.termination(), Termination::Converged);
+        for (&a, &b) in fit.coefficients().iter().zip(cold.coefficients()) {
+            close(a, b);
+        }
+        close(fit.intercept(), cold.intercept());
+        close(fit.objective(), cold.objective());
+    }
+    assert!(
+        solver
+            .solve_path(&problem, &[] as &[Ridge])
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        solver
+            .solve_path(&problem, &[Ridge::new(1.0), Ridge::new(-1.0)])
+            .is_err()
+    );
+}
+
+#[test]
+fn runtime_path_matches_typed_path_with_mixed_penalties() {
+    let x = Matrix::from_rows(&[&[1.0], &[2.0], &[4.0], &[7.0]]);
+    let y = [2.0, 3.0, 5.0, 8.0];
+    let solver = ProximalGradient::new().tolerance(1e-9);
+    let penalties: Vec<Box<dyn ProximalPenalty>> = vec![
+        Box::new(L1::new(0.3)),
+        Box::new(Ridge::new(0.1)),
+        Box::new(ElasticNet::new(0.1, 0.2)),
+    ];
+    let typed = Problem::new(&x, Gaussian::new(&y), L1::new(99.0));
+    let runtime = RuntimeProblem::new(
+        Box::new(MatrixDesign::new(&x)),
+        Box::new(Gaussian::new(&y)),
+        Box::new(L1::new(99.0)),
+    );
+    let a = solver.solve_path(&typed, &penalties).unwrap();
+    let b = solver.solve_runtime_path(&runtime, &penalties).unwrap();
+    for (a, b) in a.iter().zip(&b) {
+        close(a.coefficients()[0], b.coefficients()[0]);
+        close(a.intercept(), b.intercept());
+        assert_eq!(a.iterations(), b.iterations());
+    }
+}
+
+#[test]
+fn iteration_limit_path_points_continue_from_the_previous_parameters() {
+    let x = Matrix::from_rows(&[&[1.0], &[2.0], &[3.0]]);
+    let y = [1.0, 2.0, 3.0];
+    let problem = Problem::new(&x, Gaussian::new(&y).fit_intercept(false), Ridge::new(0.2))
+        .normalize(Normalization::None);
+    let solver = ProximalGradient::new()
+        .max_iterations(1)
+        .initial_step(0.1)
+        .tolerance(1e-12);
+    let path = solver
+        .solve_path(&problem, &[Ridge::new(0.2), Ridge::new(0.2)])
+        .unwrap();
+    assert!(
+        path.iter()
+            .all(|fit| fit.termination() == Termination::IterationLimit)
+    );
+    assert!(path.iter().all(|fit| fit.iterations() == 1));
+    let cold = problem.fit_with(&solver).unwrap();
+    close(path[0].coefficients()[0], cold.coefficients()[0]);
+    assert!(path[1].coefficients()[0] > path[0].coefficients()[0]);
+    assert!(path[1].objective() < path[0].objective());
+}
