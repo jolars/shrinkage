@@ -62,7 +62,7 @@ pub mod penalty;
 pub mod problem;
 pub mod solver;
 
-pub use datafit::{Datafit, Gaussian, SmoothDatafit};
+pub use datafit::{Binomial, Datafit, Gaussian, SmoothDatafit};
 pub use error::FitError as LassoError;
 pub use error::{BackendError, FitError};
 pub use fit::{LassoFit, Preprocessing, ProximalFit, Termination};

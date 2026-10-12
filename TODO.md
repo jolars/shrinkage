@@ -102,7 +102,7 @@ boundaries only when an implemented consumer needs them.
 
 ## 4. Datafit and coefficient layout proof
 
-- [ ] Add binomial regression through proximal gradient with stable loss and
+- [x] Add binomial regression through proximal gradient with stable loss and
   derivative evaluation, intercept handling, and justified step-size
   selection.
 - [ ] Check derivatives with finite differences and verify fits against

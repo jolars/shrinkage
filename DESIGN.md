@@ -1,9 +1,9 @@
 # Shrinkage: design
 
 Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
-and typed and runtime proximal gradient with ridge and elastic net are
-implemented. This document records commitments and an implementation sequence;
-illustrative API names are not frozen interfaces.
+and typed and runtime proximal gradient with Gaussian and binomial datafits,
+ridge, and elastic net are implemented. This document records commitments and an
+implementation sequence; illustrative API names are not frozen interfaces.
 
 ## 1. Purpose
 
