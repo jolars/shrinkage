@@ -105,8 +105,10 @@ boundaries only when an implemented consumer needs them.
 - [x] Add binomial regression through proximal gradient with stable loss and
   derivative evaluation, intercept handling, and justified step-size
   selection.
-- [ ] Check derivatives with finite differences and verify fits against
+- [x] Check derivatives with finite differences and verify fits against
   independent reference cases, including extreme linear predictors.
+  Predictor and coefficient checks cover both logit tails; typed and runtime
+  fits match reproducible high-precision Newton and active-set fixtures.
 - [ ] Add multivariate Gaussian fitting with explicit feature, response, and
   penalty axes before stabilizing coefficient layouts.
 - [ ] Compare separable multivariate cases with independent response fits and

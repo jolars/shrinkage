@@ -2,6 +2,8 @@
 
 #[path = "common/matrix.rs"]
 mod matrix;
+#[path = "binomial/reference.rs"]
+mod reference;
 
 use matrix::Matrix;
 use shrinkage::{
@@ -16,6 +18,16 @@ fn extreme_predictors_keep_loss_and_derivatives_finite() {
     let mut gradient = [0.0; 4];
     loss.gradient(&eta, &mut gradient).unwrap();
     assert_eq!(gradient, [0.0, 0.0, 0.25, -0.25]);
+}
+
+#[test]
+fn averaging_extreme_misclassified_losses_does_not_overflow() {
+    let datafit = Binomial::new(&[0.0, 1.0, 0.0, 1.0]);
+    let predictor = [f64::MAX, -f64::MAX, f64::MAX, -f64::MAX];
+    assert_eq!(datafit.value(&predictor).unwrap(), f64::MAX);
+    let mut gradient = [f64::NAN; 4];
+    datafit.gradient(&predictor, &mut gradient).unwrap();
+    assert_eq!(gradient, [0.25, -0.25, 0.25, -0.25]);
 }
 
 #[test]
@@ -52,6 +64,68 @@ fn gradients_match_finite_differences_and_retain_small_tails() {
         .gradient(&[40.0], &mut gradient[..1])
         .unwrap();
     assert!(gradient[0] < 0.0);
+}
+
+#[test]
+fn predictor_derivatives_match_finite_differences_across_both_tails() {
+    for target in [0.0, 0.3, 1.0] {
+        for eta in [
+            -700.0, -100.0, -40.0, -8.0, -0.2, 0.0, 0.2, 8.0, 40.0, 100.0, 700.0,
+        ] {
+            // A single row prevents another row's loss from hiding a tiny tail.
+            let response = [target];
+            let loss = Binomial::new(&response);
+            let mut gradient = [f64::NAN];
+            loss.gradient(&[eta], &mut gradient).unwrap();
+            let h = 1e-4;
+            let difference =
+                (loss.value(&[eta + h]).unwrap() - loss.value(&[eta - h]).unwrap()) / (2.0 * h);
+            assert!(
+                (difference - gradient[0]).abs() <= 3e-8 * gradient[0].abs(),
+                "target={target}, eta={eta}: {difference} != {}",
+                gradient[0]
+            );
+            if (target == 1.0 && eta > 0.0) || (target == 0.0 && eta < 0.0) {
+                assert_ne!(gradient[0], 0.0, "representable tails must survive");
+            }
+        }
+    }
+}
+
+#[test]
+fn coefficient_and_intercept_derivatives_match_finite_differences() {
+    let rows = [
+        [-40.0, 1.0],
+        [-2.0, -0.5],
+        [0.0, 2.0],
+        [1.0, -1.0],
+        [40.0, 0.0],
+    ];
+    let response = [0.0, 0.3, 1.0, 0.0, 1.0];
+    let datafit = Binomial::new(&response);
+    let predictor = |parameters: [f64; 3]| {
+        rows.map(|row| row[0] * parameters[0] + row[1] * parameters[1] + parameters[2])
+    };
+    let parameters = [1.5, -0.4, 0.2];
+    let mut gradient = [0.0; 5];
+    datafit
+        .gradient(&predictor(parameters), &mut gradient)
+        .unwrap();
+    for j in 0..3 {
+        let derivative: f64 = rows
+            .iter()
+            .zip(gradient)
+            .map(|(row, value)| value * if j == 2 { 1.0 } else { row[j] })
+            .sum();
+        let mut plus = parameters;
+        let mut minus = parameters;
+        plus[j] += 1e-5;
+        minus[j] -= 1e-5;
+        let difference = (datafit.value(&predictor(plus)).unwrap()
+            - datafit.value(&predictor(minus)).unwrap())
+            / 2e-5;
+        assert!((derivative - difference).abs() < 1e-10, "parameter {j}");
+    }
 }
 
 #[test]
