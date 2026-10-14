@@ -284,9 +284,9 @@ where
 
 // Slice buffers keep scalar loops concrete even when components are erased.
 // Native product buffers belong to the design adapter.
-struct Workspace {
-    coefficients: Vec<f64>,
-    intercept: f64,
+pub(crate) struct Workspace {
+    pub(crate) coefficients: Vec<f64>,
+    pub(crate) intercept: f64,
     eta: Vec<f64>,
     predictor_gradient: Vec<f64>,
     gradient: Vec<f64>,
@@ -295,7 +295,7 @@ struct Workspace {
 }
 
 impl Workspace {
-    fn new(n: usize, p: usize) -> Self {
+    pub(crate) fn new(n: usize, p: usize) -> Self {
         Self {
             coefficients: vec![0.0; p],
             intercept: 0.0,
@@ -363,7 +363,7 @@ where
         .collect()
 }
 
-fn iterate_with_workspace<O, D, P, V>(
+pub(crate) fn iterate_with_workspace<O, D, P, V>(
     design: &mut O,
     datafit: &D,
     penalty: &P,

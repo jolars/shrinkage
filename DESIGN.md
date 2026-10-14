@@ -3,8 +3,9 @@
 Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
 and typed and runtime proximal gradient with Gaussian and binomial datafits,
 ridge, elastic net, SLOPE, and multivariate Gaussian fitting with explicit
-penalty axes are implemented. This document records commitments and an
-implementation sequence; illustrative API names are not frozen interfaces.
+penalty axes, regularization paths, and lasso path screening are implemented.
+This document records commitments and an implementation sequence; illustrative
+API names are not frozen interfaces.
 
 ## 1. Purpose
 
@@ -482,6 +483,58 @@ Automatic maximum-penalty calculations and sequences are
 family/penalty-specific. For multiple penalties, allow independent strengths and
 meaningful mixing parameterizations without assuming every tuning problem is
 one-dimensional.
+
+`PathSolver` provides owned explicit penalty paths through
+`Problem::fit_path_with`. `RegularizationPathSolver` adds maximum-penalty
+queries and `fit_regularization_path_with`, generating the sequence within one
+prepared fit. `Lasso` supplies corresponding convenience methods. `PathFit`
+retains ordered fitted models, complete penalty settings, and automatic sequence
+metadata. Existing proximal path methods retain their vector return types.
+Explicit points preserve caller order, including repeated, increasing, and mixed
+penalties. All requested points are fitted, iteration-limit points warm the next
+fit, and errors return no partial path. Results own independent original-scale
+parameters and preprocessing.
+
+`NullModelDatafit` and `PathPenalty` are opt-in capabilities for exact null
+intercepts, penalty thresholds, and strength construction. `PathDatafit`
+combines the null-model and smooth-loss capabilities for runtime erasure.
+`RuntimePathProblem` and `ErasedPathPenalty` retain automatic capabilities
+before boxing, while ordinary runtime explicit paths continue to accept
+arbitrary smooth datafits and complete proximal terms. Dispatch stays outside
+scalar loops.
+
+Automatic sequences use 100 log-spaced points by default. Their endpoint ratio
+is `0.01` when observations are fewer than features, or `0.0001` otherwise.
+`PathOptions` overrides length, ratio, or starting strength. A zero start yields
+the requested number of zero values. Thresholds use the optimization-scale
+gradient at zero coefficients with enabled intercepts optimized. Gaussian null
+intercepts are response means, including one per multivariate response. Binomial
+uses the log odds of the response totals and rejects boundary responses for
+automatic free-intercept paths because their null optimum is not finite.
+
+L1 uses the null gradient's infinity norm. Elastic net follows glmnet's mixing
+parameterization: `l1 = lambda * alpha` and `l2 = lambda * (1 - alpha)`.
+`ElasticNet::from_alpha` retains alpha even at zero strength; positive
+independent strengths determine an equivalent ratio. A positive alpha divides
+the L1 threshold by alpha. Ridge and alpha-zero elastic net generally have no
+finite threshold and use the L1 threshold divided by `0.001` as a finite path
+anchor. `PenaltyMaximum` distinguishes this from a true zero-coefficient
+threshold. SLOPE's threshold is the maximum cumulative sorted gradient magnitude
+divided by the corresponding cumulative base weight. Axis penalties take the
+maximum group threshold, preserving the `1/nobs` loss scale and explicit penalty
+axis.
+
+Coordinate paths cache column summaries, residual offsets, correlations, dual
+certificate storage, and working-set masks across points. Gap Safe screening
+uses the existing feasible dual vector `u` and radius `sqrt(2 * gap / n)`. A
+zero coordinate is screened when its absolute dual correlation plus column norm
+times the radius lies strictly below lambda, with conservative rounding guards.
+Working sets include nonzero coefficients and KKT violators. Full checks after
+sweeps restore excluded violators; residuals are refreshed before accepting
+convergence and at iteration limits. Screening eligibility is rebuilt at each
+strength and disabled at zero penalty. Single fits retain complete cyclic
+sweeps. Proximal and multivariate paths reuse native products and iteration
+storage with complete mapping checks, including all unpenalized intercepts.
 
 ## 9. Out-of-core execution
 

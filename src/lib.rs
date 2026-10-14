@@ -59,6 +59,7 @@ pub mod fit;
 pub mod lasso;
 pub mod layout;
 pub mod normalization;
+pub mod path;
 pub mod penalty;
 pub mod problem;
 pub mod solver;
@@ -70,11 +71,16 @@ pub use fit::{LassoFit, MultivariateFit, Preprocessing, ProximalFit, Termination
 pub use lasso::Lasso;
 pub use layout::CoefficientLayout;
 pub use normalization::{Centering, Normalization, Scaling};
+pub use path::{
+    ErasedPathPenalty, NullModelDatafit, PathDatafit, PathFit, PathOptions, PathPenalty,
+    PathSolver, PenaltyMaximum, RegularizationPathSolver,
+};
 pub use penalty::{
     AxisPenalty, ElasticNet, L1, Penalty, PenaltyAxis, ProximalPenalty, Ridge, Slope,
 };
 pub use problem::{
-    MatrixDesign, Problem, RuntimeDesign, RuntimeMultivariateProblem, RuntimeProblem,
+    MatrixDesign, Problem, RuntimeDesign, RuntimeMultivariateProblem, RuntimePathProblem,
+    RuntimeProblem,
 };
 pub use solver::{
     CoordinateDescent, ProximalDesign, ProximalGradient, ProximalVector, Solver, StoppingCriterion,

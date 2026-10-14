@@ -224,6 +224,84 @@ adapter uses the cloning product API. A three-point dense path uses 750
 allocations versus 924 for independent fits; CSC uses 749 versus 921. These
 counts include preparation and owned results and depend on convergence.
 
+## Regularization paths
+
+`Lasso::fit_path(&x, &y, &lambdas)` fits explicit strengths in caller order.
+`Problem::fit_path_with(&solver, penalties)` accepts an owned vector of complete
+penalties, including independent elastic-net strengths and mixed runtime
+penalties. Both return `PathFit`, which retains the corresponding penalty
+settings and fitted models. Iterate with `path.iter()` or inspect `path.fits()`
+and `path.penalties()`. Each model owns its original-scale parameters,
+preprocessing, and convergence diagnostics.
+
+For automatic sequences, use `Lasso::fit_regularization_path` or
+`Problem::fit_regularization_path_with`:
+
+```rust
+use faer::{Col, Mat};
+use shrinkage::{ElasticNet, Gaussian, PathOptions, Problem, ProximalGradient};
+
+let x = Mat::from_fn(3, 1, |i, _| i as f64);
+let y = [1.0, 3.0, 5.0];
+let problem = Problem::new(&x, Gaussian::new(&y), ElasticNet::from_alpha(0.0, 0.5));
+let path = problem.fit_regularization_path_with(
+    &ProximalGradient::<Col<f64>>::new(),
+    &PathOptions::new().nlambda(50).lambda_min_ratio(0.01),
+)?;
+for ((penalty, fit), lambda) in path.iter().zip(path.lambdas().unwrap()) {
+    println!("lambda={lambda}, l1={}, l2={}, status={:?}",
+        penalty.l1(), penalty.l2(), fit.termination());
+}
+```
+
+Automatic paths optimize the null intercepts, calculate the coefficient gradient
+on the normalized design, and generate decreasing, evenly log-spaced strengths.
+Defaults follow glmnet: 100 points and an endpoint ratio of `0.01` when there
+are fewer observations than features, or `0.0001` otherwise. Configure the
+length, ratio, and optional starting override through `PathOptions`. Every
+requested point is fitted. A zero start produces a sequence of zeros.
+
+`ElasticNet::from_alpha(lambda, alpha)` uses
+`lambda * (alpha * ||theta||₁ + (1 - alpha) * ||theta||² / 2)`, with alpha in
+`[0, 1]`. Automatic paths fix alpha while varying lambda. The existing
+`ElasticNet::new(l1, l2)` retains independent strengths for explicit paths;
+positive strengths also determine their equivalent mixing ratio. Two
+independently supplied zero strengths do not identify alpha, so use `from_alpha`
+when configuring such an automatic path.
+
+`maximum_penalty_with` reports `PenaltyMaximum::Finite` or `Unbounded`. Lasso
+also exposes `lambda_max`. The finite L1 threshold is the largest absolute null
+gradient; positive-alpha elastic net divides it by alpha. SLOPE uses cumulative
+sorted gradient magnitudes divided by cumulative base weights, and each lambda
+multiplies the supplied weight shape. Multivariate axis penalties take the
+largest group threshold without changing loss normalization. Ridge generally has
+no finite zero-coefficient threshold. Its automatic path starts at the L1
+threshold divided by `0.001`, including elastic net at alpha zero.
+`path.maximum_penalty()` and `path.lambda_start()` distinguish this anchor from
+a true threshold. An explicit starting override does not change the reported
+threshold. A free-intercept binomial null model needs responses whose mean lies
+strictly between zero and one; explicit paths remain available otherwise.
+
+Each path validates and prepares the design once, retains optimization-scale
+warm starts and numerical workspaces, and resets the iteration budget at each
+point. Proximal steps also reset. Gaussian lasso paths use Gap Safe screening
+and working sets, with refreshed full-design checks before convergence.
+`CoordinateDescent::screening(false)` and `working_sets(false)` disable these
+path optimizations. Screening is disabled at zero penalty, and the default lasso
+stopping criterion resolves separately for each strength. Check each fit's
+termination: iteration-limit results initialize the next point, while fitting
+errors return no partial path.
+
+The same APIs support `MultivariateGaussian` with `AxisPenalty`, retaining
+response-specific intercepts. Runtime automatic paths use `RuntimePathProblem`
+with a boxed `PathDatafit` and `ErasedPathPenalty`, preserving the required
+capabilities before erasure. External components can implement
+`NullModelDatafit` and `PathPenalty`; ordinary explicit paths still require only
+the existing smooth-datafit and proximal-penalty capabilities. The existing
+proximal `solve_path` and `solve_runtime_path` methods keep their vector return
+types. Run `cargo run --example regularization_path --features faer_v0_24` for
+lasso, elastic-net, and runtime binomial paths.
+
 ## Multivariate Gaussian
 
 `MultivariateGaussian` fits several Gaussian responses jointly with the same
@@ -322,8 +400,9 @@ original-scale fitted parameters follow the typed API's conventions. Automatic
 centering resolves during fitting using the selected datafit's intercept policy.
 Runtime backend failures return `FitError<BackendError>` with their operation
 context and original error accessible through `BackendError::as_error` and the
-error source chain. Product buffers are reused within a fit; ownership across
-fits and regularization paths remains future work.
+error source chain. Product buffers and iteration storage are reused within a
+fit and across regularization path points. Independently requested fits prepare
+their own storage.
 
 Typed and runtime fits use the same component contracts and return matching
 parameters, predictions, normalization metadata, and stopping diagnostics,

@@ -168,3 +168,80 @@ fn repeated_updates_and_refresh_match_materialized_residuals() {
         );
     }
 }
+
+#[test]
+fn path_workspace_retains_storage_and_rebuilds_screening_at_each_strength() {
+    let raw = Sparse {
+        nrows: 4,
+        columns: vec![
+            vec![(0, -1.0), (1, -1.0), (2, 1.0), (3, 1.0)],
+            vec![(0, -1.0), (1, 1.0), (2, -1.0), (3, 1.0)],
+        ],
+        visits: Cell::new(0),
+    };
+    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let y = [-3.1, -2.9, 2.9, 3.1];
+    let datafit = Gaussian::new(&y).fit_intercept(false);
+    let options = CoordinateDescent::new().tolerance(1e-10);
+    let mut work = Workspace::new(&matrix, datafit).unwrap();
+    let pointers = (
+        work.coefficients.as_ptr(),
+        work.residual.base.as_ptr(),
+        work.summaries.as_ptr(),
+        work.dual_certificate.as_ptr(),
+        work.dual_correlations.as_ptr(),
+        work.correlations.as_ptr(),
+        work.working_set.as_ptr(),
+        work.screened.as_ptr(),
+    );
+    let first = solve_with_workspace(&matrix, datafit, L1::new(1.0), &options, &mut work).unwrap();
+    assert_eq!(first.termination, Termination::Converged);
+    assert!(work.screened[1]);
+    assert!(!work.working_set[1]);
+    let repeated =
+        solve_with_workspace(&matrix, datafit, L1::new(1.0), &options, &mut work).unwrap();
+    assert_eq!(repeated.iterations, 0);
+    let weaker =
+        solve_with_workspace(&matrix, datafit, L1::new(0.01), &options, &mut work).unwrap();
+    assert_eq!(weaker.termination, Termination::Converged);
+    close(weaker.coefficients[1], 0.09);
+    assert!(!work.screened[1]);
+    assert!(work.working_set[1]);
+    assert_eq!(
+        pointers,
+        (
+            work.coefficients.as_ptr(),
+            work.residual.base.as_ptr(),
+            work.summaries.as_ptr(),
+            work.dual_certificate.as_ptr(),
+            work.dual_correlations.as_ptr(),
+            work.correlations.as_ptr(),
+            work.working_set.as_ptr(),
+            work.screened.as_ptr(),
+        )
+    );
+    let zero = solve_with_workspace(&matrix, datafit, L1::new(0.0), &options, &mut work).unwrap();
+    assert_eq!(zero.termination, Termination::Converged);
+    assert!(work.screened.iter().all(|screened| !screened));
+}
+
+#[test]
+fn path_iteration_limits_keep_optimization_parameters() {
+    let raw = Sparse {
+        nrows: 3,
+        columns: vec![vec![(0, 1.0), (1, 2.0), (2, 3.0)]],
+        visits: Cell::new(0),
+    };
+    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let datafit = Gaussian::new(&[2.0, 4.0, 8.0]);
+    let options = CoordinateDescent::new().tolerance(1e-12).max_iterations(1);
+    let mut work = Workspace::new(&matrix, datafit).unwrap();
+    let first = solve_with_workspace(&matrix, datafit, L1::new(0.1), &options, &mut work).unwrap();
+    let second = solve_with_workspace(&matrix, datafit, L1::new(0.1), &options, &mut work).unwrap();
+    assert_eq!(first.termination, Termination::IterationLimit);
+    assert_eq!(second.termination, Termination::IterationLimit);
+    assert_eq!(first.iterations, 1);
+    assert_eq!(second.iterations, 1);
+    assert!(second.objective < first.objective);
+    assert!(second.coefficients[0] > first.coefficients[0]);
+}

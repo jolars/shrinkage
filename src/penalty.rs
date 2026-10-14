@@ -139,12 +139,50 @@ impl Ridge {
 pub struct ElasticNet {
     l1: f64,
     l2: f64,
+    mixing: Option<f64>,
 }
 
 impl ElasticNet {
     /// Set the L1 and squared L2 strengths independently, checked when used.
     pub fn new(l1: f64, l2: f64) -> Self {
-        Self { l1, l2 }
+        Self {
+            l1,
+            l2,
+            mixing: None,
+        }
+    }
+
+    /// Use `lambda * (alpha * ||theta||₁ + (1 - alpha) * ||theta||² / 2)`.
+    /// Lambda must be finite and nonnegative, and alpha must lie in `[0, 1]`.
+    /// Validation occurs during evaluation or fitting. Automatic paths retain
+    /// alpha even when the supplied lambda is zero.
+    pub fn from_alpha(lambda: f64, alpha: f64) -> Self {
+        Self {
+            l1: lambda * alpha,
+            l2: lambda * (1.0 - alpha),
+            mixing: Some(alpha),
+        }
+    }
+
+    /// Configured mixing parameter, or its equivalent for positive independent
+    /// strengths. Two independently supplied zero strengths have no mixing ratio.
+    pub fn alpha(&self) -> Option<f64> {
+        self.mixing.or_else(|| {
+            let scale = self.l1.max(self.l2);
+            (scale > 0.0).then(|| (self.l1 / scale) / (self.l1 / scale + self.l2 / scale))
+        })
+    }
+
+    fn validate(&self) -> Result<(), FitError> {
+        L1::new(self.l1).validate()?;
+        L1::new(self.l2).validate()?;
+        if self
+            .mixing
+            .is_some_and(|alpha| !alpha.is_finite() || !(0.0..=1.0).contains(&alpha))
+        {
+            return Err(invalid("elastic-net alpha must be finite and in [0, 1]"));
+        }
+        Ok(())
     }
 
     /// Configured L1 strength.
@@ -170,8 +208,7 @@ impl Penalty for ElasticNet {
     type Error = FitError;
 
     fn value(&self, coefficients: &[f64]) -> Result<f64, FitError> {
-        L1::new(self.l1).validate()?;
-        L1::new(self.l2).validate()?;
+        self.validate()?;
         let l1 = L1::new(self.l1).value(coefficients)?;
         let l2 = if self.l2 == 0.0 {
             0.0
@@ -202,8 +239,7 @@ impl ProximalPenalty for Ridge {
 
 impl ProximalPenalty for ElasticNet {
     fn prox(&self, input: &[f64], step: f64, output: &mut [f64]) -> Result<(), FitError> {
-        L1::new(self.l1).validate()?;
-        L1::new(self.l2).validate()?;
+        self.validate()?;
         if input.len() != output.len() {
             return Err(invalid("proximal input and output lengths must match"));
         }

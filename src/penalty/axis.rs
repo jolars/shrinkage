@@ -79,6 +79,12 @@ impl<P: Penalty<Error = FitError>> Penalty for AxisPenalty<P> {
     fn value(&self, coefficients: &[f64]) -> Result<f64, FitError> {
         self.validate(coefficients)?;
         if self.layout.is_empty() {
+            if self.axis == PenaltyAxis::Responses {
+                // There are no response groups, but the inner penalty still
+                // needs validation against its configured response width.
+                self.penalty.value(&self.scratch.borrow().0)?;
+                return Ok(0.0);
+            }
             let value = self.penalty.value(coefficients)?;
             return Ok(finite(
                 match self.axis {
@@ -125,6 +131,11 @@ impl<P: ProximalPenalty> ProximalPenalty for AxisPenalty<P> {
             return Err(invalid(
                 "proximal step must be finite and strictly positive",
             ));
+        }
+        if self.layout.is_empty() && self.axis == PenaltyAxis::Responses {
+            let mut scratch = self.scratch.borrow_mut();
+            let (group, target) = &mut *scratch;
+            return self.penalty.prox(group, step, target);
         }
         if self.axis == PenaltyAxis::All || self.layout.is_empty() {
             return self.penalty.prox(input, step, output);

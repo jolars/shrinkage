@@ -168,7 +168,6 @@ pub(crate) struct Solution {
 struct Diagnostics {
     objective: f64,
     kkt_violation: f64,
-    dual_certificate: Vec<f64>,
     dual_objective: f64,
     duality_gap: f64,
 }
@@ -176,22 +175,22 @@ struct Diagnostics {
 fn diagnostics<M: RawColumns<f64>>(
     matrix: &LazyMatrix<M>,
     y: &[f64],
-    parameters: (&[f64], f64),
+    parameters: (&[f64], f64, &mut [f64], &mut [f64], &mut [f64]),
     residual: &Residual,
     summaries: &[ColumnSummary],
     components: (Gaussian<'_>, L1),
     iteration: usize,
 ) -> Result<Diagnostics, NumericalFailure> {
     let (datafit, penalty) = components;
-    let (coefficients, intercept) = parameters;
+    let (coefficients, intercept, dual_certificate, correlations, primal_correlations) = parameters;
     let kkt_violation = kkt_violation(
         matrix,
         coefficients,
         residual,
         summaries,
-        datafit,
-        penalty,
+        (datafit, penalty),
         iteration,
+        primal_correlations,
     )?;
     let penalty_value = finite(
         penalty.value_unchecked(coefficients),
@@ -213,17 +212,13 @@ fn diagnostics<M: RawColumns<f64>>(
     } else {
         0.0
     };
-    let mut dual_certificate = residual
-        .base
-        .iter()
-        .map(|&base| {
-            finite(
-                (base + residual.offset - mean) / n,
-                "constructing a dual certificate",
-                iteration,
-            )
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    for (&base, dual) in residual.base.iter().zip(dual_certificate.iter_mut()) {
+        *dual = finite(
+            (base + residual.offset - mean) / n,
+            "constructing a dual certificate",
+            iteration,
+        )?;
+    }
     if datafit.fit_intercept {
         let last = dual_certificate.len() - 1;
         let prefix_sum: f64 = dual_certificate[..last].iter().sum();
@@ -235,27 +230,26 @@ fn diagnostics<M: RawColumns<f64>>(
         iteration,
     )?;
     let mut max_correlation: f64 = 0.0;
-    let mut correlations = Vec::with_capacity(matrix.ncols());
-    for j in 0..matrix.ncols() {
+    for (j, entry) in correlations.iter_mut().enumerate() {
         let correlation = finite(
-            matrix.column(j).dot_with_sum(&dual_certificate, dual_sum),
+            matrix.column(j).dot_with_sum(dual_certificate, dual_sum),
             "checking dual feasibility",
             iteration,
         )?;
         max_correlation = max_correlation.max(correlation.abs());
-        correlations.push(correlation);
+        *entry = correlation;
     }
     let factor = if max_correlation > 0.0 {
         (penalty.lambda / max_correlation).min(1.0) * (1.0 - 16.0 * f64::EPSILON)
     } else {
         1.0
     };
-    for value in &mut dual_certificate {
+    for value in dual_certificate.iter_mut() {
         *value = finite(*value * factor, "scaling a dual certificate", iteration)?;
     }
     let inner_product = finite(
         y.iter()
-            .zip(&dual_certificate)
+            .zip(dual_certificate.iter())
             .map(|(&target, &dual)| target * dual)
             .sum(),
         "computing the dual objective",
@@ -274,7 +268,7 @@ fn diagnostics<M: RawColumns<f64>>(
     // Fenchel's identity avoids subtracting nearly equal objectives. The norm
     // and coordinatewise terms are nonnegative for an exactly feasible vector.
     let mut duality_gap = 0.0;
-    for (&base, &dual) in residual.base.iter().zip(&dual_certificate) {
+    for (&base, &dual) in residual.base.iter().zip(dual_certificate.iter()) {
         let difference = finite(
             base + residual.offset - n * dual,
             "computing the duality gap",
@@ -282,7 +276,7 @@ fn diagnostics<M: RawColumns<f64>>(
         )?;
         duality_gap += 0.5 * (difference / n.sqrt()).powi(2);
     }
-    for (&coefficient, &correlation) in coefficients.iter().zip(&correlations) {
+    for (&coefficient, &correlation) in coefficients.iter().zip(correlations.iter()) {
         let slack = penalty.lambda * coefficient.abs() - coefficient * factor * correlation;
         duality_gap += slack.max(0.0);
     }
@@ -291,10 +285,12 @@ fn diagnostics<M: RawColumns<f64>>(
         duality_gap -= intercept * scaled_sum;
     }
     duality_gap = finite(duality_gap.max(0.0), "computing the duality gap", iteration)?;
+    for correlation in correlations.iter_mut() {
+        *correlation *= factor;
+    }
     Ok(Diagnostics {
         objective,
         kkt_violation,
-        dual_certificate,
         dual_objective,
         duality_gap,
     })
@@ -315,10 +311,11 @@ fn kkt_violation<M: RawColumns<f64>>(
     coefficients: &[f64],
     residual: &Residual,
     summaries: &[ColumnSummary],
-    datafit: Gaussian<'_>,
-    penalty: L1,
+    components: (Gaussian<'_>, L1),
     iteration: usize,
+    correlations: &mut [f64],
 ) -> Result<f64, NumericalFailure> {
+    let (datafit, penalty) = components;
     let mut violation = if datafit.fit_intercept {
         residual.mean(iteration)?.abs()
     } else {
@@ -327,6 +324,7 @@ fn kkt_violation<M: RawColumns<f64>>(
     let n = matrix.nrows() as f64;
     for (j, &coefficient) in coefficients.iter().enumerate() {
         let correlation = residual.dot(&matrix.column(j), &summaries[j], iteration)? / n;
+        correlations[j] = correlation;
         let coordinate_violation = if coefficient == 0.0 {
             (correlation.abs() - penalty.lambda).max(0.0)
         } else {
@@ -342,30 +340,119 @@ fn kkt_violation<M: RawColumns<f64>>(
     Ok(violation)
 }
 
+pub(crate) struct Workspace {
+    summaries: Vec<ColumnSummary>,
+    coefficients: Vec<f64>,
+    intercept: f64,
+    residual: Residual,
+    reference_loss: f64,
+    dual_certificate: Vec<f64>,
+    dual_correlations: Vec<f64>,
+    correlations: Vec<f64>,
+    working_set: Vec<bool>,
+    screened: Vec<bool>,
+}
+
+impl Workspace {
+    pub(crate) fn new<M: RawColumns<f64>>(
+        matrix: &LazyMatrix<M>,
+        datafit: Gaussian<'_>,
+    ) -> Result<Self, NumericalFailure> {
+        let n = matrix.nrows() as f64;
+        let intercept = if datafit.fit_intercept {
+            finite(
+                datafit.response.iter().map(|value| value / n).sum(),
+                "computing the response mean",
+                0,
+            )?
+        } else {
+            0.0
+        };
+        let residual = Residual::new(datafit.response, intercept)?;
+        let reference_loss = residual.loss(0)?;
+        Ok(Self {
+            summaries: (0..matrix.ncols())
+                .map(|j| ColumnSummary::new(&matrix.column(j)))
+                .collect::<Result<_, _>>()?,
+            coefficients: vec![0.0; matrix.ncols()],
+            intercept,
+            residual,
+            reference_loss,
+            dual_certificate: vec![0.0; matrix.nrows()],
+            dual_correlations: vec![0.0; matrix.ncols()],
+            correlations: vec![0.0; matrix.ncols()],
+            working_set: vec![true; matrix.ncols()],
+            screened: vec![false; matrix.ncols()],
+        })
+    }
+
+    fn select(&mut self, penalty: L1, options: &CoordinateDescent, check: &Diagnostics) {
+        // The dual objective is n-strongly concave in the unscaled certificate.
+        // Inflate the gap and the strict screening bound to retain borderline
+        // columns under floating-point rounding.
+        let guard = 64.0
+            * f64::EPSILON
+            * (check.objective.abs() + check.dual_objective.abs() + self.reference_loss);
+        let radius = (2.0 * ((check.duality_gap + guard) / self.residual.base.len() as f64)).sqrt();
+        for j in 0..self.coefficients.len() {
+            let nonzero = self.coefficients[j] != 0.0;
+            let bound =
+                self.dual_correlations[j].abs() + self.summaries[j].norm_squared.sqrt() * radius;
+            let slack = 64.0 * f64::EPSILON * (bound.abs() + penalty.lambda);
+            self.screened[j] = options.screening
+                && penalty.lambda > 0.0
+                && !nonzero
+                && bound + slack < penalty.lambda;
+            let violation = self.correlations[j].abs() > penalty.lambda;
+            // Full KKT checks can restore a coordinate even when a screening
+            // bound was too optimistic because of numerical rounding.
+            if violation {
+                self.screened[j] = false;
+            }
+            self.working_set[j] =
+                !self.screened[j] && (!options.working_sets || nonzero || violation);
+        }
+    }
+}
+
 pub(crate) fn solve<M: RawColumns<f64>>(
     matrix: &LazyMatrix<M>,
     datafit: Gaussian<'_>,
     penalty: L1,
     options: &CoordinateDescent,
 ) -> Result<Solution, NumericalFailure> {
+    let mut work = Workspace::new(matrix, datafit)?;
+    let full = CoordinateDescent {
+        screening: false,
+        working_sets: false,
+        ..*options
+    };
+    solve_with_workspace(matrix, datafit, penalty, &full, &mut work)
+}
+
+pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
+    matrix: &LazyMatrix<M>,
+    datafit: Gaussian<'_>,
+    penalty: L1,
+    options: &CoordinateDescent,
+    work: &mut Workspace,
+) -> Result<Solution, NumericalFailure> {
     let y = datafit.response;
     let criterion = options.criterion(penalty);
     let n = matrix.nrows() as f64;
-    let summaries: Vec<_> = (0..matrix.ncols())
-        .map(|j| ColumnSummary::new(&matrix.column(j)))
-        .collect::<Result<_, _>>()?;
-    let mut coefficients = vec![0.0; matrix.ncols()];
-    let mut intercept = if datafit.fit_intercept {
-        finite(
-            y.iter().map(|value| value / n).sum(),
-            "computing the response mean",
-            0,
-        )?
-    } else {
-        0.0
-    };
-    let mut residual = Residual::new(y, intercept)?;
-    let reference_loss = residual.loss(0)?;
+    let Workspace {
+        summaries,
+        coefficients,
+        intercept,
+        residual,
+        reference_loss,
+        dual_certificate,
+        dual_correlations,
+        correlations,
+        working_set: _,
+        screened: _,
+    } = work;
+    let reference_loss = *reference_loss;
     let threshold = match criterion {
         StoppingCriterion::DualityGap { absolute, relative } => finite(
             absolute + relative * reference_loss,
@@ -380,16 +467,38 @@ pub(crate) fn solve<M: RawColumns<f64>>(
     let mut check = diagnostics(
         matrix,
         y,
-        (&coefficients, intercept),
-        &residual,
-        &summaries,
+        (
+            coefficients,
+            *intercept,
+            dual_certificate,
+            dual_correlations,
+            correlations,
+        ),
+        residual,
+        summaries,
         (datafit, penalty),
         0,
     )?;
+    work.select(penalty, options, &check);
     let mut iterations = 0;
     while stopping_value(&check, criterion) > threshold && iterations < options.max_iterations {
         iterations += 1;
+        let Workspace {
+            summaries,
+            coefficients,
+            intercept,
+            residual,
+            reference_loss: _,
+            dual_certificate,
+            dual_correlations,
+            correlations,
+            working_set,
+            screened: _,
+        } = work;
         for (j, coefficient) in coefficients.iter_mut().enumerate() {
+            if !working_set[j] {
+                continue;
+            }
             let summary = &summaries[j];
             if summary.norm_squared == 0.0 {
                 continue;
@@ -418,7 +527,7 @@ pub(crate) fn solve<M: RawColumns<f64>>(
         }
         if datafit.fit_intercept {
             let delta = residual.mean(iterations)?;
-            intercept = finite(intercept + delta, "updating the intercept", iterations)?;
+            *intercept = finite(*intercept + delta, "updating the intercept", iterations)?;
             residual.offset = finite(
                 residual.offset - delta,
                 "updating the intercept residual",
@@ -427,34 +536,53 @@ pub(crate) fn solve<M: RawColumns<f64>>(
         }
         let refreshed = iterations % REFRESH_INTERVAL == 0 || iterations == options.max_iterations;
         if refreshed {
-            residual.refresh(matrix, y, &coefficients, intercept, &summaries, iterations)?;
+            residual.refresh(matrix, y, coefficients, *intercept, summaries, iterations)?;
         }
         check = diagnostics(
             matrix,
             y,
-            (&coefficients, intercept),
-            &residual,
-            &summaries,
+            (
+                coefficients,
+                *intercept,
+                dual_certificate,
+                dual_correlations,
+                correlations,
+            ),
+            residual,
+            summaries,
             (datafit, penalty),
             iterations,
         )?;
         if stopping_value(&check, criterion) <= threshold && !refreshed {
-            residual.refresh(matrix, y, &coefficients, intercept, &summaries, iterations)?;
+            residual.refresh(matrix, y, coefficients, *intercept, summaries, iterations)?;
             check = diagnostics(
                 matrix,
                 y,
-                (&coefficients, intercept),
-                &residual,
-                &summaries,
+                (
+                    coefficients,
+                    *intercept,
+                    dual_certificate,
+                    dual_correlations,
+                    correlations,
+                ),
+                residual,
+                summaries,
                 (datafit, penalty),
                 iterations,
             )?;
         }
+        work.select(penalty, options, &check);
     }
-    let final_value = stopping_value(&check, criterion);
-    Ok(Solution {
+    let Workspace {
         coefficients,
         intercept,
+        dual_certificate,
+        ..
+    } = work;
+    let final_value = stopping_value(&check, criterion);
+    Ok(Solution {
+        coefficients: coefficients.clone(),
+        intercept: *intercept,
         termination: if final_value <= threshold {
             Termination::Converged
         } else {
@@ -463,7 +591,7 @@ pub(crate) fn solve<M: RawColumns<f64>>(
         iterations,
         objective: check.objective,
         kkt_violation: check.kkt_violation,
-        dual_certificate: check.dual_certificate,
+        dual_certificate: dual_certificate.clone(),
         dual_objective: check.dual_objective,
         duality_gap: check.duality_gap,
         reference_loss,

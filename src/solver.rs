@@ -3,6 +3,7 @@
 pub(crate) mod coordinate;
 pub(crate) mod proximal;
 
+pub use crate::path::{PathSolver, RegularizationPathSolver};
 pub use proximal::{ProximalDesign, ProximalGradient, ProximalVector};
 
 use crate::error::{invalid, unsupported};
@@ -31,6 +32,8 @@ pub trait Solver<P> {
 pub struct CoordinateDescent {
     stopping_criterion: Option<StoppingCriterion>,
     max_iterations: usize,
+    screening: bool,
+    working_sets: bool,
 }
 
 impl CoordinateDescent {
@@ -40,6 +43,8 @@ impl CoordinateDescent {
         Self {
             stopping_criterion: None,
             max_iterations: 10_000,
+            screening: true,
+            working_sets: true,
         }
     }
 
@@ -58,6 +63,20 @@ impl CoordinateDescent {
     /// Set the maximum number of complete sweeps, checked when fitting.
     pub fn max_iterations(mut self, max_iterations: usize) -> Self {
         self.max_iterations = max_iterations;
+        self
+    }
+
+    /// Enable Gap Safe screening in paths. Disabled at zero penalty.
+    /// Single fits retain their complete cyclic sweeps.
+    pub fn screening(mut self, enabled: bool) -> Self {
+        self.screening = enabled;
+        self
+    }
+
+    /// Restrict path sweeps to active or KKT-violating features, with full
+    /// checks after every sweep. Single fits retain complete cyclic sweeps.
+    pub fn working_sets(mut self, enabled: bool) -> Self {
+        self.working_sets = enabled;
         self
     }
 }

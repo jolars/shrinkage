@@ -16,6 +16,7 @@ use shrinkage::{
     MultivariateGaussian, Normalization, PenaltyAxis, Problem, ProximalGradient, ProximalVector,
     RuntimeMultivariateProblem, RuntimeProblem, Scaling, Termination,
 };
+use shrinkage::{ErasedPathPenalty, PathOptions, RuntimePathProblem};
 
 const ROWS: [[f64; 3]; 5] = [
     [0.0, 1.0, 5.0],
@@ -37,6 +38,7 @@ where
     V: ProximalVector + 'static,
 {
     verify_multivariate::<M, V>(design);
+    verify_paths::<M, V>(design);
     let rows: Vec<_> = ROWS.iter().map(|row| row.as_slice()).collect();
     let reference = matrix::Matrix::from_rows(&rows);
     for intercept in [false, true] {
@@ -172,6 +174,59 @@ where
                         close(*a, b);
                     }
                 }
+            }
+        }
+    }
+}
+
+fn verify_paths<M, V>(design: &M)
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    M::Error: std::error::Error + 'static,
+    V: ProximalVector + 'static,
+{
+    let rows = ROWS.iter().map(|row| row.as_slice()).collect::<Vec<_>>();
+    let reference = matrix::Matrix::from_rows(&rows);
+    let options = PathOptions::new().nlambda(3).lambda_min_ratio(0.1);
+    let penalty = ElasticNet::from_alpha(0.0, 0.5);
+    for intercept in [false, true] {
+        for normalization in [Normalization::None, Normalization::Standardize] {
+            let datafit = Gaussian::new(&Y).fit_intercept(intercept);
+            let typed = Problem::new(design, datafit, penalty)
+                .normalize(normalization)
+                .fit_regularization_path_with(
+                    &ProximalGradient::<V>::new().tolerance(1e-9),
+                    &options,
+                )
+                .unwrap();
+            let runtime = RuntimePathProblem::new(
+                Box::new(MatrixDesign::<_, V>::new(design)),
+                Box::new(datafit),
+                Box::new(ErasedPathPenalty::new(penalty)),
+            )
+            .normalize(normalization)
+            .fit_regularization_path_with(&ProximalGradient::new().tolerance(1e-9), &options)
+            .unwrap();
+            let expected = Problem::new(&reference, datafit, penalty)
+                .normalize(normalization)
+                .fit_regularization_path_with(&ProximalGradient::new().tolerance(1e-9), &options)
+                .unwrap();
+            for ((a, b), c) in typed.fits().iter().zip(runtime.fits()).zip(expected.fits()) {
+                assert_eq!(a.termination(), Termination::Converged);
+                assert_eq!(a.coefficients(), b.coefficients());
+                assert_eq!(a.intercept(), b.intercept());
+                close(a.objective(), c.objective());
+                for (&a, &c) in a.coefficients().iter().zip(c.coefficients()) {
+                    close(a, c);
+                }
+            }
+            for (&a, &c) in typed
+                .lambdas()
+                .unwrap()
+                .iter()
+                .zip(expected.lambdas().unwrap())
+            {
+                close(a, c);
             }
         }
     }

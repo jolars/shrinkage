@@ -124,13 +124,11 @@ boundaries only when an implemented consumer needs them.
 - [ ] Test ties, cluster merges and splits, normalization semantics, and
   agreement with generic proximal methods before preferring the hybrid
   solver.
-- [ ] Add path APIs with warm starts and reusable workspaces. Add screening and
-  working sets with full optimality checks at each solution.
-- [ ] Implement maximum-penalty calculations and path sequences for each
+- [x] Add path APIs with warm starts and reusable workspaces. Add lasso
+  screening and working sets with full optimality checks at each solution.
+- [x] Implement maximum-penalty calculations and path sequences for each
   supported family and penalty. Keep independent penalty strengths explicit
   when tuning multiple penalties.
-- [ ] Compare warm and cold starts and benchmark paths and SLOPE solvers across
-  representative dense and sparse problems.
 
 ## 6. Broader penalties and solvers
 

@@ -42,7 +42,7 @@ pub struct Lasso {
     normalization: Normalization,
     supplied_centers: Option<Vec<f64>>,
     supplied_scales: Option<Vec<f64>>,
-    stopping_criterion: StoppingCriterion,
+    stopping_criterion: Option<StoppingCriterion>,
     max_iterations: usize,
 }
 
@@ -60,11 +60,7 @@ impl Lasso {
             normalization: Normalization::Auto,
             supplied_centers: None,
             supplied_scales: None,
-            stopping_criterion: if lambda == 0.0 {
-                StoppingCriterion::kkt_violation(1e-6)
-            } else {
-                StoppingCriterion::duality_gap(1e-6)
-            },
+            stopping_criterion: None,
             max_iterations: 10_000,
         }
     }
@@ -122,7 +118,7 @@ impl Lasso {
     /// `|mean(residual)|`. Convergence requires the largest violation to be at
     /// most this tolerance, confirmed after reconstructing the residual.
     pub fn tolerance(mut self, tolerance: f64) -> Self {
-        self.stopping_criterion = StoppingCriterion::kkt_violation(tolerance);
+        self.stopping_criterion = Some(StoppingCriterion::kkt_violation(tolerance));
         self
     }
 
@@ -132,7 +128,7 @@ impl Lasso {
     /// model, with the intercept optimized when enabled. The legacy
     /// [`Self::tolerance`] setter selects absolute KKT violation.
     pub fn terminate_on(mut self, criterion: StoppingCriterion) -> Self {
-        self.stopping_criterion = criterion;
+        self.stopping_criterion = Some(criterion);
         self
     }
 
@@ -160,6 +156,74 @@ impl Lasso {
     where
         M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
     {
+        self.problem(x, y).fit_with(&self.solver())
+    }
+
+    /// Fit explicit strengths in caller order with warm starts and reused storage.
+    /// The builder's single-fit lambda is replaced by these values. Defaults
+    /// resolve the stopping criterion separately for each point.
+    ///
+    /// # Errors
+    /// Returns validation or fitting errors without a partial path.
+    pub fn fit_path<M>(
+        &self,
+        x: &M,
+        y: &[f64],
+        lambdas: &[f64],
+    ) -> Result<crate::PathFit<LassoFit, L1>, LassoError<M::Error>>
+    where
+        M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
+    {
+        Ok(self
+            .problem(x, y)
+            .fit_path_with(
+                &self.solver(),
+                lambdas.iter().map(|&v| L1::new(v)).collect(),
+            )?
+            .with_lambdas(lambdas.to_vec()))
+    }
+
+    /// Generate and fit a decreasing regularization path with one preparation.
+    ///
+    /// # Errors
+    /// Returns invalid sequence options, input failures, or numerical errors.
+    pub fn fit_regularization_path<M>(
+        &self,
+        x: &M,
+        y: &[f64],
+        options: &crate::PathOptions,
+    ) -> Result<crate::PathFit<LassoFit, L1>, LassoError<M::Error>>
+    where
+        M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
+    {
+        self.problem(x, y)
+            .fit_regularization_path_with(&self.solver(), options)
+    }
+
+    /// Calculate the smallest lambda with optimal zero optimization coefficients.
+    /// Uses the builder's intercept and normalization settings.
+    ///
+    /// # Errors
+    /// Returns validation, preprocessing, or arithmetic failures.
+    pub fn lambda_max<M>(&self, x: &M, y: &[f64]) -> Result<f64, LassoError<M::Error>>
+    where
+        M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
+    {
+        match self.problem(x, y).maximum_penalty_with(&self.solver())? {
+            crate::PenaltyMaximum::Finite(value) => Ok(value),
+            crate::PenaltyMaximum::Unbounded => unreachable!("L1 has a finite threshold"),
+        }
+    }
+
+    fn solver(&self) -> CoordinateDescent {
+        let mut solver = CoordinateDescent::new().max_iterations(self.max_iterations);
+        if let Some(criterion) = self.stopping_criterion {
+            solver = solver.terminate_on(criterion);
+        }
+        solver
+    }
+
+    fn problem<'a, M: ?Sized>(&self, x: &'a M, y: &'a [f64]) -> Problem<&'a M, Gaussian<'a>, L1> {
         let mut problem = Problem::new(
             x,
             Gaussian::new(y).fit_intercept(self.fit_intercept),
@@ -172,10 +236,6 @@ impl Lasso {
         if let Some(scales) = &self.supplied_scales {
             problem = problem.with_scales(scales.clone());
         }
-        problem.fit_with(
-            &CoordinateDescent::new()
-                .terminate_on(self.stopping_criterion)
-                .max_iterations(self.max_iterations),
-        )
+        problem
     }
 }

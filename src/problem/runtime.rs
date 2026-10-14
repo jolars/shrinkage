@@ -70,6 +70,16 @@ pub type RuntimeProblem<'a> = Problem<
     Box<dyn ProximalPenalty + 'a>,
 >;
 
+/// Runtime composition retaining the capabilities needed for automatic paths.
+///
+/// Box a [`crate::PathDatafit`] and an [`crate::ErasedPathPenalty`] before
+/// erasure. Explicit paths still support the broader [`RuntimeProblem`].
+pub type RuntimePathProblem<'a> = Problem<
+    Box<dyn RuntimeDesign + 'a>,
+    Box<dyn crate::PathDatafit + 'a>,
+    Box<dyn crate::PathPenalty<AtStrength = Box<dyn ProximalPenalty>> + 'a>,
+>;
+
 /// Multivariate Gaussian fitting with a runtime-selected design and penalty.
 ///
 /// [`crate::AxisPenalty`] specifies the coefficient layout and penalty axis.
@@ -242,11 +252,16 @@ impl ProximalGradient<Vec<f64>> {
     }
 }
 
-impl Solver<RuntimeProblem<'_>> for ProximalGradient<Vec<f64>> {
+impl<D: SmoothDatafit, P: ProximalPenalty> Solver<Problem<Box<dyn RuntimeDesign + '_>, D, P>>
+    for ProximalGradient<Vec<f64>>
+{
     type Fit = ProximalFit;
     type Error = FitError<BackendError>;
 
-    fn solve(&self, problem: &RuntimeProblem<'_>) -> Result<Self::Fit, Self::Error> {
+    fn solve(
+        &self,
+        problem: &Problem<Box<dyn RuntimeDesign + '_>, D, P>,
+    ) -> Result<Self::Fit, Self::Error> {
         let threshold = self.validate()?;
         if problem.datafit().nobs() != problem.design().nrows() {
             return Err(invalid(
@@ -261,8 +276,8 @@ impl Solver<RuntimeProblem<'_>> for ProximalGradient<Vec<f64>> {
         )?;
         let solution = iterate(
             design.as_mut(),
-            problem.datafit().as_ref(),
-            problem.penalty().as_ref(),
+            problem.datafit(),
+            problem.penalty(),
             self,
             threshold,
         )?;

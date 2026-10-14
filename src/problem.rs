@@ -1,7 +1,9 @@
 //! Composition and validated preparation of training problems.
 
 pub mod runtime;
-pub use runtime::{MatrixDesign, RuntimeDesign, RuntimeMultivariateProblem, RuntimeProblem};
+pub use runtime::{
+    MatrixDesign, RuntimeDesign, RuntimeMultivariateProblem, RuntimePathProblem, RuntimeProblem,
+};
 
 use crate::error::{finite, invalid};
 use crate::solver::{Solver, coordinate};
@@ -93,6 +95,45 @@ impl<X, D, P> Problem<X, D, P> {
     /// Forwards validation and numerical failures from the selected solver.
     pub fn fit_with<S: Solver<Self>>(&self, solver: &S) -> Result<S::Fit, S::Error> {
         solver.solve(self)
+    }
+
+    /// Fit an owned explicit penalty sequence in caller order.
+    ///
+    /// # Errors
+    /// Forwards fitting errors without a partial path. Iteration-limit fits
+    /// remain available and initialize the next point.
+    pub fn fit_path_with<S, Q>(
+        &self,
+        solver: &S,
+        penalties: Vec<Q>,
+    ) -> Result<crate::PathFit<S::Fit, Q>, S::Error>
+    where
+        S: crate::PathSolver<Self, Q>,
+    {
+        crate::PathSolver::solve_path(solver, self, penalties)
+    }
+
+    /// Generate and fit a regularization sequence with one data preparation.
+    ///
+    /// # Errors
+    /// Forwards invalid options, undefined null models, and fitting errors.
+    pub fn fit_regularization_path_with<S: crate::RegularizationPathSolver<Self>>(
+        &self,
+        solver: &S,
+        options: &crate::PathOptions,
+    ) -> Result<crate::PathFit<S::Fit, S::Penalty>, S::Error> {
+        solver.solve_regularization_path(self, options)
+    }
+
+    /// Calculate the zero-coefficient threshold on the optimization scale.
+    ///
+    /// # Errors
+    /// Forwards null-model, component, and backend validation failures.
+    pub fn maximum_penalty_with<S: crate::RegularizationPathSolver<Self>>(
+        &self,
+        solver: &S,
+    ) -> Result<crate::PenaltyMaximum, S::Error> {
+        solver.maximum_penalty(self)
     }
 
     /// Select lazy training-column normalization.

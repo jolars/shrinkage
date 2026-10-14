@@ -135,6 +135,18 @@ where
                 .max_iterations(50_000);
             let a = model.fit(first, &Y).unwrap();
             let b = model.fit(second, &Y).unwrap();
+            let first_path = model.fit_path(first, &Y, &[0.4, 0.15, 0.05]).unwrap();
+            let second_path = model.fit_path(second, &Y, &[0.4, 0.15, 0.05]).unwrap();
+            for ((penalty, a), b) in first_path.iter().zip(second_path.fits()) {
+                assert_eq!(a.termination(), Termination::Converged);
+                assert_eq!(b.termination(), Termination::Converged);
+                verify_diagnostics(a, intercept, penalty.lambda());
+                verify_diagnostics(b, intercept, penalty.lambda());
+                close(a.objective(), b.objective());
+                for (&a, &b) in a.coefficients().iter().zip(b.coefficients()) {
+                    close(a, b);
+                }
+            }
             assert_eq!(a.termination(), Termination::Converged);
             assert_eq!(b.termination(), Termination::Converged);
             verify_diagnostics(&a, intercept, 0.15);
