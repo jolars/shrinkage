@@ -951,9 +951,9 @@ checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "lazymatrix"
-version = "0.5.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dae46787584ddd2180da2fdad4d414891e56d917c04a4cba6c4465f807d85ade"
+checksum = "ba7105a3bacf3ce5f54591074cfb884d472669d3e41e9cc6dedc272b717bec11"
 dependencies = [
  "faer",
  "faer-traits",
