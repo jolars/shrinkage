@@ -1,5 +1,8 @@
 //! Owned fitted parameters, training transformations, and diagnostics.
 
+mod multivariate;
+pub use multivariate::MultivariateFit;
+
 use crate::error::{finite, invalid};
 use crate::problem::validate_matrix;
 use crate::{Centering, LassoError, Scaling, StoppingCriterion};
@@ -204,6 +207,16 @@ pub(crate) fn back_transform<E>(
     preprocessing: &Preprocessing,
     iterations: usize,
 ) -> Result<(Vec<f64>, f64), LassoError<E>> {
+    back_transform_in_place(&mut coefficients, &mut intercept, preprocessing, iterations)?;
+    Ok((coefficients, intercept))
+}
+
+pub(crate) fn back_transform_in_place<E>(
+    coefficients: &mut [f64],
+    intercept: &mut f64,
+    preprocessing: &Preprocessing,
+    iterations: usize,
+) -> Result<(), LassoError<E>> {
     if let Some(scales) = &preprocessing.scales {
         for (coefficient, scale) in coefficients.iter_mut().zip(scales) {
             *coefficient = finite(
@@ -215,14 +228,14 @@ pub(crate) fn back_transform<E>(
     }
     if let Some(centers) = &preprocessing.centers {
         for (coefficient, center) in coefficients.iter().zip(centers) {
-            intercept = finite(
-                intercept - coefficient * center,
+            *intercept = finite(
+                *intercept - coefficient * center,
                 "back-transforming intercept",
                 iterations,
             )?;
         }
     }
-    Ok((coefficients, intercept))
+    Ok(())
 }
 
 fn predict<M: RawColumns<f64> + ?Sized>(

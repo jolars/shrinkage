@@ -31,10 +31,11 @@ tasks:
       - cargo test --locked --all-features
 
   example:
-    desc: Verify normalization, lasso fitting, and buffered Zarr fitting
+    desc: Verify normalization, lasso, multivariate, and buffered Zarr fitting
     cmds:
       - cargo run --locked --example normalization --features faer_v0_24
       - cargo run --locked --example lasso --features faer_v0_24
+      - cargo run --locked --example multivariate --features faer_v0_24
       - cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
 
   bench:
@@ -48,7 +49,7 @@ tasks:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso_heap
 
   bench:proximal:
-    desc: Benchmark proximal lasso, ridge, and elastic net with dense and CSC input
+    desc: Benchmark proximal vector and multivariate fits with dense and CSC input
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench proximal
 

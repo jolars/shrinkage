@@ -12,8 +12,9 @@ mod matrix;
 
 use shrinkage::lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, RawColumns};
 use shrinkage::{
-    Centering, ElasticNet, Gaussian, MatrixDesign, Normalization, Problem, ProximalGradient,
-    ProximalVector, RuntimeProblem, Scaling, Termination,
+    AxisPenalty, Centering, CoefficientLayout, ElasticNet, Gaussian, MatrixDesign,
+    MultivariateGaussian, Normalization, PenaltyAxis, Problem, ProximalGradient, ProximalVector,
+    RuntimeMultivariateProblem, RuntimeProblem, Scaling, Termination,
 };
 
 const ROWS: [[f64; 3]; 5] = [
@@ -35,6 +36,7 @@ where
     M::Error: std::error::Error + 'static,
     V: ProximalVector + 'static,
 {
+    verify_multivariate::<M, V>(design);
     let rows: Vec<_> = ROWS.iter().map(|row| row.as_slice()).collect();
     let reference = matrix::Matrix::from_rows(&rows);
     for intercept in [false, true] {
@@ -170,6 +172,92 @@ where
                         close(*a, b);
                     }
                 }
+            }
+        }
+    }
+}
+
+fn verify_multivariate<M, V>(design: &M)
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    M::Error: std::error::Error + 'static,
+    V: ProximalVector + 'static,
+{
+    let rows: Vec<_> = ROWS.iter().map(|row| row.as_slice()).collect();
+    let reference = matrix::Matrix::from_rows(&rows);
+    let y = [1.0, 2.0, -1.0, 4.0, 2.0, -3.0, 2.0, 0.5, 1.0, 2.0];
+    let layout = CoefficientLayout::new(3, 2).unwrap();
+    for intercept in [false, true] {
+        for normalization in [Normalization::None, Normalization::Standardize] {
+            for axis in [
+                PenaltyAxis::All,
+                PenaltyAxis::Features,
+                PenaltyAxis::Responses,
+            ] {
+                let datafit = MultivariateGaussian::new(&y, 5, 2).fit_intercept(intercept);
+                let penalty = ElasticNet::new(0.1, 0.3);
+                let actual = Problem::new(design, datafit, AxisPenalty::new(layout, axis, penalty))
+                    .normalize(normalization)
+                    .fit_with(
+                        &ProximalGradient::<V>::new()
+                            .tolerance(1e-9)
+                            .max_iterations(200_000),
+                    )
+                    .unwrap();
+                let expected =
+                    Problem::new(&reference, datafit, AxisPenalty::new(layout, axis, penalty))
+                        .normalize(normalization)
+                        .fit_with(
+                            &ProximalGradient::<Vec<f64>>::new()
+                                .tolerance(1e-9)
+                                .max_iterations(200_000),
+                        )
+                        .unwrap();
+                let runtime = RuntimeMultivariateProblem::new(
+                    Box::new(MatrixDesign::<_, V>::new(design)),
+                    datafit,
+                    AxisPenalty::new(layout, axis, Box::new(penalty)),
+                )
+                .normalize(normalization)
+                .fit_with(
+                    &ProximalGradient::new()
+                        .tolerance(1e-9)
+                        .max_iterations(200_000),
+                )
+                .unwrap();
+                assert_eq!(actual.termination(), Termination::Converged);
+                assert_eq!(expected.termination(), Termination::Converged);
+                assert_eq!(actual.layout(), layout);
+                close(actual.objective(), expected.objective());
+                for (&a, &b) in actual.coefficients().iter().zip(expected.coefficients()) {
+                    close(a, b);
+                }
+                for (&a, &b) in actual.intercepts().iter().zip(expected.intercepts()) {
+                    close(a, b);
+                }
+                for (&a, b) in actual
+                    .predict(design)
+                    .unwrap()
+                    .iter()
+                    .zip(expected.predict(&reference).unwrap())
+                {
+                    close(a, b);
+                }
+                assert_eq!(runtime.coefficients(), actual.coefficients());
+                assert_eq!(runtime.intercepts(), actual.intercepts());
+                assert_eq!(runtime.objective(), actual.objective());
+                assert_eq!(runtime.termination(), actual.termination());
+                assert_eq!(runtime.iterations(), actual.iterations());
+                assert_eq!(runtime.stopping_value(), actual.stopping_value());
+                assert_eq!(runtime.step_size(), actual.step_size());
+                assert_eq!(
+                    runtime.preprocessing().centers(),
+                    actual.preprocessing().centers()
+                );
+                assert_eq!(
+                    runtime.preprocessing().scales(),
+                    actual.preprocessing().scales()
+                );
             }
         }
     }

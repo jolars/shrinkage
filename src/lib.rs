@@ -57,19 +57,23 @@ pub mod error;
 pub mod experimental;
 pub mod fit;
 pub mod lasso;
+pub mod layout;
 pub mod normalization;
 pub mod penalty;
 pub mod problem;
 pub mod solver;
 
-pub use datafit::{Binomial, Datafit, Gaussian, SmoothDatafit};
+pub use datafit::{Binomial, Datafit, Gaussian, MultivariateGaussian, SmoothDatafit};
 pub use error::FitError as LassoError;
 pub use error::{BackendError, FitError};
-pub use fit::{LassoFit, Preprocessing, ProximalFit, Termination};
+pub use fit::{LassoFit, MultivariateFit, Preprocessing, ProximalFit, Termination};
 pub use lasso::Lasso;
+pub use layout::CoefficientLayout;
 pub use normalization::{Centering, Normalization, Scaling};
-pub use penalty::{ElasticNet, L1, Penalty, ProximalPenalty, Ridge};
-pub use problem::{MatrixDesign, Problem, RuntimeDesign, RuntimeProblem};
+pub use penalty::{AxisPenalty, ElasticNet, L1, Penalty, PenaltyAxis, ProximalPenalty, Ridge};
+pub use problem::{
+    MatrixDesign, Problem, RuntimeDesign, RuntimeMultivariateProblem, RuntimeProblem,
+};
 pub use solver::{
     CoordinateDescent, ProximalDesign, ProximalGradient, ProximalVector, Solver, StoppingCriterion,
 };

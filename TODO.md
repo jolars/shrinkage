@@ -109,9 +109,9 @@ boundaries only when an implemented consumer needs them.
   independent reference cases, including extreme linear predictors.
   Predictor and coefficient checks cover both logit tails; typed and runtime
   fits match reproducible high-precision Newton and active-set fixtures.
-- [ ] Add multivariate Gaussian fitting with explicit feature, response, and
+- [x] Add multivariate Gaussian fitting with explicit feature, response, and
   penalty axes before stabilizing coefficient layouts.
-- [ ] Compare separable multivariate cases with independent response fits and
+- [x] Compare separable multivariate cases with independent response fits and
   provide a small runnable example.
 
 ## 5. SLOPE and regularization paths

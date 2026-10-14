@@ -52,6 +52,7 @@ jobs:
         run: |
           cargo run --locked --example normalization --features faer_v0_24
           cargo run --locked --example lasso --features faer_v0_24
+          cargo run --locked --example multivariate --features faer_v0_24
           cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
 
       - name: Check fitting heap budgets

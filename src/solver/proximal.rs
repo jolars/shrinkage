@@ -1,6 +1,7 @@
 //! Backtracking proximal gradient over concrete or object-safe design oracles.
 
 mod design;
+mod multivariate;
 pub(crate) use design::NativeDesign;
 pub use design::ProximalDesign;
 
@@ -96,6 +97,9 @@ impl ProximalVector for ndarray::Array1<f64> {
 /// `nalgebra::DVector<f64>`, `ndarray::Array1<f64>`, or `Vec<f64>` for sprs.
 /// No normalized design or Gram matrix is formed. LazyMatrix 0.5.0 still
 /// clones the input to scaled forward products.
+/// [`crate::MultivariateGaussian`] with [`crate::AxisPenalty`] fits joint
+/// matrix coefficients and response-specific unpenalized intercepts through
+/// the same iteration, returning [`crate::MultivariateFit`].
 ///
 /// ```
 /// # #[cfg(feature = "faer_v0_24")] {

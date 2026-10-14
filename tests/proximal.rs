@@ -534,6 +534,82 @@ fn runtime_backend_errors_retain_original_sources_and_discard_partial_outputs() 
 }
 
 #[test]
+fn multivariate_backend_failures_discard_partial_response_products() {
+    use shrinkage::{
+        AxisPenalty, CoefficientLayout, MultivariateGaussian, PenaltyAxis,
+        RuntimeMultivariateProblem,
+    };
+    use std::error::Error;
+
+    fn verify_source<E: Error + 'static>(error: FitError<E>, operation: &str) {
+        let mut source: &(dyn Error + 'static) = &error;
+        while let Some(next) = source.source() {
+            source = next;
+        }
+        assert!(source.downcast_ref::<std::io::Error>().is_some());
+        assert!(source.to_string().contains("injected"));
+        assert!(
+            matches!(error, FitError::Backend { operation: actual, .. } if actual == operation)
+        );
+    }
+
+    for (fail_forward, fail_transpose, fail_statistics, operation) in [
+        (2, false, false, "computing a forward design product"),
+        (6, false, false, "computing a forward design product"),
+        (
+            usize::MAX,
+            true,
+            false,
+            "computing a transposed design product",
+        ),
+        (
+            usize::MAX,
+            false,
+            true,
+            "computing training normalization statistics",
+        ),
+    ] {
+        let matrix = FailingProducts {
+            matrix: Matrix::from_rows(&[&[0.0], &[1.0], &[2.0]]),
+            forward_calls: std::cell::Cell::new(0),
+            fail_forward,
+            fail_transpose,
+            fail_statistics,
+        };
+        let y = [1.0, 3.0, 5.0, -2.0, 0.0, 1.0];
+        let datafit = MultivariateGaussian::new(&y, 3, 2);
+        let layout = CoefficientLayout::new(1, 2).unwrap();
+        let solver = ProximalGradient::<Vec<f64>>::new().initial_step(0.1);
+        let error = Problem::new(
+            &matrix,
+            datafit,
+            AxisPenalty::new(layout, PenaltyAxis::Features, Ridge::new(0.1)),
+        )
+        .fit_with(&solver)
+        .unwrap_err();
+        verify_source(error, operation);
+        let expected_calls = if fail_statistics {
+            0
+        } else if fail_transpose {
+            2
+        } else {
+            fail_forward
+        };
+        assert_eq!(matrix.forward_calls.get(), expected_calls);
+        matrix.forward_calls.set(0);
+        let error = RuntimeMultivariateProblem::new(
+            Box::new(MatrixDesign::<_, Vec<f64>>::new(&matrix)),
+            datafit,
+            AxisPenalty::new(layout, PenaltyAxis::Features, Box::new(Ridge::new(0.1))),
+        )
+        .fit_with(&solver)
+        .unwrap_err();
+        verify_source(error, operation);
+        assert_eq!(matrix.forward_calls.get(), expected_calls);
+    }
+}
+
+#[test]
 fn nonfinite_arithmetic_is_distinct_from_invalid_input() {
     let matrix = Matrix::from_rows(&[&[0.0]]);
     assert!(matches!(

@@ -1,5 +1,9 @@
 //! Loss capabilities on the linear predictor.
 
+mod multivariate;
+pub use multivariate::MultivariateGaussian;
+pub(crate) use multivariate::StackedGaussian;
+
 use crate::FitError;
 use crate::error::{NumericalFailure, finite, invalid};
 

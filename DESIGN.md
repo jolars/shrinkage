@@ -2,8 +2,9 @@
 
 Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
 and typed and runtime proximal gradient with Gaussian and binomial datafits,
-ridge, and elastic net are implemented. This document records commitments and an
-implementation sequence; illustrative API names are not frozen interfaces.
+ridge, elastic net, and multivariate Gaussian fitting with explicit penalty axes
+are implemented. This document records commitments and an implementation
+sequence; illustrative API names are not frozen interfaces.
 
 ## 1. Purpose
 
@@ -357,6 +358,30 @@ Coefficient layouts distinguish features, responses, classes, and groups even
 when internal storage is flattened. Penalty axes must be explicit. Multinomial
 identifiability conventions must be chosen and documented because
 reference-class and symmetric representations change penalty semantics.
+
+The provisional CPU `CoefficientLayout` records the feature-by-response shape
+and uses response-major storage: `response * nfeatures + feature`.
+`MultivariateGaussian` accepts response-major observations with explicit
+observation and response counts. Its loss is `||Y - predictor||_F² / (2n)`,
+summing over responses and averaging over observations. `AxisPenalty` applies a
+complete vector penalty across `Features` separately for each response, across
+`Responses` separately for each feature, or to `All` coefficients at once.
+Disjoint group values are summed, each with the supplied strength; response
+count never rescales the loss or penalty. Exact vector proximal maps therefore
+give exact maps for these disjoint groups, including external terms that couple
+responses. A reused scratch buffer gathers strided response groups.
+
+`ProximalGradient` reuses its existing joint iteration with a stacked design
+adapter. The adapter repeats normalized LazyMatrix products for each response
+and appends free intercept coordinates with an identity proximal map. It never
+materializes a Kronecker design, normalized matrix, or Gram matrix. The internal
+stacking leaves the loss's `1/n` convention intact. Intercepts remain separate
+from the public coefficient layout and penalty. `MultivariateFit`
+back-transforms each response using shared feature preprocessing, retains the
+joint objective and mapping diagnostics, and predicts response-major columns.
+`RuntimeMultivariateProblem` uses the same adapters and iteration with a
+runtime-selected design and vector penalty. These interfaces do not yet specify
+class identifiability, overlapping groups, or device storage.
 
 Normalization is a modeling choice. Record the centering/scaling rule and the
 scale on which penalties are defined. With normalized coefficients `Theta`,

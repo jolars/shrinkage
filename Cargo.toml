@@ -53,6 +53,10 @@ name = "lasso"
 required-features = ["faer_v0_24"]
 
 [[example]]
+name = "multivariate"
+required-features = ["faer_v0_24"]
+
+[[example]]
 name = "zarrs_buffered"
 required-features = ["experimental-block-reader", "zarrs_v0_22"]
 

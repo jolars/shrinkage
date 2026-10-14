@@ -1,7 +1,7 @@
 //! Composition and validated preparation of training problems.
 
 pub mod runtime;
-pub use runtime::{MatrixDesign, RuntimeDesign, RuntimeProblem};
+pub use runtime::{MatrixDesign, RuntimeDesign, RuntimeMultivariateProblem, RuntimeProblem};
 
 use crate::error::{finite, invalid};
 use crate::solver::{Solver, coordinate};
@@ -16,6 +16,9 @@ use lazymatrix::{ColumnStats, LazyMatrix, RawColumn, RawColumns};
 /// uses native forward and transposed products with [`crate::SmoothDatafit`]
 /// and a complete [`crate::ProximalPenalty`], returning [`crate::ProximalFit`].
 /// Both results retain original-scale parameters and training normalization.
+/// [`crate::MultivariateGaussian`] with [`crate::AxisPenalty`] uses the same
+/// proximal iteration and returns [`crate::MultivariateFit`]. Its coefficient
+/// feature and response dimensions and penalty axis are explicit.
 ///
 /// ```
 /// # #[cfg(feature = "faer_v0_24")] {

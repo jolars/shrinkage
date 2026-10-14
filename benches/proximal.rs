@@ -5,8 +5,8 @@ use std::{hint::black_box, time::Duration};
 use criterion::{Criterion, criterion_group, criterion_main};
 use faer::Col;
 use shrinkage::{
-    ElasticNet, Gaussian, L1, MatrixDesign, Problem, ProximalGradient, ProximalPenalty, Ridge,
-    RuntimeProblem, Termination,
+    AxisPenalty, CoefficientLayout, ElasticNet, Gaussian, L1, MatrixDesign, MultivariateGaussian,
+    PenaltyAxis, Problem, ProximalGradient, ProximalPenalty, Ridge, RuntimeProblem, Termination,
 };
 
 #[path = "common/fixture.rs"]
@@ -87,5 +87,60 @@ fn benchmark_proximal(c: &mut Criterion) {
     benchmark_penalty(c, "elastic_net", ElasticNet::new(0.03, 0.1));
 }
 
-criterion_group!(benches, benchmark_proximal);
+fn benchmark_multivariate(c: &mut Criterion) {
+    let (dense, sparse, y) = fixture::dataset(1_024, 64);
+    let responses: Vec<_> = (0..4)
+        .flat_map(|response| {
+            y.iter()
+                .map(move |value| value * (response + 1) as f64 + response as f64)
+        })
+        .collect();
+    let layout = CoefficientLayout::new(64, 4).unwrap();
+    let datafit = MultivariateGaussian::new(&responses, 1_024, 4);
+    let solver = ProximalGradient::<Col<f64>>::new();
+    for (axis, name) in [
+        (PenaltyAxis::Features, "features"),
+        (PenaltyAxis::Responses, "responses"),
+    ] {
+        let dense_problem = Problem::new(
+            &dense,
+            datafit,
+            AxisPenalty::new(layout, axis, ElasticNet::new(0.03, 0.1)),
+        );
+        let sparse_problem = Problem::new(
+            &sparse,
+            datafit,
+            AxisPenalty::new(layout, axis, ElasticNet::new(0.03, 0.1)),
+        );
+        assert_eq!(
+            dense_problem.fit_with(&solver).unwrap().termination(),
+            Termination::Converged
+        );
+        assert_eq!(
+            sparse_problem.fit_with(&solver).unwrap().termination(),
+            Termination::Converged
+        );
+        let mut group = c.benchmark_group(format!("multivariate_{name}_1024x64x4"));
+        group.sample_size(20);
+        group.warm_up_time(Duration::from_secs(1));
+        group.measurement_time(Duration::from_secs(2));
+        group.bench_function("dense", |b| {
+            b.iter(|| {
+                black_box(&dense_problem)
+                    .fit_with(black_box(&solver))
+                    .unwrap()
+            })
+        });
+        group.bench_function("csc", |b| {
+            b.iter(|| {
+                black_box(&sparse_problem)
+                    .fit_with(black_box(&solver))
+                    .unwrap()
+            })
+        });
+        group.finish();
+    }
+}
+
+criterion_group!(benches, benchmark_proximal, benchmark_multivariate);
 criterion_main!(benches);

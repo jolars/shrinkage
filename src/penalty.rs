@@ -1,5 +1,8 @@
 //! Penalty values, complete proximal maps, and coefficient subproblems.
 
+mod axis;
+pub use axis::{AxisPenalty, PenaltyAxis};
+
 use crate::FitError;
 use crate::error::{finite, invalid};
 

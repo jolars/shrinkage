@@ -70,6 +70,17 @@ pub type RuntimeProblem<'a> = Problem<
     Box<dyn ProximalPenalty + 'a>,
 >;
 
+/// Multivariate Gaussian fitting with a runtime-selected design and penalty.
+///
+/// [`crate::AxisPenalty`] specifies the coefficient layout and penalty axis.
+/// Each response has its own unpenalized intercept. The shared proximal solver
+/// fits all responses jointly, including penalties that couple them.
+pub type RuntimeMultivariateProblem<'a> = Problem<
+    Box<dyn RuntimeDesign + 'a>,
+    crate::MultivariateGaussian<'a>,
+    crate::AxisPenalty<Box<dyn ProximalPenalty + 'a>>,
+>;
+
 /// Object-safe preparation of a runtime-selected design.
 ///
 /// Entry validation and generic column views remain in the concrete adapter.

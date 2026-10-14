@@ -60,6 +60,7 @@ cargo test --locked --no-default-features --features experimental-block-reader,z
 cargo test --locked --all-features
 cargo run --locked --example normalization --features faer_v0_24
 cargo run --locked --example lasso --features faer_v0_24
+cargo run --locked --example multivariate --features faer_v0_24
 cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
 cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso_heap
 RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features

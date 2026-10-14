@@ -197,6 +197,64 @@ adapter uses the cloning product API. A three-point dense path uses 750
 allocations versus 924 for independent fits; CSC uses 749 versus 921. These
 counts include preparation and owned results and depend on convergence.
 
+## Multivariate Gaussian
+
+`MultivariateGaussian` fits several Gaussian responses jointly with the same
+proximal iteration. Supply responses in response-major order: each response
+column contains all observations contiguously. The coefficient matrix has
+features as rows and responses as columns, with each response's feature vector
+stored contiguously. `CoefficientLayout` records both dimensions, and
+`AxisPenalty` makes the penalty axis explicit:
+
+```rust
+use faer::{Col, Mat};
+use shrinkage::{
+    AxisPenalty, CoefficientLayout, MultivariateGaussian, PenaltyAxis, Problem,
+    ProximalGradient, Ridge,
+};
+
+let x = Mat::from_fn(3, 1, |i, _| i as f64);
+let y = [1.0, 3.0, 5.0, -2.0, -1.0, 0.0];
+let layout = CoefficientLayout::new(1, 2)?;
+let fit = Problem::new(
+    &x,
+    MultivariateGaussian::new(&y, 3, 2),
+    AxisPenalty::new(layout, PenaltyAxis::Features, Ridge::new(0.1)),
+)
+.fit_with(&ProximalGradient::<Col<f64>>::new())?;
+let first_response = fit.coefficients_for_response(0).unwrap();
+let intercepts = fit.intercepts();
+let predictions = fit.predict(&x)?;
+```
+
+`PenaltyAxis::Features` applies the complete vector penalty independently to
+each response's feature vector. `Responses` applies it to the response vector at
+each feature, allowing an external proximal penalty to couple responses. `All`
+applies it once to the full coefficient matrix in response-major order. Group
+values are summed, and each group uses the supplied strength unchanged. The loss
+is `||Y - predictor||_F² / (2n)`, averaged over observations and summed over
+responses. Separable lasso, ridge, and elastic-net fits therefore match
+independent response fits using the same strengths.
+
+By default, each response has an unpenalized intercept. Shared training-feature
+centers and scales apply to every response; original-scale coefficients and
+intercepts preserve predictions, including when explicit centering induces an
+intercept with `fit_intercept(false)`. `MultivariateFit` retains the layout,
+preprocessing, joint objective, and joint stopping diagnostics. Prediction
+returns response-major columns with the new batch's observation count.
+`RuntimeMultivariateProblem` accepts a boxed `RuntimeDesign` and an
+`AxisPenalty<Box<dyn ProximalPenalty>>`, and uses the same joint solver. These
+coefficient interfaces remain provisional CPU layouts.
+
+Run the example, which also checks independent ridge fits:
+
+```console
+cargo run --locked --example multivariate --features faer_v0_24
+```
+
+`task bench:proximal` includes dense and CSC multivariate fits with four
+responses and both feature and response penalty axes.
+
 ## Runtime composition
 
 `RuntimeProblem` owns independently selected design, smooth datafit, and
