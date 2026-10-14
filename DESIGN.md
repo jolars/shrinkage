@@ -2,9 +2,9 @@
 
 Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
 and typed and runtime proximal gradient with Gaussian and binomial datafits,
-ridge, elastic net, and multivariate Gaussian fitting with explicit penalty axes
-are implemented. This document records commitments and an implementation
-sequence; illustrative API names are not frozen interfaces.
+ridge, elastic net, SLOPE, and multivariate Gaussian fitting with explicit
+penalty axes are implemented. This document records commitments and an
+implementation sequence; illustrative API names are not frozen interfaces.
 
 ## 1. Purpose
 
@@ -93,9 +93,10 @@ an experimental block-reader consumer exercise fallible storage access.
 
 `SmoothDatafit` adds a fallible predictor gradient, observation count, and
 intercept policy. `ProximalPenalty` requires an exact prox for the complete
-convex term. `L1`, `Ridge`, and `ElasticNet` implement this capability. Ridge
-means `lambda * ||theta||² / 2`; elastic net accepts separate strengths for
-`l1 * ||theta||₁ + l2 * ||theta||² / 2`. There is no inferred prox for a sum.
+convex term. `L1`, `Ridge`, `ElasticNet`, and `Slope` implement this capability.
+Ridge means `lambda * ||theta||² / 2`; elastic net accepts separate strengths
+for `l1 * ||theta||₁ + l2 * ||theta||² / 2`. There is no inferred prox for a
+sum.
 
 `ProximalGradient<V>` uses LazyMatrix's fallible native-vector products and
 backtracking against the smooth quadratic upper bound. `ProximalDesign` exposes
@@ -341,9 +342,21 @@ arbitrary nonconvex nonsmooth penalties.
 
 ## 7. Specialized SLOPE support
 
-Implement SLOPE both as a generic penalty with an exact proximal map and through
-the specialized hybrid coordinate/proximal solver. Validate nonnegative,
-nonincreasing SLOPE weights for the convex penalty.
+`Slope` implements the generic sorted L1 penalty with an exact proximal map. It
+accepts one finite, nonnegative, nonincreasing weight per coefficient, including
+the strength, and validates weights and dimensions when evaluated or fitted.
+Magnitudes are sorted on the optimization scale. Pooling adjacent violations
+projects the thresholded magnitudes onto nonincreasing sequences; clipping at
+zero and restoring signs and order completes the prox. Owned CPU sorting and
+block buffers are reused across calls. Block means avoid overflowing sums when
+the solution remains representable. Empty coefficients require empty weights,
+and zero weights define an unpenalized term.
+
+Independent exhaustive partition solutions and subgradient certificates test
+proximal optimality, including ties and zero weights. Typed and runtime Gaussian
+fits agree with an orthogonal solution. `task bench:slope` measures distinct and
+tied magnitudes, and `task bench:proximal:heap` checks value and prox
+allocations. The specialized hybrid coordinate/proximal solver remains planned.
 
 The specialized solver needs ordering, signs, equal-magnitude clusters, cluster
 updates/merges, and full proximal steps capable of splitting clusters. Put this

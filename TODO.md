@@ -116,7 +116,7 @@ boundaries only when an implemented consumer needs them.
 
 ## 5. SLOPE and regularization paths
 
-- [ ] Implement SLOPE's exact proximal map, validate nonnegative, nonincreasing
+- [x] Implement SLOPE's exact proximal map, validate nonnegative, nonincreasing
   weights, and test proximal optimality.
 - [ ] Add the hybrid coordinate/proximal solver with SLOPE-specific ordering,
   signs, equal-magnitude clusters, updates, and merges. Use full proximal

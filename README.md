@@ -2,8 +2,8 @@
 
 Shrinkage is a Rust library for regularized statistical models. It currently
 fits Gaussian lasso models with dense or sparse CSC input through coordinate
-descent and fits lasso, ridge, and elastic net through proximal gradient. The
-typed and runtime APIs also accept external smooth datafits and complete
+descent and fits lasso, ridge, elastic net, and SLOPE through proximal gradient.
+The typed and runtime APIs also accept external smooth datafits and complete
 proximal penalties. See [DESIGN.md](DESIGN.md) for the architecture and
 statistical conventions, and [TODO.md](TODO.md) for the implementation
 checklist.
@@ -124,14 +124,15 @@ Run the dense and CSC fitting example:
 cargo run --locked --example lasso --features faer
 ```
 
-## Proximal gradient, ridge, and elastic net
+## Proximal gradient
 
 Use `ProximalGradient` with a differentiable convex predictor loss and an exact
 proximal map for the complete convex penalty. The built-in terms are
-`L1::new(lambda)`, `Ridge::new(lambda)` for `lambda * ||theta||² / 2`, and
-`ElasticNet::new(l1, l2)` for `l1 * ||theta||₁ + l2 * ||theta||² / 2`. Strengths
-are finite and nonnegative, and penalties act on normalized coefficients. The
-fitted intercept remains unpenalized.
+`L1::new(lambda)`, `Ridge::new(lambda)` for `lambda * ||theta||² / 2`,
+`ElasticNet::new(l1, l2)` for `l1 * ||theta||₁ + l2 * ||theta||² / 2`, and
+`Slope::new(weights)` for the sorted L1 penalty. Strengths are finite and
+nonnegative, and penalties act on normalized coefficients. The fitted intercept
+remains unpenalized.
 
 ```rust
 use faer::{Col, Mat};
@@ -171,6 +172,32 @@ External components implement `SmoothDatafit` and `ProximalPenalty`. The latter
 requires the prox of the entire term; individual proximal maps do not establish
 a valid prox for their sum. Elastic net implements its complete formula
 directly.
+
+`Slope::new(weights)` supplies the complete sorted L1 penalty
+`sum_j weights[j] * |theta|_(j)`, where magnitudes are sorted from largest to
+smallest. Supply one finite, nonnegative, nonincreasing weight per coefficient,
+including the penalty strength. Equal weights recover L1; all zero weights leave
+coefficients unpenalized. Parameters are checked when the penalty is evaluated
+or fitted.
+
+```rust
+use shrinkage::{Penalty, ProximalPenalty, Slope};
+
+let penalty = Slope::new(vec![3.0, 1.0]);
+assert_eq!(penalty.value(&[-3.0, 3.0])?, 12.0);
+let mut output = [0.0; 2];
+penalty.prox(&[-3.0, 3.0], 1.0, &mut output)?;
+assert_eq!(output, [-1.0, 1.0]);
+```
+
+Use `Slope` in typed or runtime proximal problems, or inside `AxisPenalty` with
+one weight per coefficient in each selected group. Its exact prox sorts
+magnitudes, pools adjacent ordering violations, and restores signs and order. It
+reuses owned CPU scratch buffers. Both the penalty ordering and weights act on
+normalized coefficients; back-transforming the fit preserves predictions without
+changing the penalty that was optimized. Run `task bench:slope` for distinct and
+tied magnitudes, and `task bench:proximal:heap` for isolated SLOPE value and
+proximal allocation checks.
 
 The solver shares the lasso's normalization preparation and
 prediction-preserving parameter transformation. It reuses CPU work buffers and

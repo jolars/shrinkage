@@ -70,7 +70,9 @@ pub use fit::{LassoFit, MultivariateFit, Preprocessing, ProximalFit, Termination
 pub use lasso::Lasso;
 pub use layout::CoefficientLayout;
 pub use normalization::{Centering, Normalization, Scaling};
-pub use penalty::{AxisPenalty, ElasticNet, L1, Penalty, PenaltyAxis, ProximalPenalty, Ridge};
+pub use penalty::{
+    AxisPenalty, ElasticNet, L1, Penalty, PenaltyAxis, ProximalPenalty, Ridge, Slope,
+};
 pub use problem::{
     MatrixDesign, Problem, RuntimeDesign, RuntimeMultivariateProblem, RuntimeProblem,
 };

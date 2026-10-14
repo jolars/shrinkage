@@ -58,6 +58,11 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench proximal_heap
 
+  bench:slope:
+    desc: Benchmark exact SLOPE proximal maps with distinct and tied magnitudes
+    cmds:
+      - cargo bench --locked --no-default-features --bench slope
+
   check:
     desc: Run all required checks
     cmds:

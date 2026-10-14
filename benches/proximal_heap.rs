@@ -2,7 +2,9 @@
 
 use faer::Col;
 use shrinkage::lazymatrix::{LazyMatrix, MatTransposeVecInto, MatVecInto};
-use shrinkage::{ElasticNet, Gaussian, Problem, ProximalGradient, ProximalPenalty, Termination};
+use shrinkage::{
+    ElasticNet, Gaussian, Penalty, Problem, ProximalGradient, ProximalPenalty, Slope, Termination,
+};
 use std::hint::black_box;
 
 #[path = "common/fixture.rs"]
@@ -121,6 +123,25 @@ fn main() {
             penalty
                 .prox(black_box(&input_slice), 0.5, &mut prox_output)
                 .unwrap()
+        },
+        Some(0),
+    );
+    let slope = Slope::new((0..64).map(|j| (64 - j) as f64 / 64.0).collect());
+    measure(
+        "slope_prox",
+        100,
+        || {
+            slope
+                .prox(black_box(&input_slice), 0.5, &mut prox_output)
+                .unwrap();
+        },
+        Some(0),
+    );
+    measure(
+        "slope_value",
+        100,
+        || {
+            black_box(slope.value(black_box(&input_slice)).unwrap());
         },
         Some(0),
     );

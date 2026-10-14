@@ -1,7 +1,9 @@
 //! Penalty values, complete proximal maps, and coefficient subproblems.
 
 mod axis;
+mod slope;
 pub use axis::{AxisPenalty, PenaltyAxis};
+pub use slope::Slope;
 
 use crate::FitError;
 use crate::error::{finite, invalid};

@@ -83,3 +83,7 @@ missing_docs = "warn"
 name = "proximal_heap"
 harness = false
 required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "slope"
+harness = false
