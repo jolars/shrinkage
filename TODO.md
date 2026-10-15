@@ -11,6 +11,13 @@ update this checklist as work lands. Start with `f64` and modules in the
 existing crate. Preserve the lean default build, and add dependencies or crate
 boundaries only when an implemented consumer needs them.
 
+Each unchecked item below is intended for one focused `/goal` session. Copy the
+whole item, including its scope and checks, when starting a goal. Complete named
+prerequisites first. Numerical implementation items include correctness tests,
+relevant benchmarks, and documentation for the stated combination; broader
+coverage belongs in a separate item. Where a design choice is still open, the
+item produces a decision and concrete follow-up tasks.
+
 ## 1. Bootstrap
 
 - [x] Create the Rust 2024 library with a declared Rust 1.89 MSRV, README,
@@ -118,12 +125,22 @@ boundaries only when an implemented consumer needs them.
 
 - [x] Implement SLOPE's exact proximal map, validate nonnegative, nonincreasing
   weights, and test proximal optimality.
-- [ ] Add the hybrid coordinate/proximal solver with SLOPE-specific ordering,
-  signs, equal-magnitude clusters, updates, and merges. Use full proximal
-  steps to permit cluster splitting.
-- [ ] Test ties, cluster merges and splits, normalization semantics, and
-  agreement with generic proximal methods before preferring the hybrid
-  solver.
+- [ ] **SLOPE cluster state:** Represent coefficient ordering, signs, and
+  equal-magnitude clusters. Test zero coefficients, ties, permutations, and
+  reconstruction of the coefficient vector.
+- [ ] **SLOPE cluster updates:** Implement Gaussian cluster-coordinate sweeps
+  using the cluster state, residual updates, and cluster merges. Verify each
+  restricted update against a small independently solved subproblem.
+- [ ] **SLOPE hybrid iteration:** Alternate cluster sweeps with full proximal
+  steps that allow cluster splitting. Start with typed Gaussian/SLOPE fits,
+  reusable workspaces, and an appropriate full optimality check. Test
+  merges, splits, iteration limits, and agreement with proximal gradient.
+- [ ] **SLOPE storage and normalization:** Extend the hybrid solver to dense and
+  CSC input with lazy normalization. Check explicit/lazy agreement,
+  intercept policies, and prediction-preserving back-transformation.
+- [ ] **SLOPE solver comparison:** Benchmark hybrid and generic proximal fits on
+  distinct, tied, and highly clustered solutions. Record correctness, time,
+  allocations, and memory before recommending the hybrid solver.
 - [x] Add path APIs with warm starts and reusable workspaces. Add lasso
   screening and working sets with full optimality checks at each solution.
 - [x] Implement maximum-penalty calculations and path sequences for each
@@ -132,94 +149,373 @@ boundaries only when an implemented consumer needs them.
 
 ## 6. Broader penalties and solvers
 
-- [ ] Add scaled penalties, explicit unpenalized masks, and composition over
-  rows and groups. Validate group definitions and distinguish disjoint from
-  overlapping groups.
-- [ ] Add group and sparse-group penalties with valid proximal or block
-  subproblems, followed by group SLOPE, nuclear norm, bounds, and
-  constraints where supported.
-- [ ] Add FISTA, three-operator splitting, and ATOS with documented assumptions.
-  Do not substitute successive proximal maps for the prox of an arbitrary
-  sum.
-- [ ] Add ADMM through explicit splittings and supported subproblem solvers.
-- [ ] Add MCP, SCAD, and group variants with suitable coordinate, block,
-  majorization-minimization, or difference-of-convex methods. Document
-  initialization sensitivity and justified stationarity criteria separately
-  from convex convergence guarantees.
-- [ ] Test proximal and subproblem optimality and solver agreement where
-  solutions are comparable. Benchmark specializations before adding
-  selection preferences.
+### Penalty composition
+
+- [ ] **Scaled penalties:** Add a validated nonnegative scaling wrapper for
+  penalty values and supported complete proximal maps. Test zero scaling,
+  invalid strengths, and equivalence with existing built-in strengths.
+- [ ] **Unpenalized masks:** Support explicit unpenalized coordinates for
+  penalties with an implemented restricted proximal map. Validate masks,
+  preserve excluded coordinates, and reject unsupported coupled penalties.
+- [ ] **Row composition:** Compose scaled and masked penalties over feature rows
+  through the existing coefficient layout and `AxisPenalty`. Verify row
+  indexing, penalty scaling, and exclusion of intercepts.
+- [ ] **Group definitions:** Add validated disjoint groups with explicit weights
+  and a policy for uncovered coefficients. Reject duplicate, overlapping,
+  empty, and out-of-range groups in the disjoint representation.
+- [ ] **Disjoint group composition:** Apply a complete vector penalty to each
+  validated disjoint group with reusable gather/scatter buffers. Check value
+  and proximal agreement with independent group calculations.
+- [ ] **Penalty sums:** Represent independently weighted sums for value
+  evaluation and explicit splitting solvers. Require a separately
+  implemented complete prox before exposing a sum to proximal gradient.
+
+### Convex penalties
+
+- [ ] **Group lasso:** Implement the weighted disjoint-group L2 penalty and
+  exact block soft-thresholding prox. Verify proximal optimality, zero
+  groups, and Gaussian fits against independent reference cases.
+- [ ] **Sparse-group lasso:** Implement the complete prox for L1 plus disjoint
+  group L2 penalties. Check limiting cases against lasso and group lasso,
+  and verify proximal optimality.
+- [ ] **Group SLOPE:** Implement the penalty and complete prox for disjoint
+  groups under documented group-size and weight conventions. Check equal
+  group norms, ordering, zero groups, and proximal optimality.
+- [ ] **Overlapping groups:** After an explicit splitting solver is available,
+  support one documented overlapping-group formulation. Test shared
+  coefficients and compare small solutions with an independent reference.
+- [ ] **Nuclear norm:** Implement matrix penalty evaluation and singular-value
+  thresholding for one optional linear algebra backend. Verify layout,
+  rank-deficient cases, and proximal optimality.
+- [ ] **Coefficient bounds:** Add validated lower and upper bounds as an
+  indicator penalty with an exact projection. Test feasibility, infinite
+  endpoints, fixed coordinates, and small constrained fits.
+- [ ] **Additional constraints:** Select one concrete constraint needed by a
+  supported model, document its projection or splitting requirements, and
+  add a separate implementation item with acceptance checks.
+
+### Convex solvers
+
+- [ ] **FISTA:** Add accelerated proximal gradient for the existing smooth
+  datafits and complete convex proximal terms, reusing product workspaces
+  and backtracking. Document assumptions, check convergence at the returned
+  iterate, and compare fits and work counts with proximal gradient.
+- [ ] **Three-operator splitting:** Add an oracle and iteration for a smooth
+  term plus two separately proximable convex terms. Start with one Gaussian
+  penalty-plus-bounds example, document step assumptions, and verify a
+  justified fixed-point stopping criterion.
+- [ ] **ATOS:** Add adaptive three-operator splitting using the validated
+  three-operator formulation. Document adaptation assumptions, report step
+  and line-search diagnostics, and compare solutions and work counts with
+  fixed-step three-operator splitting.
+- [ ] **ADMM splitting:** Define one Gaussian penalty split, its subproblem
+  contracts, and primal and dual residual conventions. Implement the oracle
+  with tests for its operators and error propagation.
+- [ ] **ADMM quadratic subproblem:** Implement the Gaussian coefficient
+  subproblem for that split using products and reusable solve storage.
+  Verify solve residuals and failures without forming a Gram matrix by
+  default.
+- [ ] **ADMM iteration:** Combine the validated split and subproblem solver with
+  dual updates and residual-based stopping. Compare Gaussian lasso solutions
+  with existing solvers, and test iteration and inner-solve limits.
+
+### Nonconvex penalties and methods
+
+- [ ] **MCP penalty:** Implement MCP values and scalar coordinate subproblems
+  with validated shape parameters. Test thresholds, boundary cases, and
+  subproblem optimality against an independent scalar reference.
+- [ ] **SCAD penalty:** Implement SCAD values and scalar coordinate subproblems
+  with validated shape parameters. Test thresholds, boundary cases, and
+  subproblem optimality against an independent scalar reference.
+- [ ] **Gaussian MCP fitting:** Add coordinate descent using the MCP subproblem,
+  explicit initialization, and a justified stationarity check. Test multiple
+  starts and report local convergence separately from convex guarantees.
+- [ ] **Gaussian SCAD fitting:** Add coordinate descent using the SCAD
+  subproblem and the established nonconvex diagnostics. Verify stationarity
+  and initialization sensitivity without requiring identical local
+  solutions.
+- [ ] **Group MCP penalty:** Implement disjoint-group MCP values and valid block
+  subproblems. Verify block optimality on small independent reference cases
+  and check reduction to scalar MCP for singleton groups.
+- [ ] **Gaussian group MCP fitting:** Add block descent using the validated
+  group MCP subproblem. Check final stationarity, initialization
+  sensitivity, and agreement with scalar MCP fits for singleton groups.
+- [ ] **Group SCAD penalty:** Implement disjoint-group SCAD values and valid
+  block subproblems. Verify block optimality on small independent reference
+  cases and check reduction to scalar SCAD for singleton groups.
+- [ ] **Gaussian group SCAD fitting:** Add block descent using the validated
+  group SCAD subproblem. Check final stationarity, initialization
+  sensitivity, and agreement with scalar SCAD fits for singleton groups.
+- [ ] **Majorization-minimization:** Implement one Gaussian MCP or SCAD
+  formulation with explicit surrogate and inner-solve requirements. Verify
+  surrogate validity, objective descent, and the final stationarity check.
+- [ ] **Difference-of-convex fitting:** Implement one MCP or SCAD decomposition
+  using an existing convex subsolver. Document inner tolerances and compare
+  stationarity and initialization sensitivity with coordinate descent.
+- [ ] **Specialized solver comparison:** Benchmark implemented block and
+  nonconvex methods on documented supported combinations. Compare convex
+  solutions where applicable and nonconvex stationarity otherwise; record
+  evidence before adding solver-selection preferences.
 
 ## 7. Additional outcomes and statistical semantics
 
-- [ ] Add Poisson and other GLMs with validated observation weights and offsets.
-- [ ] Choose and document multinomial identifiability and penalty conventions,
-  then implement multinomial fitting.
-- [ ] Extend multivariate models and penalties with explicit coefficient layouts
-  and penalty axes.
-- [ ] Add Cox and stratified Cox with event, time, and stratum validation and
-  risk-set operations in the datafit or solver. Preserve observation
-  coupling in any blockwise evaluation.
-- [ ] Add proximal Newton, IRLS, and other specialized methods when concrete
-  datafits justify their curvature or weighted-product capabilities.
-- [ ] Verify each family's loss normalization, derivatives, weight and offset
-  semantics, intercept policy, and reference fits.
+### Weights, offsets, and GLMs
+
+- [ ] **Weight conventions:** Specify observation-weight validation, loss
+  normalization, zero-weight behavior, and how weights affect fitted
+  preprocessing and null models. Record the decision in `DESIGN.md`.
+- [ ] **Weighted Gaussian fits:** Apply the documented weight conventions to
+  Gaussian proximal fits. Test derivatives, zero weights, intercepts, and
+  agreement with independently computed weighted least squares cases.
+- [ ] **Weighted binomial fits:** Add observation weights to binomial proximal
+  fits using the same conventions. Check derivatives, extreme predictors,
+  and independent weighted reference fits.
+- [ ] **Gaussian offsets:** Add validated predictor offsets to Gaussian proximal
+  fits and prediction. Check dimensions, finite values, intercept
+  interaction, and coefficient back-transformation.
+- [ ] **Binomial offsets:** Extend the offset contract to binomial proximal fits
+  and prediction. Check extreme predictors, intercept interaction, and
+  independent reference fits.
+- [ ] **Weighted and offset Gaussian paths:** Extend Gaussian null models,
+  maximum penalties, and warm-start paths to weights and offsets. Compare
+  with cold fits and test degenerate null models.
+- [ ] **Weighted and offset binomial paths:** Extend binomial null models,
+  maximum penalties, and warm-start paths to weights and offsets. Compare
+  with cold fits and reject unsupported boundary null models.
+- [ ] **Poisson datafit:** Implement stable Poisson loss and predictor
+  derivatives with validated responses, weights, and offsets. Document loss
+  normalization and test finite differences and overflow behavior.
+- [ ] **Poisson fitting:** Fit Poisson models through proximal gradient with
+  intercepts and original-scale prediction. Verify independent reference
+  fits, all-zero responses, and numerical and iteration-limit diagnostics.
+- [ ] **Poisson paths:** Implement the supported null model and maximum-penalty
+  calculation, including weights and offsets. Compare warm paths with
+  independent cold fits and reject nonfinite null optima.
+- [ ] **Next GLM:** Select one additional family with a concrete use case.
+  Specify its response, link, weight, offset, and intercept conventions, and
+  add separate datafit and fitting tasks.
+
+### Multinomial and multivariate models
+
+- [ ] **Multinomial conventions:** Choose identifiability, class encoding,
+  coefficient layout, intercept handling, and penalty axes. Document how
+  these choices affect prediction and normalization.
+- [ ] **Multinomial datafit:** Implement stable loss and predictor gradients
+  under those conventions. Validate class inputs and check finite
+  differences, extreme logits, and invariance properties.
+- [ ] **Multinomial fitting:** Add proximal fitting with the chosen
+  identifiability constraint and existing compatible penalties. Verify
+  probabilities, back-transformation, and independent reference fits.
+- [ ] **Multivariate model extension:** Select the next multivariate datafit and
+  specify response coupling, coefficient layout, and penalty axes. Add
+  separate datafit and solver-integration tasks for that model.
+- [ ] **Multivariate group penalties:** Integrate the implemented group and
+  sparse-group penalties with feature rows of multivariate Gaussian
+  coefficients. Test axis semantics, intercept exclusion, and reference
+  solutions with coupled responses.
+
+### Survival models
+
+- [ ] **Cox response and risk sets:** Validate event indicators and times,
+  choose a tie convention, and implement reusable risk-set ordering. Test
+  tied times, censored observations, and invalid inputs.
+- [ ] **Cox datafit:** Implement partial likelihood and predictor gradients with
+  the chosen tie convention. Keep risk-set coupling in the datafit, and
+  verify derivatives and independent likelihood calculations.
+- [ ] **Cox fitting:** Add proximal fitting with documented normalization,
+  intercept, weight, and offset support. Verify stationarity and independent
+  reference fits, and reject unsupported metadata explicitly.
+- [ ] **Stratified Cox:** Extend risk sets, loss, and fitting to validated
+  strata. Compare with sums of stratum-specific likelihoods and reference
+  fits, including strata with no events.
+
+### Curvature-based solvers
+
+- [ ] **Curvature capability:** Derive a small fallible predictor-curvature or
+  weighted-product capability from binomial fitting. Check derivatives and
+  error propagation without adding requirements to unrelated datafits.
+- [ ] **Binomial IRLS:** Use the curvature capability for ridge-regularized
+  binomial fitting with stable weights and globalization. Compare with
+  proximal gradient and test extreme predictors and failed inner solves.
+- [ ] **Binomial proximal Newton:** Solve binomial/L1 quadratic subproblems with
+  a compatible inner solver and line search. Report inner accuracy, verify
+  final optimality, and compare with proximal-gradient reference fits.
+- [ ] **Further specialized methods:** Choose one additional datafit/solver
+  pairing only after its required curvature or product capability is
+  justified. Add a bounded implementation task and reference checks.
 
 ## 8. Out-of-core execution
 
-- [ ] Build a reference file-backed adapter on the tested fallible block
-  contract, initially retaining coefficients and required `O(n)` and `O(p)`
-  state in RAM. Keep format and compression dependencies optional.
-- [ ] Add streaming kernels for compatible datafits and record efficient row or
-  column access, rather than assuming arbitrary access is inexpensive.
-- [ ] Define an execution policy for memory, block size, threads, caches, and
-  permitted temporary storage. Require explicit policy permission for
-  copies, transposes, conversions, and disk caches; document hard versus
-  advisory limits.
-- [ ] Add active-column caching and periodic full optimality scans where useful.
-- [ ] Extend to streamed or file-backed `O(n)` workspaces while retaining
-  coefficients and essential `O(p)` state in RAM.
-- [ ] Compare in-memory and file-backed fits, and verify bounded buffers, read
-  failures, and absence of hidden full-matrix materialization. Measure data
-  passes, I/O, memory, and time.
+- [ ] **Reference file-backed adapter:** Promote the existing buffered Zarr
+  demonstration into a documented reference adapter on the tested fallible
+  block contract. Retain `O(n)` and `O(p)` solver state in RAM, keep storage
+  dependencies optional, and compare fits with in-memory input.
+- [ ] **Storage access description:** Describe efficient row and column scans,
+  block geometry, and costly access for the reference adapter. Verify the
+  description against instrumented reads rather than inferring it from
+  random-access support.
+- [ ] **Streaming Gaussian kernels:** Add blockwise Gaussian loss and gradient
+  accumulation with reusable buffers. Compare with full-vector evaluation,
+  including normalization, intercepts, and injected read failures.
+- [ ] **Streaming binomial kernels:** Add stable blockwise binomial loss and
+  gradient accumulation using the streaming contract. Verify extreme
+  predictors and agreement with in-memory fits.
+- [ ] **Memory and block policy:** Add validated memory and block-size settings
+  to the buffered consumer. Account for known buffers and document which
+  limits are hard or advisory, including backend decoding storage.
+- [ ] **Thread and cache policy:** Extend execution policy with thread count,
+  cache capacity, and explicit permission for temporary copies, transposes,
+  conversions, and disk caches. Test that prohibited operations are rejected
+  before execution.
+- [ ] **I/O diagnostics:** Instrument data passes, block reads, and bytes where
+  measurable. Distinguish backend-reported I/O from estimates, and verify
+  counters on deterministic small fits.
+- [ ] **File-backed working sets:** Adapt Gaussian lasso working-set fitting to
+  fallible buffered column access with policy-bounded storage. Reuse the
+  existing numerical updates, verify read failures, and compare with
+  in-memory fits before adding a cache.
+- [ ] **Active-column cache:** Add a policy-bounded cache for a supported
+  file-backed coordinate or working-set method. Verify eviction, cached and
+  uncached agreement, and periodic full optimality scans.
+- [ ] **File-backed workspace contract:** Choose one `O(n)` workspace to move
+  out of RAM and define its fallible block access, lifetime, and temporary
+  storage requirements. Keep coefficients and essential `O(p)` state in RAM.
+- [ ] **File-backed workspace implementation:** Implement that workspace for one
+  Gaussian solver using the agreed contract. Compare with the RAM workspace
+  and inject failures during updates and final checks.
+- [ ] **Out-of-core memory checks:** Add allocation and buffer checks for the
+  reference adapter and workspace implementation. Detect hidden full-matrix
+  materialization and verify behavior when the configured budget is too
+  small.
+- [ ] **Out-of-core benchmarks:** Compare in-memory and file-backed fits over
+  representative block sizes and cache policies. Report passes, I/O, peak
+  memory, and time alongside numerical agreement.
 
 ## 9. Bindings, selection, and model evaluation
 
-- [ ] Expose runtime specifications for fitting, paths, and prediction backed by
-  the typed implementations and a tested compatibility matrix.
-- [ ] Implement a documented deterministic `auto` policy based on mathematical
-  compatibility, storage access, memory, and available implementations.
-  Report the chosen solver and permit overrides.
-- [ ] Add cross-validation with preprocessing fitted separately on each training
-  fold and reused across that fold's path.
-- [ ] Add R and Python bindings with validated ownership, lifetime, layout, and
-  mutability contracts for zero-copy inputs. Keep language callbacks outside
-  observation and coefficient loops.
-- [ ] Compare typed fits, runtime fits, and binding results. Verify prediction
-  transformations, error propagation, and cross-validation without
-  preprocessing leakage.
-- [ ] Document supported combinations, objective and tolerance conventions,
-  diagnostics, examples, and measured performance before advertising
-  coverage.
+### Runtime specifications and selection
+
+- [ ] **Runtime fit specifications:** Extend the existing runtime API with
+  validated family, penalty, solver, and normalization specifications for
+  implemented combinations. Test typed/runtime agreement and actionable
+  compatibility errors.
+- [ ] **Runtime path specifications:** Expose explicit and automatic path
+  specifications through the runtime facade. Preserve independent penalty
+  strengths and compare ordering, warm starts, and failures with typed
+  paths.
+- [ ] **Runtime prediction:** Expose fitted linear predictors and supported
+  response transformations through the runtime facade. Verify original-scale
+  coefficients, preprocessing, offsets, and errors on incompatible inputs.
+- [ ] **Compatibility matrix:** Publish a tested matrix of supported families,
+  penalties, solvers, layouts, and storage capabilities. Link unsupported
+  selections to useful alternatives.
+- [ ] **Automatic solver selection:** Implement a documented deterministic
+  `auto` policy using the compatibility matrix, efficient storage access,
+  memory policy, and measured solver preferences. Report the selected solver
+  and test explicit overrides and unsupported requests.
+
+### Cross-validation
+
+- [ ] **Cross-validation folds and metrics:** Add validated deterministic fold
+  assignments and family-appropriate scoring for Gaussian and binomial
+  models. Test coverage, invalid folds, and score normalization.
+- [ ] **Cross-validation paths:** Fit preprocessing on each training fold and
+  reuse it across that fold's path. Verify held-out predictions and prove
+  absence of preprocessing leakage with a targeted fixture.
+- [ ] **Cross-validation selection:** Aggregate fold scores, select a tuning
+  point under a documented rule, and refit on all training observations.
+  Test reproducibility, failed fits, and independently checked selections.
+
+### Python bindings
+
+- [ ] **Python input contract:** Add the minimal optional binding package and
+  validate dense array ownership, lifetime, layout, and mutability. Test
+  accepted zero-copy inputs and explicit copies or errors for other inputs.
+- [ ] **Python fitting and prediction:** Expose Gaussian lasso through the
+  runtime facade with fitted diagnostics, prediction, and translated errors.
+  Compare with Rust results and keep callbacks outside numerical loops.
+- [ ] **Python paths:** Expose explicit and automatic regularization paths with
+  validated output shapes and independent penalty strengths. Compare
+  predictions, diagnostics, and failures with Rust paths.
+- [ ] **Python cross-validation:** Bind the Rust cross-validation API and verify
+  selected penalties, refits, and leakage checks against Rust results.
+
+### R bindings
+
+- [ ] **R input contract:** Add the minimal optional binding package and
+  validate matrix ownership, lifetime, layout, and mutability. Test accepted
+  zero-copy inputs and explicit copies or errors for other inputs.
+- [ ] **R fitting and prediction:** Expose Gaussian lasso through the runtime
+  facade with fitted diagnostics, prediction, and translated errors. Compare
+  with Rust results and keep callbacks outside numerical loops.
+- [ ] **R paths:** Expose explicit and automatic regularization paths with
+  validated output shapes and independent penalty strengths. Compare
+  predictions, diagnostics, and failures with Rust paths.
+- [ ] **R cross-validation:** Bind the Rust cross-validation API and verify
+  selected penalties, refits, and leakage checks against Rust results.
+
+### Coverage and documentation
+
+- [ ] **Binding coverage plan:** After the first fit/path/predict interfaces
+  work, list remaining implemented families and input backends for each
+  language. Add one bounded integration task per family or backend, with
+  Rust parity and ownership checks.
+- [ ] **Statistical API documentation:** Document supported objectives,
+  normalization, intercepts, weights, offsets, stopping tolerances, and
+  diagnostics for the public runtime and binding interfaces.
+- [ ] **Rust user examples:** Add runnable runtime fit, path, prediction, and
+  cross-validation examples. Verify outputs against shared reference cases.
+- [ ] **Python user examples:** Add runnable binding examples for fitting,
+  paths, prediction, and cross-validation. Verify agreement with the Rust
+  examples and document input ownership and copies.
+- [ ] **R user examples:** Add runnable binding examples for fitting, paths,
+  prediction, and cross-validation. Verify agreement with the Rust examples
+  and document input ownership and copies.
+- [ ] **Performance documentation:** Publish measured performance for supported
+  typed, runtime, and binding combinations, including copies, allocations,
+  and memory. Keep advertised coverage within the tested matrix.
 
 ## 10. Optional accelerators
 
-- [ ] Select representative bulk workloads after CPU interfaces are proven.
-- [ ] Add optional device-specific operators, buffers, oracles, and kernels
-  without making host slices or `Vec<f64>` universal public requirements.
-- [ ] Keep matrices and optimization workspaces on the device between iterations
-  and make transfers explicit. Isolate GPU dependencies from lean CPU
-  solvers.
-- [ ] Verify numerical agreement between CPU and device fits and measure
-  transfer costs, memory, and end-to-end performance.
+- [ ] **Accelerator workload:** Select one representative bulk workload and
+  optional device backend after the CPU interfaces are proven. Record CPU
+  baselines and define numerical and performance acceptance checks.
+- [ ] **Device storage:** Add optional device buffers and explicit upload and
+  download operations for that backend. Validate shape, ownership, and
+  lifetime contracts without requiring host slices in universal interfaces.
+- [ ] **Device products:** Implement forward and transpose products for the
+  selected workload. Compare with CPU kernels and test backend failures and
+  transfer accounting.
+- [ ] **Device datafit:** Implement loss and gradient kernels for the selected
+  datafit, including reductions and intercept handling. Verify CPU agreement
+  across ordinary and extreme inputs.
+- [ ] **Device proximal map:** Implement the workload's complete proximal term
+  with reusable device scratch storage. Check proximal optimality and CPU
+  agreement.
+- [ ] **Device solver:** Connect the validated kernels through a device oracle
+  and iteration routine. Keep matrices, coefficients, gradients, and scratch
+  storage on the device between iterations, and report transfer diagnostics.
+- [ ] **Device fit verification:** Compare complete CPU and device fits,
+  stopping diagnostics, and original-scale predictions. Test iteration
+  limits, backend errors, and the lean build without GPU dependencies.
+- [ ] **Accelerator benchmarks:** Measure transfers, device memory, kernel work,
+  and end-to-end time against the CPU baseline. Document which workload
+  sizes benefit before recommending device execution.
 
 ## Deferred work
 
-- [ ] Support original-scale penalties under nontrivial normalization only after
-  implementing their transformed subproblems explicitly.
-- [ ] Consider splitting the project into a workspace of crates when dependency
-  isolation or reuse justifies them, and a more sophisticated selection
-  planner when measurements justify one.
+- [ ] **Original-scale L1:** Derive and implement the transformed weighted L1
+  subproblem under nontrivial normalization. Verify equivalent predictions
+  and objectives against an explicitly transformed reference problem.
+- [ ] **Other original-scale penalties:** Choose one additional penalty only
+  when a consumer needs it. Derive its transformed subproblem and add a
+  separate implementation task; reject unsupported original-scale requests.
+- [ ] **Workspace split assessment:** Use actual dependency-isolation or reuse
+  requirements to decide whether one concrete crate boundary is justified.
+  Record the decision and add a migration task only if needed.
+- [ ] **Selection planner assessment:** Use measured failures or costs of the
+  deterministic `auto` policy to identify one needed improvement. Specify
+  its inputs, benchmark, and a separate implementation task.
 
 Distributed execution, general symbolic optimization, out-of-core coefficient
 vectors, and global optimization of arbitrary nonconvex objectives remain
