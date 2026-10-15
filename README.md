@@ -185,6 +185,24 @@ evaluation. The wrapper adds no allocation, and the fitted intercept remains
 unpenalized. Run `task bench:scaled` to compare scaled values and proximal maps
 with built-in strengths.
 
+`Masked::new(unpenalized, penalty)` excludes explicit coefficient coordinates.
+The boolean mask has one entry per optimization-scale coefficient: `true`
+excludes that coordinate, and `false` keeps its penalty. For example,
+`Masked::new(vec![true, false], L1::new(0.2))` leaves the first feature
+unpenalized. Excluded coordinates contribute no value and pass through the prox
+unchanged. The mask excludes the intercept, which remains unpenalized
+separately. Mask lengths, all coefficients, and inner parameters are validated
+even when every coordinate is excluded or an outer scale is zero.
+
+Masking requires `RestrictedProximalPenalty`, implemented by `L1`, `Ridge`, and
+`ElasticNet`, and preserved by `Scaled` and `Box`. Scaling and masking can be
+composed in either order. External penalties must supply a restricted value and
+an exact restricted proximal map. A coupled penalty such as `Slope` cannot be
+masked without that capability; a complete prox alone does not provide it. For
+runtime selection before masking, use `Box<dyn RestrictedProximalPenalty>`.
+Evaluation reuses the output buffer and adds no allocations. Run
+`task bench:masked` to compare full, partial, and empty restrictions.
+
 `Slope::new(weights)` supplies the complete sorted L1 penalty
 `sum_j weights[j] * |theta|_(j)`, where magnitudes are sorted from largest to
 smallest. Supply one finite, nonnegative, nonincreasing weight per coefficient,

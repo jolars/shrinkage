@@ -1,7 +1,7 @@
 //! Nonnegative scaling of complete penalty values and proximal maps.
 
 use crate::error::{finite, invalid};
-use crate::{FitError, Penalty, ProximalPenalty};
+use crate::{FitError, Penalty, ProximalPenalty, RestrictedProximalPenalty};
 
 /// A complete penalty multiplied by a finite, nonnegative scalar.
 ///
@@ -114,5 +114,66 @@ impl<P: ProximalPenalty> ProximalPenalty for Scaled<P> {
             });
         }
         self.penalty.prox(input, scaled_step, output)
+    }
+}
+
+impl<P: RestrictedProximalPenalty> RestrictedProximalPenalty for Scaled<P> {
+    fn value_restricted(
+        &self,
+        coefficients: &[f64],
+        unpenalized: &[bool],
+    ) -> Result<f64, FitError> {
+        self.validate(coefficients)?;
+        if self.scale == 0.0 {
+            self.penalty
+                .validate_restricted_input(coefficients, unpenalized)?;
+            return Ok(0.0);
+        }
+        Ok(finite(
+            self.scale * self.penalty.value_restricted(coefficients, unpenalized)?,
+            "scaling the restricted penalty value",
+            0,
+        )?)
+    }
+
+    fn validate_restricted_input(
+        &self,
+        coefficients: &[f64],
+        unpenalized: &[bool],
+    ) -> Result<(), FitError> {
+        self.validate(coefficients)?;
+        self.penalty
+            .validate_restricted_input(coefficients, unpenalized)
+    }
+
+    fn prox_restricted(
+        &self,
+        input: &[f64],
+        unpenalized: &[bool],
+        step: f64,
+        output: &mut [f64],
+    ) -> Result<(), FitError> {
+        self.validate_restricted_input(input, unpenalized)?;
+        if input.len() != output.len() {
+            return Err(invalid("proximal input and output lengths must match"));
+        }
+        if !step.is_finite() || step <= 0.0 {
+            return Err(invalid(
+                "proximal step must be finite and strictly positive",
+            ));
+        }
+        if self.scale == 0.0 {
+            output.copy_from_slice(input);
+            return Ok(());
+        }
+        let scaled_step = finite(step * self.scale, "scaling a proximal step", 0)?;
+        if scaled_step == 0.0 {
+            return Err(FitError::NumericalFailure {
+                operation: "scaling a proximal step",
+                iteration: 0,
+            });
+        }
+        self.penalty
+            .prox_restricted(input, unpenalized, scaled_step, output)
     }
 }

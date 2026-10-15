@@ -3,8 +3,8 @@
 use faer::Col;
 use shrinkage::lazymatrix::{LazyMatrix, MatTransposeVecInto, MatVecInto};
 use shrinkage::{
-    ElasticNet, Gaussian, Penalty, Problem, ProximalGradient, ProximalPenalty, Scaled, Slope,
-    Termination,
+    ElasticNet, Gaussian, Masked, Penalty, Problem, ProximalGradient, ProximalPenalty, Scaled,
+    Slope, Termination,
 };
 use std::hint::black_box;
 
@@ -128,6 +128,25 @@ fn main() {
         Some(0),
     );
     let slope = Slope::new((0..64).map(|j| (64 - j) as f64 / 64.0).collect());
+    let masked = Masked::new((0..64).map(|j| j % 2 == 0).collect(), penalty);
+    measure(
+        "masked_elastic_net_prox",
+        100,
+        || {
+            masked
+                .prox(black_box(&input_slice), 0.5, &mut prox_output)
+                .unwrap()
+        },
+        Some(0),
+    );
+    measure(
+        "masked_elastic_net_value",
+        100,
+        || {
+            black_box(masked.value(black_box(&input_slice)).unwrap());
+        },
+        Some(0),
+    );
     measure(
         "slope_prox",
         100,

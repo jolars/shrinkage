@@ -323,6 +323,20 @@ scaling propagates inner arithmetic errors and rejects nonfinite scaled values,
 overflowing steps, or positive steps that underflow to zero. The wrapper owns no
 workspace and introduces no allocations.
 
+`Masked<P>` owns an explicit boolean mask with one entry per optimization-scale
+coefficient, excluding intercepts. A true entry makes that coordinate
+unpenalized. The restricted value equals the inner penalty with excluded
+coordinates set to zero, and the exact restricted prox copies those inputs
+unchanged. `RestrictedProximalPenalty` supplies these operations and a separate
+validation hook. L1, ridge, and elastic net implement it; `Scaled` and `Box`
+preserve it. Masking a penalty without this capability is a type error,
+including coupled SLOPE and an erased `Box<dyn ProximalPenalty>`. A coupled
+penalty needs its own restricted implementation; applying its complete prox and
+restoring excluded inputs does not in general solve the restricted problem.
+Length, coefficient, and parameter validation applies even to fully excluded
+masks or zero outer scales. Built-in restrictions skip excluded value arithmetic
+and allocate no workspace during evaluation.
+
 The proximal map of a sum is not generally the composition of its individual
 proximal maps. Consequently:
 

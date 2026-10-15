@@ -154,7 +154,7 @@ item produces a decision and concrete follow-up tasks.
 - [x] **Scaled penalties:** Add a validated nonnegative scaling wrapper for
   penalty values and supported complete proximal maps. Test zero scaling,
   invalid strengths, and equivalence with existing built-in strengths.
-- [ ] **Unpenalized masks:** Support explicit unpenalized coordinates for
+- [x] **Unpenalized masks:** Support explicit unpenalized coordinates for
   penalties with an implemented restricted proximal map. Validate masks,
   preserve excluded coordinates, and reject unsupported coupled penalties.
 - [ ] **Row composition:** Compose scaled and masked penalties over feature rows

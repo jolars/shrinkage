@@ -76,7 +76,8 @@ pub use path::{
     PathSolver, PenaltyMaximum, RegularizationPathSolver,
 };
 pub use penalty::{
-    AxisPenalty, ElasticNet, L1, Penalty, PenaltyAxis, ProximalPenalty, Ridge, Scaled, Slope,
+    AxisPenalty, ElasticNet, L1, Masked, Penalty, PenaltyAxis, ProximalPenalty,
+    RestrictedProximalPenalty, Ridge, Scaled, Slope,
 };
 pub use problem::{
     MatrixDesign, Problem, RuntimeDesign, RuntimeMultivariateProblem, RuntimePathProblem,
