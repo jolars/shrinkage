@@ -99,3 +99,7 @@ harness = false
 [[bench]]
 name = "masked"
 harness = false
+
+[[bench]]
+name = "row_composition"
+harness = false

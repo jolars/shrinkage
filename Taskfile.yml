@@ -74,6 +74,11 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --bench masked
 
+  bench:rows:
+    desc: Benchmark scaled and masked penalties on feature rows
+    cmds:
+      - cargo bench --locked --no-default-features --bench row_composition
+
   check:
     desc: Run all required checks
     cmds:

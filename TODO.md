@@ -157,7 +157,7 @@ item produces a decision and concrete follow-up tasks.
 - [x] **Unpenalized masks:** Support explicit unpenalized coordinates for
   penalties with an implemented restricted proximal map. Validate masks,
   preserve excluded coordinates, and reject unsupported coupled penalties.
-- [ ] **Row composition:** Compose scaled and masked penalties over feature rows
+- [x] **Row composition:** Compose scaled and masked penalties over feature rows
   through the existing coefficient layout and `AxisPenalty`. Verify row
   indexing, penalty scaling, and exclusion of intercepts.
 - [ ] **Group definitions:** Add validated disjoint groups with explicit weights

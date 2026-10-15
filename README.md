@@ -371,6 +371,32 @@ is `||Y - predictor||_F² / (2n)`, averaged over observations and summed over
 responses. Separable lasso, ridge, and elastic-net fits therefore match
 independent response fits using the same strengths.
 
+Compose scaling and masking inside `AxisPenalty`. For example, this applies the
+same scaled, masked ridge penalty to every feature row:
+
+```rust
+use shrinkage::{AxisPenalty, CoefficientLayout, Masked, PenaltyAxis, Ridge, Scaled};
+
+let layout = CoefficientLayout::new(3, 2)?;
+let penalty = AxisPenalty::new(
+    layout,
+    PenaltyAxis::Responses,
+    Scaled::new(0.5, Masked::new(vec![true, false], Ridge::new(0.2))),
+);
+```
+
+Here the mask has one flag per response: the first response's coefficients are
+unpenalized in every row. The second response uses ridge strength `0.1` in each
+row, with no division by either axis length. To exclude entire feature rows
+across all responses for a penalty with a restricted proximal map, use
+`PenaltyAxis::Features` with a mask of length `nfeatures`. Scaling and masking
+can appear in either order. A coupled row penalty still needs its own
+`RestrictedProximalPenalty` implementation before it can be masked. Intercepts
+have no mask entries and remain unpenalized. Row gathering reuses the axis
+penalty's response buffers; scaling and masking add no evaluation allocations.
+`task bench:rows` compares row values and proximal maps with a flat elastic-net
+equivalent at several feature and response counts.
+
 By default, each response has an unpenalized intercept. Shared training-feature
 centers and scales apply to every response; original-scale coefficients and
 intercepts preserve predictions, including when explicit centering induces an

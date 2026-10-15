@@ -23,6 +23,34 @@ pub enum PenaltyAxis {
 /// supplied strength without dividing by the group or response count. The prox
 /// is exact because the groups are disjoint. Intercepts are never included.
 /// Strided response groups use owned reusable CPU scratch buffers.
+///
+/// Compose [`crate::Scaled`] and [`crate::Masked`] inside the axis penalty.
+/// With `Responses`, each feature row receives the same vector penalty and
+/// a mask has one entry per response. With `Features`, a mask has one entry
+/// per feature and excludes those feature rows across all responses. Masks
+/// require an inner [`crate::RestrictedProximalPenalty`].
+///
+/// ```
+/// use shrinkage::{
+///     AxisPenalty, CoefficientLayout, Masked, Penalty, PenaltyAxis,
+///     ProximalPenalty, Ridge, Scaled,
+/// };
+///
+/// let layout = CoefficientLayout::new(3, 2)?;
+/// let penalty = AxisPenalty::new(
+///     layout,
+///     PenaltyAxis::Responses,
+///     Scaled::new(0.5, Masked::new(vec![true, false], Ridge::new(2.0))),
+/// );
+/// // Each response's feature vector is contiguous, so the rows are [1, 4],
+/// // [2, 5], and [3, 6]. Only the second response is penalized in each row.
+/// let input = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+/// assert!((penalty.value(&input)? - 38.5).abs() < 1e-12);
+/// let mut output = [0.0; 6];
+/// penalty.prox(&input, 1.0, &mut output)?;
+/// assert_eq!(output, [1.0, 2.0, 3.0, 2.0, 2.5, 3.0]);
+/// # Ok::<(), shrinkage::FitError>(())
+/// ```
 #[derive(Clone, Debug)]
 pub struct AxisPenalty<P> {
     layout: CoefficientLayout,

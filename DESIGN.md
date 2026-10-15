@@ -410,6 +410,16 @@ count never rescales the loss or penalty. Exact vector proximal maps therefore
 give exact maps for these disjoint groups, including external terms that couple
 responses. A reused scratch buffer gathers strided response groups.
 
+Row composition uses these existing axes with `Scaled` and `Masked` as the inner
+vector penalty. On `Responses`, a mask has one entry per response and applies
+within every feature row. On `Features`, a mask has one entry per feature and
+excludes whole feature rows across responses for penalties with an implemented
+restricted proximal map. Both wrapper orders preserve the complete penalty and
+proximal map. Each group's strength includes the scale without an additional
+feature or response divisor. Masks never include intercepts. Empty layouts and
+zero scales still validate the inner parameters and the mask against the
+selected vector width.
+
 `ProximalGradient` reuses its existing joint iteration with a stacked design
 adapter. The adapter repeats normalized LazyMatrix products for each response
 and appends free intercept coordinates with an identity proximal map. It never
