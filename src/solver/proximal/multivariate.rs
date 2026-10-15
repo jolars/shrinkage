@@ -139,6 +139,10 @@ impl<P: ProximalPenalty> Penalty for WithIntercepts<'_, P> {
         let len = self.validate(input)?;
         self.penalty.value(&input[..len])
     }
+    fn validate_input(&self, input: &[f64]) -> Result<(), FitError> {
+        let len = self.validate(input)?;
+        self.penalty.validate_input(&input[..len])
+    }
 }
 
 impl<P: ProximalPenalty> ProximalPenalty for WithIntercepts<'_, P> {

@@ -312,6 +312,17 @@ Composition should allow conceptual types such as `Scaled<P>`, `Sum<P, Q>`,
 `OnRows<P>`, `OnGroups<P>`, and explicit unpenalized masks. Validate group
 definitions and distinguish disjoint from overlapping groups.
 
+`Scaled<P>` multiplies a complete penalty value by a finite, nonnegative scalar,
+checked when evaluated or fitted. It provides a complete proximal map only when
+the inner penalty does: positive scaling replaces the step by `step * scale`,
+and zero scaling returns zero value and the identity map. Invalid steps,
+dimensions, coefficients, or inner parameters remain errors at zero scaling.
+`Penalty::validate_input` defaults to value evaluation; built-in penalties and
+wrappers override it to avoid unused value arithmetic at zero scaling. Positive
+scaling propagates inner arithmetic errors and rejects nonfinite scaled values,
+overflowing steps, or positive steps that underflow to zero. The wrapper owns no
+workspace and introduces no allocations.
+
 The proximal map of a sum is not generally the composition of its individual
 proximal maps. Consequently:
 

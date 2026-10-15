@@ -108,6 +108,10 @@ impl Penalty for Slope {
             .sum();
         Ok(finite(value, "computing the SLOPE penalty", 0)?)
     }
+
+    fn validate_input(&self, coefficients: &[f64]) -> Result<(), FitError> {
+        self.validate(coefficients)
+    }
 }
 
 impl ProximalPenalty for Slope {

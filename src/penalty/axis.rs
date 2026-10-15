@@ -76,6 +76,34 @@ impl<P> AxisPenalty<P> {
 impl<P: Penalty<Error = FitError>> Penalty for AxisPenalty<P> {
     type Error = FitError;
 
+    fn validate_input(&self, coefficients: &[f64]) -> Result<(), FitError> {
+        self.validate(coefficients)?;
+        if self.layout.is_empty() && self.axis == PenaltyAxis::Responses {
+            return self.penalty.validate_input(&self.scratch.borrow().0);
+        }
+        if self.axis == PenaltyAxis::All || self.layout.is_empty() {
+            return self.penalty.validate_input(coefficients);
+        }
+        match self.axis {
+            PenaltyAxis::All => unreachable!(),
+            PenaltyAxis::Features => {
+                for group in coefficients.chunks_exact(self.layout.nfeatures()) {
+                    self.penalty.validate_input(group)?;
+                }
+            }
+            PenaltyAxis::Responses => {
+                let mut scratch = self.scratch.borrow_mut();
+                for feature in 0..self.layout.nfeatures() {
+                    for (response, entry) in scratch.0.iter_mut().enumerate() {
+                        *entry = coefficients[response * self.layout.nfeatures() + feature];
+                    }
+                    self.penalty.validate_input(&scratch.0)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn value(&self, coefficients: &[f64]) -> Result<f64, FitError> {
         self.validate(coefficients)?;
         if self.layout.is_empty() {

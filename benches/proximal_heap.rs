@@ -3,7 +3,8 @@
 use faer::Col;
 use shrinkage::lazymatrix::{LazyMatrix, MatTransposeVecInto, MatVecInto};
 use shrinkage::{
-    ElasticNet, Gaussian, Penalty, Problem, ProximalGradient, ProximalPenalty, Slope, Termination,
+    ElasticNet, Gaussian, Penalty, Problem, ProximalGradient, ProximalPenalty, Scaled, Slope,
+    Termination,
 };
 use std::hint::black_box;
 
@@ -145,6 +146,46 @@ fn main() {
         },
         Some(0),
     );
+    for scale in [0.0, 0.25] {
+        let scaled = Scaled::new(scale, penalty);
+        measure(
+            &format!("scaled_elastic_net_prox_{scale}"),
+            100,
+            || {
+                scaled
+                    .prox(black_box(&input_slice), 0.5, &mut prox_output)
+                    .unwrap()
+            },
+            Some(0),
+        );
+        measure(
+            &format!("scaled_elastic_net_value_{scale}"),
+            100,
+            || {
+                black_box(scaled.value(black_box(&input_slice)).unwrap());
+            },
+            Some(0),
+        );
+        let scaled = Scaled::new(scale, Slope::new(slope.weights().to_vec()));
+        measure(
+            &format!("scaled_slope_prox_{scale}"),
+            100,
+            || {
+                scaled
+                    .prox(black_box(&input_slice), 0.5, &mut prox_output)
+                    .unwrap()
+            },
+            Some(0),
+        );
+        measure(
+            &format!("scaled_slope_value_{scale}"),
+            100,
+            || {
+                black_box(scaled.value(black_box(&input_slice)).unwrap());
+            },
+            Some(0),
+        );
+    }
     let solver = ProximalGradient::<Col<f64>>::new();
     let problem = Problem::new(&dense, Gaussian::new(&y), penalty);
     let penalties = [

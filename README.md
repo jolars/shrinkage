@@ -173,6 +173,18 @@ requires the prox of the entire term; individual proximal maps do not establish
 a valid prox for their sum. Elastic net implements its complete formula
 directly.
 
+`Scaled::new(scale, penalty)` multiplies the complete penalty by a finite,
+nonnegative scalar, including any strengths already in the inner term. For
+example, `Scaled::new(0.5, ElasticNet::new(0.2, 0.4))` is equivalent to
+`ElasticNet::new(0.1, 0.2)`. Positive scaling delegates a complete proximal map
+with `step * scale`; zero scaling gives zero value and an identity map. Zero
+scaling still validates the inner penalty and its dimensions. External penalties
+can override `Penalty::validate_input` to perform this check without evaluating
+the unscaled value. Scaling a value-only penalty preserves only value
+evaluation. The wrapper adds no allocation, and the fitted intercept remains
+unpenalized. Run `task bench:scaled` to compare scaled values and proximal maps
+with built-in strengths.
+
 `Slope::new(weights)` supplies the complete sorted L1 penalty
 `sum_j weights[j] * |theta|_(j)`, where magnitudes are sorted from largest to
 smallest. Supply one finite, nonnegative, nonincreasing weight per coefficient,

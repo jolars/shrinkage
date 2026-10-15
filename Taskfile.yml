@@ -64,6 +64,11 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --bench slope
 
+  bench:scaled:
+    desc: Compare scaled penalty values and proximal maps with built-in strengths
+    cmds:
+      - cargo bench --locked --no-default-features --bench scaled
+
   check:
     desc: Run all required checks
     cmds:

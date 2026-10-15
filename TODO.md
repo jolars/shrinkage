@@ -151,7 +151,7 @@ item produces a decision and concrete follow-up tasks.
 
 ### Penalty composition
 
-- [ ] **Scaled penalties:** Add a validated nonnegative scaling wrapper for
+- [x] **Scaled penalties:** Add a validated nonnegative scaling wrapper for
   penalty values and supported complete proximal maps. Test zero scaling,
   invalid strengths, and equivalence with existing built-in strengths.
 - [ ] **Unpenalized masks:** Support explicit unpenalized coordinates for

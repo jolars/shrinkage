@@ -1,8 +1,10 @@
 //! Penalty values, complete proximal maps, and coefficient subproblems.
 
 mod axis;
+mod scaled;
 mod slope;
 pub use axis::{AxisPenalty, PenaltyAxis};
+pub use scaled::Scaled;
 pub use slope::Slope;
 
 use crate::FitError;
@@ -33,6 +35,19 @@ pub trait Penalty {
     /// # Errors
     /// Returns an error for invalid coefficients, parameters, or arithmetic.
     fn value(&self, coefficients: &[f64]) -> Result<f64, Self::Error>;
+
+    /// Check parameters and coefficient compatibility independently of scaling.
+    ///
+    /// The default evaluates the penalty and discards its value. Implementations
+    /// can override this to validate without value arithmetic, allowing a zero
+    /// [`Scaled`] penalty to avoid overflow in a value that is never used.
+    ///
+    /// # Errors
+    /// Reject invalid coefficients or parameters. The default also propagates
+    /// errors from value evaluation.
+    fn validate_input(&self, coefficients: &[f64]) -> Result<(), Self::Error> {
+        self.value(coefficients).map(|_| ())
+    }
 }
 
 impl L1 {
@@ -75,15 +90,20 @@ impl Penalty for L1 {
     type Error = FitError;
 
     fn value(&self, coefficients: &[f64]) -> Result<f64, Self::Error> {
-        self.validate()?;
-        if coefficients.iter().any(|value| !value.is_finite()) {
-            return Err(invalid("coefficients must be finite"));
-        }
+        self.validate_input(coefficients)?;
         Ok(finite(
             self.value_unchecked(coefficients),
             "computing the penalty",
             0,
         )?)
+    }
+
+    fn validate_input(&self, coefficients: &[f64]) -> Result<(), FitError> {
+        self.validate()?;
+        if coefficients.iter().any(|value| !value.is_finite()) {
+            return Err(invalid("coefficients must be finite"));
+        }
+        Ok(())
     }
 }
 
@@ -202,6 +222,10 @@ impl Penalty for Ridge {
     fn value(&self, coefficients: &[f64]) -> Result<f64, FitError> {
         ElasticNet::new(0.0, self.lambda).value(coefficients)
     }
+
+    fn validate_input(&self, coefficients: &[f64]) -> Result<(), FitError> {
+        L1::new(self.lambda).validate_input(coefficients)
+    }
 }
 
 impl Penalty for ElasticNet {
@@ -222,6 +246,11 @@ impl Penalty for ElasticNet {
                 .sum()
         };
         Ok(finite(l1 + l2, "computing the penalty", 0)?)
+    }
+
+    fn validate_input(&self, coefficients: &[f64]) -> Result<(), FitError> {
+        self.validate()?;
+        L1::new(0.0).validate_input(coefficients)
     }
 }
 
@@ -265,6 +294,10 @@ impl<P: Penalty + ?Sized> Penalty for Box<P> {
 
     fn value(&self, coefficients: &[f64]) -> Result<f64, Self::Error> {
         (**self).value(coefficients)
+    }
+
+    fn validate_input(&self, coefficients: &[f64]) -> Result<(), Self::Error> {
+        (**self).validate_input(coefficients)
     }
 }
 

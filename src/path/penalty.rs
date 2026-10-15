@@ -243,6 +243,9 @@ impl<P: ProximalPenalty> Penalty for ErasedPathPenalty<P> {
     fn value(&self, input: &[f64]) -> Result<f64, FitError> {
         self.0.value(input)
     }
+    fn validate_input(&self, input: &[f64]) -> Result<(), FitError> {
+        self.0.validate_input(input)
+    }
 }
 impl<P: ProximalPenalty> ProximalPenalty for ErasedPathPenalty<P> {
     fn prox(&self, input: &[f64], step: f64, output: &mut [f64]) -> Result<(), FitError> {
