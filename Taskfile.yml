@@ -150,6 +150,7 @@ tasks:
     cmds:
       - uv run --locked --project packages/python diplodocus check --config documentation/diplodocus.toml
       - uv run --locked --project packages/python diplodocus build --config documentation/diplodocus.toml --output documentation/site
+      - python scripts/prepare_documentation.py
 
   docs:check:
     desc: Build documentation and verify its Cloudflare Worker package

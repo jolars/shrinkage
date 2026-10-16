@@ -55,6 +55,8 @@ jobs:
         run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus check --config documentation/diplodocus.toml
       - name: Build documentation
         run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus build --config documentation/diplodocus.toml --output documentation/site
+      - name: Install public assets and shared head markup
+        run: python scripts/prepare_documentation.py
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
