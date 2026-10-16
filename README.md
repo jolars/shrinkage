@@ -203,6 +203,15 @@ runtime selection before masking, use `Box<dyn RestrictedProximalPenalty>`.
 Evaluation reuses the output buffer and adds no allocations. Run
 `task bench:masked` to compare full, partial, and empty restrictions.
 
+`DisjointGroups::new(ncoefficients, groups, weights, policy)` validates and owns
+disjoint coefficient groups with one explicit finite, nonnegative weight per
+group. Indices exclude intercepts and follow `CoefficientLayout` for flattened
+multivariate coefficients. Group and member order are preserved, with weights
+stored as supplied. `UncoveredPolicy::Reject` requires full coverage;
+`UncoveredPolicy::Unpenalized` leaves omitted coefficients unpenalized. Empty,
+duplicate, overlapping, and out-of-range groups are rejected, including at zero
+weight.
+
 `Slope::new(weights)` supplies the complete sorted L1 penalty
 `sum_j weights[j] * |theta|_(j)`, where magnitudes are sorted from largest to
 smallest. Supply one finite, nonnegative, nonincreasing weight per coefficient,

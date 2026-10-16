@@ -337,6 +337,18 @@ Length, coefficient, and parameter validation applies even to fully excluded
 masks or zero outer scales. Built-in restrictions skip excluded value arithmetic
 and allocate no workspace during evaluation.
 
+`DisjointGroups` owns coefficient index vectors and one explicit finite,
+nonnegative weight per group. Construction rejects empty groups, repeated
+indices, duplicate or overlapping groups, out-of-range indices, and mismatched
+weight counts. Group and member order are preserved, and weights have no
+implicit group-size or group-count scaling. Indices address optimization-scale
+coefficients, excluding intercepts; flattened matrices use `CoefficientLayout`'s
+response-major order. `UncoveredPolicy::Reject` requires full coverage, while
+`UncoveredPolicy::Unpenalized` records omitted indices in increasing order for
+unpenalized handling. Zero-weight groups still count as coverage and undergo all
+membership checks. An empty collection is valid for zero coefficients under
+either policy, or for any coefficient count with unpenalized handling.
+
 The proximal map of a sum is not generally the composition of its individual
 proximal maps. Consequently:
 

@@ -160,7 +160,7 @@ item produces a decision and concrete follow-up tasks.
 - [x] **Row composition:** Compose scaled and masked penalties over feature rows
   through the existing coefficient layout and `AxisPenalty`. Verify row
   indexing, penalty scaling, and exclusion of intercepts.
-- [ ] **Group definitions:** Add validated disjoint groups with explicit weights
+- [x] **Group definitions:** Add validated disjoint groups with explicit weights
   and a policy for uncovered coefficients. Reject duplicate, overlapping,
   empty, and out-of-range groups in the disjoint representation.
 - [ ] **Disjoint group composition:** Apply a complete vector penalty to each

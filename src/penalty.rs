@@ -1,10 +1,12 @@
 //! Penalty values, complete proximal maps, and coefficient subproblems.
 
 mod axis;
+mod groups;
 mod masked;
 mod scaled;
 mod slope;
 pub use axis::{AxisPenalty, PenaltyAxis};
+pub use groups::{DisjointGroups, UncoveredPolicy};
 pub use masked::{Masked, RestrictedProximalPenalty};
 pub use scaled::Scaled;
 pub use slope::Slope;
