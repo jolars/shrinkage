@@ -109,7 +109,7 @@ tasks:
   python:install:
     desc: Build and install the editable Python package and development tools
     cmds:
-      - uv sync --locked --project packages/python
+      - uv sync --locked --project packages/python --reinstall-package shrinkage
 
   python:lint:
     desc: Check Python formatting, types, and native binding lints

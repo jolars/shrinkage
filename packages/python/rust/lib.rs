@@ -1,5 +1,7 @@
 //! Native support for the Shrinkage Python package.
 
+mod input;
+
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use shrinkage::{L1, Penalty};
@@ -15,5 +17,7 @@ fn _core_smoke_test() -> PyResult<f64> {
 fn _shrinkage(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add("__version__", env!("CARGO_PKG_VERSION"))?;
     module.add_function(wrap_pyfunction!(_core_smoke_test, module)?)?;
+    module.add_class::<input::DenseInputs>()?;
+    module.add_function(wrap_pyfunction!(input::_prepare_dense_inputs, module)?)?;
     Ok(())
 }

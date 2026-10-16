@@ -659,6 +659,44 @@ operations and clear compatibility errors. Language callbacks must not occur per
 observation or coefficient. Zero-copy inputs require validated layout, lifetime,
 mutability, and ownership contracts.
 
+### Python dense input boundary
+
+The optional binding package in `packages/python` remains a separate Cargo
+workspace. NumPy is a Python runtime dependency; its input adapter uses PyO3's
+buffer API without adding Python or matrix backend dependencies to the default
+Rust build. The first numerical boundary is dense, single-response Gaussian
+data. Its private `_prepare_dense_inputs` entry point exercises the shared
+`DenseInputs` container before the fitting API is exposed.
+
+Accept exact `numpy.ndarray` instances with native-endian `float64` dtype and
+aligned storage. Require a two-dimensional design of shape `(n, p)` and a
+one-dimensional response of length `n`, with `n > 0` and `p >= 0`. Reject
+nonfinite values. Do not squeeze, cast, or invoke array protocols implicitly.
+Reject subclasses, including masked arrays, so user indexing and conversion
+hooks cannot enter the native boundary. Type and dtype errors become
+`TypeError`; shape, alignment, value, and copying-policy errors become
+`ValueError`. The Python package guide documents explicit conversions.
+
+Every NumPy input is copied once into immutable Rust-owned storage: the design
+uses column order, and the response uses a vector. Accept C, Fortran,
+transposed, sliced, reversed, and zero-stride broadcast layouts by copying
+logical values through their strides. Treat owned arrays and views, and writable
+and read-only arrays, identically. No NumPy input qualifies for zero-copy
+access; reject `copy=False`. Read-only flags alone cannot establish exclusive
+ownership because writable aliases can exist. This policy costs
+`8 * (n * p + n)` bytes beyond the input arrays, excluding allocation metadata.
+
+Keep the GIL and buffer exports alive throughout copying. Callers must prevent
+concurrent mutation or resizing, including through aliases or native operations
+already running without the GIL, until preparation returns. Release all buffer
+exports before any detached numerical operation. The resulting `DenseInputs`
+owns only Rust vectors and dimensions and retains no Python objects. Tests
+exercise detached reads, source collection, alias mutation after preparation,
+input flags, error cleanup, and all accepted layouts. The fitting milestone will
+consume this ownership boundary while releasing the GIL around the solver. No
+scalar loop calls Python, including during layout copying and finite-value
+validation.
+
 ## 12. Results, correctness, and performance
 
 Return coefficients, intercept/preprocessing metadata, termination reason,

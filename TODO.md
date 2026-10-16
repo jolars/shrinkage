@@ -34,7 +34,7 @@ decision and concrete follow-up tasks.
   Record the distribution and import names, supported Python versions, and
   supported platforms. Verify a clean local build and import while keeping
   Python dependencies out of the default Rust build and preserving its MSRV.
-- [ ] **Python input contract:** Validate dense array dtype, dimensions,
+- [x] **Python input contract:** Validate dense array dtype, dimensions,
   ownership, lifetime, layout, and mutability. Document accepted zero-copy
   inputs and explicit copies or errors for other inputs. Test noncontiguous
   arrays and invalid inputs, and keep Python callbacks outside numerical

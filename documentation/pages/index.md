@@ -12,8 +12,8 @@ Start with [installation](installation.md), consult the [Rust API
 reference](https://shrinkage.cc/packages/rust/), or read the [statistical
 conventions](https://github.com/jolars/shrinkage/blob/main/DESIGN.md). The
 [Python package](https://shrinkage.cc/packages/python/) currently provides
-native installation and version reporting. Python fitting and prediction are
-upcoming milestones.
+native installation, version reporting, and a private validated dense NumPy
+input boundary. Python fitting and prediction are upcoming milestones.
 
 For contributors, see [development](development.md) and [release
 conventions](releases.md).

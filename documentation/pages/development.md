@@ -11,7 +11,9 @@ inventory. Its regression test runs in documentation CI.
 
 The optional package lives in `packages/python`. Its native crate and Cargo
 lockfile are independent of the root Rust package. Maintained Python source and
-stubs under its `src/shrinkage` directory supply the Python reference.
+stubs under its `src/shrinkage` directory supply the Python reference. The
+install task rebuilds the editable native extension so checks include Rust
+source changes.
 
 ```console
 task python:install
@@ -21,8 +23,9 @@ task python:artifacts
 
 The artifact check installs a wheel into a fresh environment, tests it outside
 the checkout, and repeats the checks after rebuilding a source distribution. The
-private native smoke function exercises Rust penalty evaluation without
-establishing a public numerical Python interface.
+private native smoke function exercises Rust penalty evaluation, and the dense
+input tests verify validation, layouts, snapshots, and ownership against each
+installed artifact. These private probes precede the public fitting API.
 
 Use `task format` to format Rust, Python, and Markdown. `task check` runs the
 complete Rust and Python checks. The Python package does not install or build as

@@ -1,7 +1,8 @@
 """Regularized statistical models backed by Rust.
 
-This initial package establishes native installation and version reporting.
-Fitting and prediction bindings are planned for subsequent milestones.
+The package establishes native installation, version reporting, and validated
+dense NumPy input ownership. Fitting and prediction bindings are planned for
+the next milestone.
 
 Examples
 --------

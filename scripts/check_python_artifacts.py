@@ -35,11 +35,19 @@ def check_wheel(wheel: Path, directory: Path, tests: Path) -> None:
         "install",
         "--python",
         str(executable),
-        "--no-deps",
         str(wheel),
         cwd=directory,
     )
-    run(str(executable), "-I", str(tests), cwd=directory)
+    run(
+        str(executable),
+        "-I",
+        "-m",
+        "unittest",
+        "discover",
+        "--start-directory",
+        str(tests),
+        cwd=directory,
+    )
 
 
 def main() -> None:
@@ -47,7 +55,7 @@ def main() -> None:
     parser.add_argument("--sdist", action="store_true", help="Also rebuild an sdist.")
     options = parser.parse_args()
     repository = Path(__file__).resolve().parents[1]
-    tests = repository / "packages/python/tests/test_package.py"
+    tests = repository / "packages/python/tests"
     with tempfile.TemporaryDirectory(prefix="shrinkage-artifacts-") as temporary:
         directory = Path(temporary)
         artifacts = directory / "dist"

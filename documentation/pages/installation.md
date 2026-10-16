@@ -28,8 +28,9 @@ devenv shell -- cargo run --locked --example lasso --features faer_v0_24
 ## Python
 
 The distribution and import names are both `shrinkage`. The package currently
-provides installation and version reporting. Numerical bindings and NumPy
-dependencies will be added in later milestones.
+provides installation, version reporting, and a private validated dense input
+boundary. It requires NumPy 2.0 or newer. Fitting and prediction bindings follow
+in the next milestone.
 
 The CI matrix builds an interpreter-specific wheel and tests its installation
 and import for each supported combination:
@@ -54,3 +55,12 @@ The build uses the Rust sources from this repository. Installing an extracted
 source distribution also works without the repository because Maturin includes
 the required local Rust dependency. Neither package is published to a registry
 yet.
+
+Dense input must consist of exact NumPy arrays with native-endian `float64`
+dtype, aligned storage, and finite values. `X` has shape
+`(n_samples, n_features)`, and `y` has shape `(n_samples,)`, with at least one
+observation. Preparation copies C, Fortran, and strided layouts into independent
+Rust-owned storage. Read-only arrays are copied too, and requests for zero-copy
+NumPy input are rejected. See the [full Python input
+contract](https://github.com/jolars/shrinkage/blob/main/packages/python/README.md#dense-input-contract)
+for ownership, copying, and validation details.
