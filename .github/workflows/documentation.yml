@@ -64,7 +64,7 @@ jobs:
         run: npm --prefix documentation ci --ignore-scripts
       - name: Check Worker package
         run: npm --prefix documentation run check
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: documentation
           path: documentation/site
