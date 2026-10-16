@@ -6,6 +6,10 @@ site-url = "https://shrinkage.cc/"
 canonical-url-style = "clean"
 description = "Regularized statistical models in Rust and Python."
 
+[presentation.logo]
+repository = "shrinkage"
+path = "assets/logo-small.png"
+
 [presentation.footer]
 docs-version = "dev"
 copyright = "© 2026 Johan Larsson"

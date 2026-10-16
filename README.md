@@ -1,4 +1,4 @@
-# Shrinkage
+# Shrinkage <img src="https://raw.githubusercontent.com/jolars/shrinkage/refs/heads/main/assets/logo.png" align="right" width="240" height="108" alt="A shrink ray reducing beta coefficients" />
 
 [Documentation](https://shrinkage.cc/) covers the Rust API and the developing
 Python package. The optional Python scaffold lives in
