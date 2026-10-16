@@ -13,6 +13,36 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  msrv:
+    name: MSRV (Rust 1.85)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust 1.85
+        run: rustup toolchain install 1.85.0 --profile minimal
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            packages/python
+          key: msrv
+
+      - name: Build without backends
+        run: cargo +1.85.0 build --locked --lib --no-default-features
+
+      - name: Build compatible features and aliases
+        run: |
+          for features in faer_v0_24 faer ndarray_v0_17 ndarray experimental-block-reader; do
+            cargo +1.85.0 build --locked --lib --no-default-features --features "$features"
+          done
+
+      - name: Build Python bindings
+        run: cargo +1.85.0 build --locked --lib --manifest-path packages/python/Cargo.toml
+        env:
+          PYO3_PYTHON: python3
+
   check:
     runs-on: ubuntu-latest
     steps:
@@ -119,7 +149,7 @@ jobs:
 
   versionary:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [check, python]
+    needs: [msrv, check, python]
     runs-on: ubuntu-latest
     permissions:
       contents: write

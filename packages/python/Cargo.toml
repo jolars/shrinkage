@@ -2,7 +2,7 @@
 name = "shrinkage-python"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.89"
+rust-version = "1.85"
 description = "Python bindings for Shrinkage regularized statistical models."
 authors = ["Johan Larsson <johan@jolars.co>"]
 license = "MIT"

@@ -6,7 +6,7 @@ dense NumPy input boundary. Fitting and prediction will follow in the next
 milestone. Input preparation is currently private to the native extension.
 
 The distribution and import names are both `shrinkage`. Build from the
-repository with Rust 1.89 or newer and standard CPython 3.11 or newer:
+repository with Rust 1.85 or newer and standard CPython 3.11 or newer:
 
 ```console
 uv sync --locked --project packages/python

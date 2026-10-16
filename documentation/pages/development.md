@@ -1,11 +1,15 @@
 # Development
 
-Use `devenv shell` to enter the pinned environment. The Rust library and Python
-extension build with Rust 1.89. Documentation uses a separately pinned
-Diplodocus build and its `nightly-2026-09-28` extraction toolchain. The pinned
-Diplodocus build includes a small compatibility patch that excludes generated
-Python environments, build checkouts, and Nix hook symlinks from its Rust input
-inventory. Its regression test runs in documentation CI.
+Use `devenv shell` to enter the environment pinned to Rust 1.89.0. The core Rust
+library and Python extension support Rust 1.85. Some optional backends and
+development dependencies require newer Rust, so use the pinned toolchain for
+tests and benchmarks. CI checks the MSRV separately by building the compatible
+library features and Python extension without development dependencies.
+Documentation uses a separately pinned Diplodocus build and its
+`nightly-2026-09-28` extraction toolchain. The pinned Diplodocus build includes
+a small compatibility patch that excludes generated Python environments, build
+checkouts, and Nix hook symlinks from its Rust input inventory. Its regression
+test runs in documentation CI.
 
 ## Python package
 

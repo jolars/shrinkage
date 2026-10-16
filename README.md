@@ -588,10 +588,16 @@ devenv shell
 task check
 ```
 
-The toolchain is pinned to Rust 1.89.0, which is also the minimum supported Rust
-version. `Cargo.lock` and `devenv.lock` are tracked for reproducible
-development. CI runs the same Rust checks, example, and Panache checks as
-`task check`.
+The development toolchain is pinned to Rust 1.89.0. The core library, faer and
+ndarray integrations, experimental block reader, and Python bindings support
+Rust 1.85. With the checked-in lockfile, nalgebra requires Rust 1.87, sprs
+requires Rust 1.88, and Zarr requires Rust 1.89. Development dependencies also
+require newer Rust, so run tests and benchmarks with the pinned toolchain.
+
+`Cargo.lock` and `devenv.lock` are tracked for reproducible development. CI runs
+the same Rust checks, example, and Panache checks as `task check`. A separate
+MSRV job builds the supported library features and Python bindings on Rust
+1.85.0 without development dependencies.
 
 Useful focused commands are:
 
