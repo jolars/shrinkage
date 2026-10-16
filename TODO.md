@@ -1,24 +1,174 @@
 # Shrinkage roadmap
 
-This checklist tracks implementation of [DESIGN.md](DESIGN.md). The repository
-currently fits Gaussian lasso models through a convenience API. Work through the
-milestones in order, with each leaving a usable, tested subset. Check off
-numerical features only after their correctness tests and relevant benchmarks
-are in place.
+The next goal is a first public release of both the Rust crate and a Python
+package that can be installed, used, and cited by the clustered-lasso paper in
+`~/research/clustlasso-cd`. The remaining new penalties for this release are
+Group LASSO and clustered lasso, including the research project's hybrid of
+proximal gradient and cluster coordinate descent.
 
-Keep architectural decisions and statistical conventions in `DESIGN.md`, and
-update this checklist as work lands. Start with `f64` and modules in the
-existing crate. Preserve the lean default build, and add dependencies or crate
-boundaries only when an implemented consumer needs them.
+The minimum Python release covers dense `float64`, single-response Gaussian
+fitting, regularization paths, and prediction with lasso, ridge, elastic net,
+Group LASSO, and clustered lasso. Preserve existing Rust capabilities and the
+lean default build. Further SLOPE work, other new penalties and datafits,
+cross-validation, R bindings, out-of-core extensions, and accelerators belong to
+the backlog after this release.
 
-Each unchecked item below is intended for one focused `/goal` session. Copy the
-whole item, including its scope and checks, when starting a goal. Complete named
-prerequisites first. Numerical implementation items include correctness tests,
-relevant benchmarks, and documentation for the stated combination; broader
-coverage belongs in a separate item. Where a design choice is still open, the
-item produces a decision and concrete follow-up tasks.
+Work through the first-release milestones in order, starting Python packaging
+early. Keep architectural decisions and statistical conventions in
+[DESIGN.md](DESIGN.md), and update this checklist as work lands. Check off
+numerical features only after correctness tests, relevant benchmarks, and
+documentation are in place. Add dependencies or crate boundaries when an
+implemented consumer needs them.
 
-## 1. Bootstrap
+Each unchecked item is intended for one focused `/goal` session. Copy the whole
+item, including its scope and checks, when starting a goal. Complete named
+prerequisites first. Where a design choice is still open, the item produces a
+decision and concrete follow-up tasks.
+
+## First release
+
+### 1. Start the Python package
+
+- [ ] **Python package scaffold:** Add an optional binding package, build
+  metadata, and an installable native extension backed by the Rust crate.
+  Record the distribution and import names, supported Python versions, and
+  supported platforms. Verify a clean local build and import while keeping
+  Python dependencies out of the default Rust build and preserving its MSRV.
+- [ ] **Python input contract:** Validate dense array dtype, dimensions,
+  ownership, lifetime, layout, and mutability. Document accepted zero-copy
+  inputs and explicit copies or errors for other inputs. Test noncontiguous
+  arrays and invalid inputs, and keep Python callbacks outside numerical
+  loops.
+- [ ] **Python lasso slice:** Expose Gaussian lasso fitting, prediction, fitted
+  preprocessing, and convergence diagnostics. Translate Rust errors and
+  iteration-limit results, release the GIL during fitting under a safe input
+  ownership policy, and compare installed-package results with Rust
+  fixtures.
+
+### 2. Group LASSO
+
+- [ ] **Disjoint Group LASSO:** Build on the validated group definitions to
+  implement the weighted group L2 penalty and exact block soft-thresholding
+  prox. Preserve explicit weights and uncovered-coordinate policies.
+  Integrate Gaussian proximal fits with reusable workspaces, and test
+  proximal optimality, zero groups, singleton groups, normalization,
+  intercepts, and independent reference fits. Generic group composition
+  remains in the later backlog.
+
+### 3. Clustered lasso and the paper's hybrid method
+
+- [ ] **Clustered-lasso contract:** Specify uniform all-pairs fusion of signed
+  optimization-scale coefficients, with separate nonnegative L1 and fusion
+  strengths and each unordered pair counted once. Use Shrinkage's average
+  squared loss. To reproduce the research objective, divide both research
+  strengths by the observation count `n` and use `Normalization::None` with
+  no intercept. Record the conversion of objectives, curvature bounds, and
+  stopping tolerances, and test the equivalence. Capture a pinned research
+  revision and the contracts from that project's `docs/cluster-updates.md`,
+  `docs/pg-partition.md`, and `docs/convergence.md` in this repository.
+  Builds must be independent of the research checkout.
+- [ ] **Clustered-lasso penalty and prox:** Implement value evaluation and the
+  complete L1-plus-fusion prox using signed sorting, PAVA, and
+  soft-thresholding, with reusable buffers and no explicit pairwise graph.
+  Validate strengths and dimensions, and test ties, opposite signs, signed
+  zero, each zero-strength limit, the unpenalized case, and independent
+  proximal optimality fixtures.
+- [ ] **Gaussian clustered-lasso baseline:** Fit the complete penalty through
+  typed and runtime proximal gradient on dense input. Establish a justified
+  full-space proximal-gradient stopping check at the returned coefficients.
+  Compare objectives, fitted values, and optimality residuals with
+  independent small-problem fixtures, including rank-deficient and
+  zero-design cases.
+- [ ] **Signed cluster state:** Represent exact signed-equality blocks, feature
+  membership, aggregate columns, curvatures, and residual state for dense
+  Gaussian fits. Normalize signed zero and preserve distinct opposite signs
+  and adjacent unequal values. Check coefficient reconstruction, aggregate
+  predictions, curvature cross terms, and residual refreshes. Document and
+  measure aggregate storage as the cluster count approaches the feature
+  count.
+- [ ] **Exact cluster sweeps:** Implement scalar cluster minimization and a
+  deterministic sweep visitation policy. Support crossings, exact-tie
+  merges, moving zero blocks, and zero aggregate curvature through the
+  weighted-median rule. Compare scalar subproblems with independent
+  references and complete sweeps with a reference that rebuilds residuals
+  and aggregates after each move. Verify objective descent and state
+  invariants.
+- [ ] **Hybrid iteration:** Start with a full PG step, then interleave a
+  configurable finite number of cluster sweeps with full PG transitions,
+  initially matching the research setting of five sweeps. Use a justified
+  curvature bound for the averaged loss. Refresh residuals and rebuild all
+  membership-dependent caches after PG so zero and nonzero blocks can split.
+  Require the full-space stopping check, and report PG steps, CD sweeps,
+  stopping values, and termination reasons separately. Test split-required
+  cases, unchanged sweeps, iteration limits, and agreement with the proximal
+  baseline at matched accuracy. Benchmark complete solves, including
+  rebuilds and diagnostics, on clustered and weakly fused cases.
+- [ ] **Hybrid normalization and intercepts:** Integrate the dense hybrid with
+  fitted lazy normalization and unpenalized intercepts. Verify agreement
+  between explicit and lazy normalization and prediction-preserving
+  back-transformation. Document that cluster labels describe
+  optimization-scale coefficients; scaling can change equality among
+  reported original-scale coefficients. Preserve the paper's unnormalized,
+  no-intercept configuration as a tested case.
+- [ ] **Paths for the new penalties:** Reuse path workspaces and warm starts for
+  Group LASSO strengths and explicit clustered-lasso strength pairs,
+  including fixed-ratio sequences. Rebuild hybrid state correctly at each
+  point, retain both strengths in results, and compare with cold fits.
+  Automatic maximum-penalty calculations require a justified null model and
+  tuning direction; reject unsupported requests rather than treating two
+  independent strengths as one.
+
+### 4. Complete the Python release surface
+
+- [ ] **Python Gaussian penalty coverage:** Extend fitting and prediction to
+  ridge, elastic net, Group LASSO, and clustered lasso, including explicit
+  selection of the hybrid and proximal baseline. Expose group definitions,
+  independent strengths, normalization, stopping controls, and diagnostics.
+  Verify agreement between Rust and Python results and actionable errors for
+  unsupported combinations.
+- [ ] **Python paths:** Bind the supported existing and new Gaussian paths with
+  explicit output shapes, both clustered-lasso strengths, per-point
+  diagnostics, and prediction. Compare warm starts, failures, and
+  predictions with Rust paths. Cover the dense input contract in
+  installed-package tests.
+
+### 5. Publish a usable, citable release
+
+- [ ] **Paper integration check:** Run a small frozen research example through
+  the installed Python package, using the documented conversion of the loss
+  and penalty strengths and explicit preprocessing settings. Compare the
+  hybrid with research fixtures using objectives, predictions, and
+  independently evaluated full optimality residuals. Record the package
+  version, research revision, solver settings, and input hashes so the paper
+  can identify the implementation.
+- [ ] **Release documentation:** Publish the tested compatibility matrix for
+  Rust and Python, statistical conventions, input ownership and copying, and
+  solver diagnostics. Add runnable fitting, path, and prediction examples
+  for the release penalties, including a paper-style hybrid example. State
+  the supported scope and measured performance without requiring broader
+  model coverage or automatic solver selection.
+- [ ] **Distribution and CI:** Build the Rust package, Python source
+  distribution, and wheels for the declared support matrix. Test
+  installation, import, fitting, paths, and prediction from built artifacts
+  in clean environments, including a source-distribution build without
+  either checkout. Keep Rust and Python package versions aligned with
+  release automation, verify packaged Rust sources and metadata, and run
+  `task check` plus the Python checks.
+- [ ] **Citation and release metadata:** Add software citation metadata, a
+  versioned source archive with a persistent identifier, and documented
+  citation instructions. Check that the release tag, Rust crate, Python
+  distribution, and archive identify the same source revision and version.
+- [ ] **Public release and paper reference:** Publish to crates.io and PyPI,
+  verify installation of the published version in fresh Rust and Python
+  consumers, and record the release URL and archive identifier. Update the
+  research project's package dependency, reproduction instructions, and
+  paper citation to reference that published version.
+
+## Completed foundations
+
+These milestones record the tested capabilities already available to build on.
+
+### Bootstrap
 
 - [x] Create the Rust 2024 library with a declared Rust 1.89 MSRV, README,
   design, and license.
@@ -30,7 +180,7 @@ item produces a decision and concrete follow-up tasks.
   transformations.
 - [x] Configure reproducible development tooling, formatting, linting, and CI.
 
-## 2. First vertical slice: Gaussian lasso
+### First vertical slice: Gaussian lasso
 
 - [x] Implement Gaussian lasso coordinate descent with an unpenalized intercept
   and a simple convenience API, using LazyMatrix's dense and sparse CSC
@@ -82,7 +232,7 @@ item produces a decision and concrete follow-up tasks.
   timing and heap harnesses cover dense and CSC fits; heap checks enforce
   linear memory budgets and release of fitted-result storage.
 
-## 3. Composition proof
+### Composition proof
 
 - [x] Extract small problem, datafit, penalty, result, and solver capabilities
   from the working lasso implementation. Keep matrix operations in
@@ -107,7 +257,7 @@ item produces a decision and concrete follow-up tasks.
   verify that partially written outputs are neither consumed nor reported as
   success.
 
-## 4. Datafit and coefficient layout proof
+### Datafit and coefficient layout proof
 
 - [x] Add binomial regression through proximal gradient with stable loss and
   derivative evaluation, intercept handling, and justified step-size
@@ -121,10 +271,43 @@ item produces a decision and concrete follow-up tasks.
 - [x] Compare separable multivariate cases with independent response fits and
   provide a small runnable example.
 
-## 5. SLOPE and regularization paths
+### Paths and penalty foundations
 
 - [x] Implement SLOPE's exact proximal map, validate nonnegative, nonincreasing
   weights, and test proximal optimality.
+
+- [x] Add path APIs with warm starts and reusable workspaces. Add lasso
+  screening and working sets with full optimality checks at each solution.
+
+- [x] Implement maximum-penalty calculations and path sequences for each
+  supported family and penalty. Keep independent penalty strengths explicit
+  when tuning multiple penalties.
+
+- [x] **Scaled penalties:** Add a validated nonnegative scaling wrapper for
+  penalty values and supported complete proximal maps. Test zero scaling,
+  invalid strengths, and equivalence with existing built-in strengths.
+
+- [x] **Unpenalized masks:** Support explicit unpenalized coordinates for
+  penalties with an implemented restricted proximal map. Validate masks,
+  preserve excluded coordinates, and reject unsupported coupled penalties.
+
+- [x] **Row composition:** Compose scaled and masked penalties over feature rows
+  through the existing coefficient layout and `AxisPenalty`. Verify row
+  indexing, penalty scaling, and exclusion of intercepts.
+
+- [x] **Group definitions:** Add validated disjoint groups with explicit weights
+  and a policy for uncovered coefficients. Reject duplicate, overlapping,
+  empty, and out-of-range groups in the disjoint representation.
+
+## After the first release
+
+These items are deferred. Revisit their order around concrete use cases after
+publication; they do not gate the first Rust and Python release.
+
+### SLOPE
+
+The existing exact prox remains available. All further SLOPE work starts here.
+
 - [ ] **SLOPE cluster state:** Represent coefficient ordering, signs, and
   equal-magnitude clusters. Test zero coefficients, ties, permutations, and
   reconstruction of the coefficient vector.
@@ -141,28 +324,19 @@ item produces a decision and concrete follow-up tasks.
 - [ ] **SLOPE solver comparison:** Benchmark hybrid and generic proximal fits on
   distinct, tied, and highly clustered solutions. Record correctness, time,
   allocations, and memory before recommending the hybrid solver.
-- [x] Add path APIs with warm starts and reusable workspaces. Add lasso
-  screening and working sets with full optimality checks at each solution.
-- [x] Implement maximum-penalty calculations and path sequences for each
-  supported family and penalty. Keep independent penalty strengths explicit
-  when tuning multiple penalties.
 
-## 6. Broader penalties and solvers
+### Clustered-lasso storage extensions
 
-### Penalty composition
+- [ ] **Sparse clustered-lasso hybrid:** Extend the dense hybrid to CSC input
+  using LazyMatrix's sparse column capabilities and lazy normalization.
+  Bound and measure aggregate-column storage, verify agreement between
+  explicit and lazy normalization and between dense and sparse fits, and
+  test residual refreshes and prediction back-transformation.
 
-- [x] **Scaled penalties:** Add a validated nonnegative scaling wrapper for
-  penalty values and supported complete proximal maps. Test zero scaling,
-  invalid strengths, and equivalence with existing built-in strengths.
-- [x] **Unpenalized masks:** Support explicit unpenalized coordinates for
-  penalties with an implemented restricted proximal map. Validate masks,
-  preserve excluded coordinates, and reject unsupported coupled penalties.
-- [x] **Row composition:** Compose scaled and masked penalties over feature rows
-  through the existing coefficient layout and `AxisPenalty`. Verify row
-  indexing, penalty scaling, and exclusion of intercepts.
-- [x] **Group definitions:** Add validated disjoint groups with explicit weights
-  and a policy for uncovered coefficients. Reject duplicate, overlapping,
-  empty, and out-of-range groups in the disjoint representation.
+### Broader penalties and solvers
+
+#### Penalty composition
+
 - [ ] **Disjoint group composition:** Apply a complete vector penalty to each
   validated disjoint group with reusable gather/scatter buffers. Check value
   and proximal agreement with independent group calculations.
@@ -170,11 +344,8 @@ item produces a decision and concrete follow-up tasks.
   evaluation and explicit splitting solvers. Require a separately
   implemented complete prox before exposing a sum to proximal gradient.
 
-### Convex penalties
+#### Convex penalties
 
-- [ ] **Group lasso:** Implement the weighted disjoint-group L2 penalty and
-  exact block soft-thresholding prox. Verify proximal optimality, zero
-  groups, and Gaussian fits against independent reference cases.
 - [ ] **Sparse-group lasso:** Implement the complete prox for L1 plus disjoint
   group L2 penalties. Check limiting cases against lasso and group lasso,
   and verify proximal optimality.
@@ -194,7 +365,7 @@ item produces a decision and concrete follow-up tasks.
   supported model, document its projection or splitting requirements, and
   add a separate implementation item with acceptance checks.
 
-### Convex solvers
+#### Convex solvers
 
 - [ ] **FISTA:** Add accelerated proximal gradient for the existing smooth
   datafits and complete convex proximal terms, reusing product workspaces
@@ -219,7 +390,7 @@ item produces a decision and concrete follow-up tasks.
   dual updates and residual-based stopping. Compare Gaussian lasso solutions
   with existing solvers, and test iteration and inner-solve limits.
 
-### Nonconvex penalties and methods
+#### Nonconvex penalties and methods
 
 - [ ] **MCP penalty:** Implement MCP values and scalar coordinate subproblems
   with validated shape parameters. Test thresholds, boundary cases, and
@@ -257,9 +428,9 @@ item produces a decision and concrete follow-up tasks.
   solutions where applicable and nonconvex stationarity otherwise; record
   evidence before adding solver-selection preferences.
 
-## 7. Additional outcomes and statistical semantics
+### Additional outcomes and statistical semantics
 
-### Weights, offsets, and GLMs
+#### Weights, offsets, and GLMs
 
 - [ ] **Weight conventions:** Specify observation-weight validation, loss
   normalization, zero-weight behavior, and how weights affect fitted
@@ -295,7 +466,7 @@ item produces a decision and concrete follow-up tasks.
   Specify its response, link, weight, offset, and intercept conventions, and
   add separate datafit and fitting tasks.
 
-### Multinomial and multivariate models
+#### Multinomial and multivariate models
 
 - [ ] **Multinomial conventions:** Choose identifiability, class encoding,
   coefficient layout, intercept handling, and penalty axes. Document how
@@ -314,7 +485,7 @@ item produces a decision and concrete follow-up tasks.
   coefficients. Test axis semantics, intercept exclusion, and reference
   solutions with coupled responses.
 
-### Survival models
+#### Survival models
 
 - [ ] **Cox response and risk sets:** Validate event indicators and times,
   choose a tie convention, and implement reusable risk-set ordering. Test
@@ -329,7 +500,7 @@ item produces a decision and concrete follow-up tasks.
   strata. Compare with sums of stratum-specific likelihoods and reference
   fits, including strata with no events.
 
-### Curvature-based solvers
+#### Curvature-based solvers
 
 - [ ] **Curvature capability:** Derive a small fallible predictor-curvature or
   weighted-product capability from binomial fitting. Check derivatives and
@@ -344,7 +515,7 @@ item produces a decision and concrete follow-up tasks.
   pairing only after its required curvature or product capability is
   justified. Add a bounded implementation task and reference checks.
 
-## 8. Out-of-core execution
+### Out-of-core execution
 
 - [ ] **Reference file-backed adapter:** Promote the existing buffered Zarr
   demonstration into a documented reference adapter on the tested fallible
@@ -391,30 +562,31 @@ item produces a decision and concrete follow-up tasks.
   representative block sizes and cache policies. Report passes, I/O, peak
   memory, and time alongside numerical agreement.
 
-## 9. Bindings, selection, and model evaluation
+### Bindings, selection, and model evaluation
 
-### Runtime specifications and selection
+#### Runtime specifications and selection
 
-- [ ] **Runtime fit specifications:** Extend the existing runtime API with
-  validated family, penalty, solver, and normalization specifications for
-  implemented combinations. Test typed/runtime agreement and actionable
-  compatibility errors.
-- [ ] **Runtime path specifications:** Expose explicit and automatic path
-  specifications through the runtime facade. Preserve independent penalty
+- [ ] **Runtime fit specifications:** Extend the first-release runtime API to
+  remaining implemented families and layouts with validated penalty, solver,
+  and normalization specifications. Test typed/runtime agreement and
+  actionable compatibility errors.
+- [ ] **Runtime path specifications:** Extend runtime path specifications to the
+  remaining implemented families and layouts. Preserve independent penalty
   strengths and compare ordering, warm starts, and failures with typed
   paths.
-- [ ] **Runtime prediction:** Expose fitted linear predictors and supported
-  response transformations through the runtime facade. Verify original-scale
-  coefficients, preprocessing, offsets, and errors on incompatible inputs.
-- [ ] **Compatibility matrix:** Publish a tested matrix of supported families,
-  penalties, solvers, layouts, and storage capabilities. Link unsupported
-  selections to useful alternatives.
+- [ ] **Runtime prediction:** Extend runtime prediction to the remaining
+  implemented families and layouts, with supported response transformations.
+  Verify original-scale coefficients, preprocessing, offsets, and errors on
+  incompatible inputs.
+- [ ] **Compatibility matrix expansion:** Extend the first-release tested matrix
+  of families, penalties, solvers, layouts, and storage capabilities. Link
+  unsupported selections to useful alternatives.
 - [ ] **Automatic solver selection:** Implement a documented deterministic
   `auto` policy using the compatibility matrix, efficient storage access,
   memory policy, and measured solver preferences. Report the selected solver
   and test explicit overrides and unsupported requests.
 
-### Cross-validation
+#### Cross-validation
 
 - [ ] **Cross-validation folds and metrics:** Add validated deterministic fold
   assignments and family-appropriate scoring for Gaussian and binomial
@@ -426,21 +598,16 @@ item produces a decision and concrete follow-up tasks.
   point under a documented rule, and refit on all training observations.
   Test reproducibility, failed fits, and independently checked selections.
 
-### Python bindings
+#### Python extensions
 
-- [ ] **Python input contract:** Add the minimal optional binding package and
-  validate dense array ownership, lifetime, layout, and mutability. Test
-  accepted zero-copy inputs and explicit copies or errors for other inputs.
-- [ ] **Python fitting and prediction:** Expose Gaussian lasso through the
-  runtime facade with fitted diagnostics, prediction, and translated errors.
-  Compare with Rust results and keep callbacks outside numerical loops.
-- [ ] **Python paths:** Expose explicit and automatic regularization paths with
-  validated output shapes and independent penalty strengths. Compare
-  predictions, diagnostics, and failures with Rust paths.
+- [ ] **Python sparse input:** Add a checked sparse CSC input contract and bind
+  the compatible Rust fits and paths. Verify ownership, copies, validation,
+  and agreement with dense input, and keep the advertised solver coverage
+  within the tested matrix.
 - [ ] **Python cross-validation:** Bind the Rust cross-validation API and verify
   selected penalties, refits, and leakage checks against Rust results.
 
-### R bindings
+#### R bindings
 
 - [ ] **R input contract:** Add the minimal optional binding package and
   validate matrix ownership, lifetime, layout, and mutability. Test accepted
@@ -454,18 +621,18 @@ item produces a decision and concrete follow-up tasks.
 - [ ] **R cross-validation:** Bind the Rust cross-validation API and verify
   selected penalties, refits, and leakage checks against Rust results.
 
-### Coverage and documentation
+#### Coverage and documentation
 
 - [ ] **Binding coverage plan:** After the first fit/path/predict interfaces
   work, list remaining implemented families and input backends for each
   language. Add one bounded integration task per family or backend, with
   Rust parity and ownership checks.
-- [ ] **Statistical API documentation:** Document supported objectives,
-  normalization, intercepts, weights, offsets, stopping tolerances, and
-  diagnostics for the public runtime and binding interfaces.
-- [ ] **Rust user examples:** Add runnable runtime fit, path, prediction, and
+- [ ] **Extended statistical API documentation:** Document newly supported
+  objectives, normalization, intercepts, weights, offsets, stopping
+  tolerances, and diagnostics for the public runtime and binding interfaces.
+- [ ] **Rust user examples:** Extend runnable runtime fit, path, prediction, and
   cross-validation examples. Verify outputs against shared reference cases.
-- [ ] **Python user examples:** Add runnable binding examples for fitting,
+- [ ] **Python user examples:** Extend runnable binding examples for fitting,
   paths, prediction, and cross-validation. Verify agreement with the Rust
   examples and document input ownership and copies.
 - [ ] **R user examples:** Add runnable binding examples for fitting, paths,
@@ -475,7 +642,7 @@ item produces a decision and concrete follow-up tasks.
   typed, runtime, and binding combinations, including copies, allocations,
   and memory. Keep advertised coverage within the tested matrix.
 
-## 10. Optional accelerators
+### Optional accelerators
 
 - [ ] **Accelerator workload:** Select one representative bulk workload and
   optional device backend after the CPU interfaces are proven. Record CPU
@@ -502,7 +669,7 @@ item produces a decision and concrete follow-up tasks.
   and end-to-end time against the CPU baseline. Document which workload
   sizes benefit before recommending device execution.
 
-## Deferred work
+### Other deferred work
 
 - [ ] **Original-scale L1:** Derive and implement the transformed weighted L1
   subproblem under nontrivial normalization. Verify equivalent predictions

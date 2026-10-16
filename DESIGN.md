@@ -7,6 +7,14 @@ penalty axes, regularization paths, and lasso path screening are implemented.
 This document records commitments and an implementation sequence; illustrative
 API names are not frozen interfaces.
 
+The next milestone is a first public Rust and Python release that the
+clustered-lasso paper can use and cite. Its remaining new penalties are disjoint
+Group LASSO and uniform clustered lasso, including the hybrid method developed
+in `~/research/clustlasso-cd`. The minimum Python surface covers dense,
+single-response Gaussian fits, paths, and prediction. Further SLOPE work and
+broader extensions follow publication. [TODO.md](TODO.md) tracks the release
+scope, acceptance checks, and deferred work.
+
 ## 1. Purpose
 
 Shrinkage is a composable Rust framework for fitting regularized statistical
@@ -44,13 +52,13 @@ the initial lasso convention and the transformation of reported coefficients.
 
 Long-term scope:
 
-  | Component | Intended coverage                                                                                                                                                                   |
-  | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | Datafits  | Gaussian, multivariate Gaussian, binomial, multinomial, Poisson, other GLMs, Cox and stratified Cox                                                                                 |
-  | Penalties | L1, squared L2/ridge, elastic net, SLOPE, group and sparse-group penalties, group SLOPE, MCP, SCAD, group variants, other nonconvex penalties, nuclear norm, bounds and constraints |
-  | Solvers   | Coordinate and block descent, hybrid SLOPE descent, gradient and proximal-gradient methods, FISTA, three-operator splitting and ATOS, ADMM, proximal Newton/IRLS, MM/DC methods     |
-  | Storage   | Dense, sparse, memory-mapped, chunked/file-backed, and user-defined operators                                                                                                       |
-  | Utilities | Regularization paths, warm starts, screening, prediction, cross-validation, diagnostics                                                                                             |
+  | Component | Intended coverage                                                                                                                                                                                    |
+  | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | Datafits  | Gaussian, multivariate Gaussian, binomial, multinomial, Poisson, other GLMs, Cox and stratified Cox                                                                                                  |
+  | Penalties | L1, squared L2/ridge, elastic net, SLOPE, clustered lasso, group and sparse-group penalties, group SLOPE, MCP, SCAD, group variants, other nonconvex penalties, nuclear norm, bounds and constraints |
+  | Solvers   | Coordinate and block descent, hybrid clustered-lasso and SLOPE descent, gradient and proximal-gradient methods, FISTA, three-operator splitting and ATOS, ADMM, proximal Newton/IRLS, MM/DC methods  |
+  | Storage   | Dense, sparse, memory-mapped, chunked/file-backed, and user-defined operators                                                                                                                        |
+  | Utilities | Regularization paths, warm starts, screening, prediction, cross-validation, diagnostics                                                                                                              |
 
 Use `f64` initially. GPU execution is deferred, but the architecture must allow
 device-specific implementations. Distributed execution, general symbolic
@@ -394,7 +402,8 @@ Independent exhaustive partition solutions and subgradient certificates test
 proximal optimality, including ties and zero weights. Typed and runtime Gaussian
 fits agree with an orthogonal solution. `task bench:slope` measures distinct and
 tied magnitudes, and `task bench:proximal:heap` checks value and prox
-allocations. The specialized hybrid coordinate/proximal solver remains planned.
+allocations. The specialized hybrid coordinate/proximal solver is deferred until
+after the first public Rust and Python release.
 
 The specialized solver needs ordering, signs, equal-magnitude clusters, cluster
 updates/merges, and full proximal steps capable of splitting clusters. Put this
@@ -750,18 +759,31 @@ benefit; test mathematical correctness before optimizing.
    evaluation, intercept handling, and step-size selection. Add a small
    multivariate Gaussian example with explicit penalty axes before stabilizing
    coefficient layouts; compare separable cases with independent response fits.
-5. **SLOPE and paths:** exact prox, hybrid solver, cluster tests, warm starts,
-   path state, and comparison with generic proximal methods.
-6. **Broader objectives:** group/sparse-group penalties, MCP/SCAD, suitable
-   specialized solvers, FISTA, TOS/ATOS, and ADMM with explicit assumptions.
-7. **Additional outcomes:** Poisson, multinomial, broader multivariate models,
-   and Cox; validate weights, offsets, and identifiability.
-8. **Out-of-core:** build on the tested fallible block contract with a reference
-   file-backed adapter, streaming kernels, budgets, and working-set caching.
-9. **Bindings and selection:** R/Python runtime specs, compatibility reporting,
-   paths/prediction/CV, and documented automatic selection.
-10. **Accelerators:** optional device-specific backend after CPU interfaces and
-    representative bulk workloads are established.
+5. **Paths and penalty foundations:** the exact SLOPE prox, warm-start paths,
+   lasso screening, maximum penalties, scaled and masked penalties, row
+   composition, and validated disjoint group definitions are implemented.
+6. **First Python slice:** establish packaging and dense input ownership, then
+   expose Gaussian lasso fitting, prediction, and diagnostics. Keep the Rust
+   default build lean and test the installed package early.
+7. **First-release penalties:** add disjoint Group LASSO and uniform clustered
+   lasso with exact complete proximal maps and Gaussian reference fits. Add the
+   dense hybrid of PG and cluster coordinate descent, signed cluster state,
+   full-space stopping checks, normalization, intercepts, and paths. Test the
+   conversion from the research project's unaveraged loss to Shrinkage's average
+   loss.
+8. **Python release surface:** expose dense Gaussian fitting, paths, prediction,
+   and explicit solver selection for lasso, ridge, elastic net, Group LASSO, and
+   clustered lasso. Publish the tested compatibility matrix and verify parity
+   with Rust, including the hybrid method.
+9. **Publication and paper integration:** test distributable Rust and Python
+   artifacts, reproduce a frozen research example through the installed package,
+   and publish versioned packages and citation metadata. Pin the published
+   implementation in the paper's reproduction instructions.
+
+After the first release, resume specialized SLOPE work and consider broader
+penalties and solvers, additional outcomes, out-of-core execution, R bindings,
+cross-validation, broader Python coverage, automatic selection, and optional
+accelerators. The backlog in [TODO.md](TODO.md) retains their scoped tasks.
 
 Each milestone must leave a usable, tested subset. Broad advertised capability
 must not get ahead of implemented and verified combinations.
