@@ -1,4 +1,22 @@
 /target
+/packages/python/target/
+/packages/python/.venv/
+/packages/python/src/shrinkage/*.so
+/packages/python/src/shrinkage/*.pyd
+/packages/python/src/shrinkage/*.dylib
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+/dist/
+/documentation/.diplodocus/
+/documentation/site/
+/documentation/node_modules/
+/documentation/.wrangler/
+/.build/
+.env
+.env.*
+.dev.vars*
 
 # devenv
 .devenv*

@@ -29,7 +29,7 @@ decision and concrete follow-up tasks.
 
 ### 1. Start the Python package
 
-- [ ] **Python package scaffold:** Add an optional binding package, build
+- [x] **Python package scaffold:** Add an optional binding package, build
   metadata, and an installable native extension backed by the Rust crate.
   Record the distribution and import names, supported Python versions, and
   supported platforms. Verify a clean local build and import while keeping
@@ -151,13 +151,14 @@ decision and concrete follow-up tasks.
   distribution, and wheels for the declared support matrix. Test
   installation, import, fitting, paths, and prediction from built artifacts
   in clean environments, including a source-distribution build without
-  either checkout. Keep Rust and Python package versions aligned with
-  release automation, verify packaged Rust sources and metadata, and run
-  `task check` plus the Python checks.
+  either checkout. Keep each package's version metadata aligned with its
+  independent Versionary release, verify packaged Rust sources and metadata,
+  and run `task check` plus the Python checks.
 - [ ] **Citation and release metadata:** Add software citation metadata, a
   versioned source archive with a persistent identifier, and documented
-  citation instructions. Check that the release tag, Rust crate, Python
-  distribution, and archive identify the same source revision and version.
+  citation instructions. Check that each package's release tag, published
+  artifact, and archive identify its source revision and version. Record the
+  Rust core revision bundled in each Python release.
 - [ ] **Public release and paper reference:** Publish to crates.io and PyPI,
   verify installation of the published version in fresh Rust and Python
   consumers, and record the release URL and archive identifier. Update the

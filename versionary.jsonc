@@ -1,8 +1,36 @@
 {
-  "$schema": "https://raw.githubusercontent.com/jolars/versionary/main/schemas/config.json",
+  "$schema": "https://raw.githubusercontent.com/jolars/versionary/v1.6.0/schemas/config.json",
   "version": 1,
   "review-mode": "pr",
   "release-type": "rust",
+  "monorepo-mode": "independent",
+  "separate-release-prs": true,
   "include-commit-authors": true,
-  "release-reference-comments": "best-effort"
+  "release-reference-comments": "best-effort",
+  "packages": {
+    ".": {
+      "exclude-paths": ["packages", "documentation"]
+    },
+    "packages/python": {
+      "release-type": "python",
+      "package-name": "shrinkage-python",
+      "extra-files": [
+        {
+          "type": "regex",
+          "path": "src/shrinkage/__init__.py",
+          "pattern": "__version__\\s*=\\s*\"([^\"]+)\""
+        },
+        {
+          "type": "toml",
+          "path": "Cargo.toml",
+          "field-path": "$.package.version"
+        },
+        {
+          "type": "regex",
+          "path": "Cargo.lock",
+          "pattern": "name = \"shrinkage-python\"\\r?\\nversion = \"([^\"]+)\""
+        }
+      ]
+    }
+  }
 }

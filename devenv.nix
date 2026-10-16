@@ -1,14 +1,48 @@
 {
+  config,
+  inputs,
+  lib,
   pkgs,
   ...
 }:
-
+let
+  rustOverlay = config.lib.getInput {
+    name = "rust-overlay";
+    url = "github:oxalica/rust-overlay";
+    attribute = "DIPLODOCUS_RUST_TOOLCHAIN";
+    follows = [ "nixpkgs" ];
+  };
+  rustDocumentationToolchain =
+    (rustOverlay.lib.mkRustBin { } pkgs.buildPackages).nightly."2026-09-28".minimal;
+in
 {
   packages = [
     pkgs.go-task
     pkgs.panache
     pkgs.taplo
+    pkgs.nodejs
+    pkgs.ruff
+    (inputs.diplodocus.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
+      patches = (old.patches or [ ]) ++ [ ./documentation/diplodocus-generated-inputs.patch ];
+    }))
   ];
+
+  languages.python = {
+    enable = true;
+    uv.enable = true;
+  };
+
+  env.DIPLODOCUS_RUST_TOOLCHAIN = rustDocumentationToolchain;
+
+  # npm's Linux binary names a conventional loader path unavailable on NixOS.
+  env.MINIFLARE_WORKERD_PATH = lib.mkIf pkgs.stdenv.isLinux (
+    pkgs.writeShellScript "shrinkage-workerd" ''
+      exec ${pkgs.stdenv.cc.bintools.dynamicLinker} \
+        "${config.devenv.root}/documentation/node_modules/@cloudflare/workerd-linux-${
+          if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "64"
+        }/bin/workerd" "$@"
+    ''
+  );
 
   languages.rust = {
     enable = true;

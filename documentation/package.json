@@ -1,0 +1,19 @@
+{
+  "name": "shrinkage-documentation",
+  "private": true,
+  "scripts": {
+    "preview": "wrangler dev",
+    "check": "wrangler deploy --dry-run",
+    "check:releases": "node ../scripts/check_releases.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.151.1",
+    "versionary": "1.6.0"
+  },
+  "overrides": {
+    "miniflare": {
+      "sharp": "0.35.5"
+    }
+  }
+}

@@ -1,0 +1,76 @@
+name: Documentation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check out Diplodocus
+        uses: actions/checkout@v7
+        with:
+          repository: jolars/diplodocus
+          ref: b622de82fe33baee0c72ad95edb2fe5d7b060ffc
+          path: .build/diplodocus
+          persist-credentials: false
+      - name: Install Rust toolchains
+        run: |
+          rustup toolchain install 1.89.0 --profile minimal
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup toolchain install nightly-2026-09-28 --profile minimal
+          echo "DIPLODOCUS_RUST_TOOLCHAIN=$(dirname "$(dirname "$(rustup which --toolchain nightly-2026-09-28 rustc)")")" >> "$GITHUB_ENV"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            .build/diplodocus
+            packages/python
+          key: documentation
+      - name: Build Diplodocus
+        run: |
+          git -C .build/diplodocus apply "$GITHUB_WORKSPACE/documentation/diplodocus-generated-inputs.patch"
+          cargo +1.98.0 test --locked --manifest-path .build/diplodocus/Cargo.toml --lib inventory_
+          cargo +1.98.0 build --locked --manifest-path .build/diplodocus/Cargo.toml --bin diplodocus
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: true
+          python-version: "3.11"
+      - name: Prepare package dependencies
+        run: |
+          uv sync --locked --project packages/python
+          cargo fetch --locked
+      - name: Check documentation
+        run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus check --config documentation/diplodocus.toml
+      - name: Build documentation
+        run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus build --config documentation/diplodocus.toml --output documentation/site
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: documentation/package-lock.json
+      - name: Install deployment dependencies
+        run: npm --prefix documentation ci --ignore-scripts
+      - name: Check Worker package
+        run: npm --prefix documentation run check
+      - uses: actions/upload-artifact@v6
+        with:
+          name: documentation
+          path: documentation/site
+      - name: Deploy documentation
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: npm --prefix documentation run deploy
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

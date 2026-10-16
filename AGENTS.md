@@ -20,6 +20,11 @@ capability. Solver iteration stays in `src/solver/proximal.rs`.
 Start with modules in this crate. Use `name.rs` and `name/child.rs`, never
 `mod.rs`. Add solver tests and benchmarks with the numerical implementations.
 
+The optional Python package lives in `packages/python` as a separate Cargo
+workspace with maintained Python source and native stubs. Keep it out of the
+root Rust dependency graph. `documentation` contains the shared Diplodocus site
+and Cloudflare Worker configuration.
+
 ## Architecture
 
 - Reuse LazyMatrix's matrix capabilities and normalization algebra. Solver
@@ -71,6 +76,12 @@ RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
 and `task example` for the matrix integration check. Preserve the declared MSRV
 unless a deliberate compatibility change raises it.
 
+`task check` also checks the Python package, installed wheels, a source
+distribution rebuilt outside the checkout, and independent Versionary release
+scenarios. Use `task python:check` for binding checks and `task docs:check` for
+the shared site and Worker package. Documentation uses a separate pinned Rust
+extraction toolchain; do not raise the library's MSRV to match it.
+
 ## Generated files and releases
 
 - Track `Cargo.lock` and `devenv.lock`; regenerate them with Cargo and devenv.
@@ -79,3 +90,7 @@ unless a deliberate compatibility change raises it.
 - Do not edit `.pre-commit-config.yaml`; devenv generates it.
 - Use Conventional Commits. Versionary manages `CHANGELOG.md`; do not edit it
   manually. Release automation requires the `RELEASE_TOKEN` GitHub secret.
+- Rust and Python versions advance independently. Keep Python's version, native
+  manifest, and lockfile synchronized through its package-scoped Versionary
+  rules. Versionary 1.6 composite strategies do not scope secondary manifests
+  correctly for nested packages.

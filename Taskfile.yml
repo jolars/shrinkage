@@ -5,12 +5,16 @@ tasks:
     desc: Format source and documentation
     cmds:
       - cargo fmt --all
+      - cargo fmt --manifest-path packages/python/Cargo.toml
+      - ruff format packages/python scripts
+      - ruff check --fix packages/python scripts
       - panache format .
 
   lint:
     desc: Lint source and documentation
     cmds:
       - cargo clippy --locked --all-targets --all-features -- -D warnings
+      - task: python:lint
       - panache lint .
 
   test:
@@ -92,3 +96,64 @@ tasks:
       - RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
       - panache format --check .
       - panache lint .
+      - task: python:check
+      - task: python:artifacts
+      - task: releases:check
+
+  releases:check:
+    desc: Verify independent versions and release PRs in disposable repositories
+    cmds:
+      - npm --prefix documentation ci --ignore-scripts
+      - npm --prefix documentation run check:releases
+
+  python:install:
+    desc: Build and install the editable Python package and development tools
+    cmds:
+      - uv sync --locked --project packages/python
+
+  python:lint:
+    desc: Check Python formatting, types, and native binding lints
+    deps: [python:install]
+    cmds:
+      - cargo fmt --manifest-path packages/python/Cargo.toml -- --check
+      - cargo clippy --locked --manifest-path packages/python/Cargo.toml --all-targets -- -D warnings
+      - ruff format --check packages/python scripts
+      - ruff check packages/python scripts
+      - uv run --locked --project packages/python mypy --config-file packages/python/pyproject.toml packages/python/src/shrinkage packages/python/tests scripts/check_python_artifacts.py
+
+  python:check:
+    desc: Check and test the Python package
+    cmds:
+      - task: python:lint
+      - uv run --locked --project packages/python pytest packages/python/tests
+
+  python:artifacts:
+    desc: Test installed wheels and a wheel rebuilt from an isolated sdist
+    cmds:
+      - python scripts/check_python_artifacts.py --sdist
+
+  docs:prepare:
+    internal: true
+    cmds:
+      - task: python:install
+      - cargo fetch --locked
+
+  docs:serve:
+    desc: Preview the shared Rust and Python documentation
+    deps: [docs:prepare]
+    cmds:
+      - uv run --locked --project packages/python diplodocus serve --config documentation/diplodocus.toml --output documentation/site
+
+  docs:build:
+    desc: Validate and build the shared documentation site
+    deps: [docs:prepare]
+    cmds:
+      - uv run --locked --project packages/python diplodocus check --config documentation/diplodocus.toml
+      - uv run --locked --project packages/python diplodocus build --config documentation/diplodocus.toml --output documentation/site
+
+  docs:check:
+    desc: Build documentation and verify its Cloudflare Worker package
+    cmds:
+      - task: docs:build
+      - npm --prefix documentation ci --ignore-scripts
+      - npm --prefix documentation run check

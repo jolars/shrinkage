@@ -1,0 +1,40 @@
+--- a/src/assembly/rust_native.rs
++++ b/src/assembly/rust_native.rs
+@@ -850,6 +850,12 @@
+     matches!(
+         name,
+         ".git"
++            | ".build"
++            | ".venv"
++            | ".mypy_cache"
++            | ".pytest_cache"
++            | ".ruff_cache"
++            | ".pre-commit-config.yaml"
+             | ".devenv"
+             | ".direnv"
+             | ".cache"
+@@ -1227,6 +1233,24 @@
+         );
+     }
+ 
++    #[cfg(unix)]
++    #[test]
++    fn inventory_skips_generated_python_and_nix_environment_links() {
++        let fixture = Fixture::new("");
++        let cache = fixture.directory.path().join("generated");
++        fs::create_dir(&cache).unwrap();
++        let roots = std::slice::from_ref(&fixture.package.path);
++        let before = inventory(&fixture.repository, roots, &BTreeSet::new(), &cache).unwrap();
++        let outside = tempfile::tempdir().unwrap();
++        for name in [".venv", ".build", ".pre-commit-config.yaml", ".mypy_cache", ".pytest_cache", ".ruff_cache"] {
++            std::os::unix::fs::symlink(outside.path(), fixture.package.path.join(name)).unwrap();
++        }
++        assert_eq!(
++            inventory(&fixture.repository, roots, &BTreeSet::new(), &cache).unwrap(),
++            before
++        );
++    }
++
+     #[test]
+     fn inventory_observes_membership_and_skips_generated_caches() {
+         let fixture = Fixture::new("");

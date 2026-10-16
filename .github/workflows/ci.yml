@@ -67,9 +67,59 @@ jobs:
         with:
           version: v3.8.0
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: documentation/package-lock.json
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Check independent releases
+        run: |
+          npm --prefix documentation ci --ignore-scripts
+          npm --prefix documentation run check:releases
+
+  python:
+    name: Python ${{ matrix.python }} (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15, macos-15-intel]
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Rust
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/python
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python }}
+      - name: Install Python package
+        run: uv sync --locked --project packages/python
+      - name: Test Python package
+        run: uv run --locked --project packages/python pytest packages/python/tests
+      - name: Check Python and native source
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.11'
+        run: |
+          cargo fmt --manifest-path packages/python/Cargo.toml -- --check
+          cargo clippy --locked --manifest-path packages/python/Cargo.toml --all-targets -- -D warnings
+          uv run --locked --project packages/python ruff format --check packages/python scripts
+          uv run --locked --project packages/python ruff check packages/python scripts
+          uv run --locked --project packages/python mypy --config-file packages/python/pyproject.toml packages/python/src/shrinkage packages/python/tests scripts/check_python_artifacts.py
+      - name: Test built wheel
+        run: uv run --locked --project packages/python python scripts/check_python_artifacts.py
+      - name: Rebuild and test the source distribution
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.11'
+        run: uv run --locked --project packages/python python scripts/check_python_artifacts.py --sdist
+
   versionary:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: check
+    needs: [check, python]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -81,7 +131,13 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
 
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
       - id: versionary
         uses: jolars/versionary@v1
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
+          versionary-version: 1.6.0

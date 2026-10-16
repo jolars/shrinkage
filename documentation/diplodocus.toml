@@ -1,0 +1,55 @@
+[project]
+name = "Shrinkage"
+
+[presentation]
+site-url = "https://shrinkage.cc/"
+canonical-url-style = "clean"
+description = "Regularized statistical models in Rust and Python."
+
+[presentation.footer]
+docs-version = "dev"
+copyright = "© 2026 Johan Larsson"
+licenses = [{ label = "MIT", url = "https://github.com/jolars/shrinkage/blob/main/LICENSE" }]
+links = [
+  { label = "GitHub", url = "https://github.com/jolars/shrinkage" },
+  { label = "Report an issue", url = "https://github.com/jolars/shrinkage/issues" },
+]
+built-with = true
+
+[[repository]]
+id = "shrinkage"
+path = ".."
+url = "https://github.com/jolars/shrinkage"
+
+[[package]]
+id = "rust"
+name = "Shrinkage for Rust"
+slug = "rust"
+ecosystem = "rust"
+repository = "shrinkage"
+path = "."
+metadata-path = "Cargo.toml"
+targets = [
+  { id = "api", extractor = "rust", path = "src/lib.rs", role = "public-api", rust = { default-features = false, features = ["faer_v0_24", "nalgebra_v0_34", "ndarray_v0_17", "sprs_v0_11", "zarrs_v0_22", "experimental-block-reader"] } },
+]
+
+[[package]]
+id = "python"
+name = "Shrinkage for Python"
+slug = "python"
+ecosystem = "python"
+repository = "shrinkage"
+path = "packages/python"
+metadata-path = "pyproject.toml"
+targets = [{ id = "api", extractor = "python", path = "src/shrinkage", role = "public-api" }]
+
+[[content]]
+id = "guide"
+owner = "project"
+repository = "shrinkage"
+path = "documentation/pages"
+mount = ""
+format = "gfm"
+
+[content.execution]
+mode = "never"

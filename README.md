@@ -1,5 +1,10 @@
 # Shrinkage
 
+[Documentation](https://shrinkage.cc/) covers the Rust API and the developing
+Python package. The optional Python scaffold lives in
+[`packages/python`](packages/python/README.md); Rust and Python have independent
+versions and release schedules.
+
 Shrinkage is a Rust library for regularized statistical models. It currently
 fits Gaussian lasso models with dense or sparse CSC input through coordinate
 descent and fits lasso, ridge, elastic net, and SLOPE through proximal gradient.

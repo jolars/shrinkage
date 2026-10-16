@@ -1,0 +1,3 @@
+__version__: str
+
+def _core_smoke_test() -> float: ...

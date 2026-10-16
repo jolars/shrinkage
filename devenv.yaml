@@ -1,4 +1,6 @@
 inputs:
+  diplodocus:
+    url: github:jolars/diplodocus/b622de82fe33baee0c72ad95edb2fe5d7b060ffc
   git-hooks:
     url: github:cachix/git-hooks.nix
     inputs:
