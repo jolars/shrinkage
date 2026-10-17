@@ -187,7 +187,7 @@ class DenseInputTests(unittest.TestCase):
         for invalid in (
             None,
             [[1.0]],
-            memoryview(self.x),
+            self.x.data,
             ArrayProtocol(),
             self.x.view(ArraySubclass),
             np.ma.array(self.x),
