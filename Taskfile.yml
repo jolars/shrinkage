@@ -35,12 +35,13 @@ tasks:
       - cargo test --locked --all-features
 
   example:
-    desc: Verify normalization, lasso, multivariate, and buffered Zarr fitting
+    desc: Verify fitting examples and Rust/Python fixtures
     cmds:
       - cargo run --locked --example normalization --features faer_v0_24
       - cargo run --locked --example lasso --features faer_v0_24
       - cargo run --locked --example multivariate --features faer_v0_24
       - cargo run --locked --example regularization_path --features faer_v0_24
+      - cargo run --locked --example python_lasso_fixture --features ndarray_v0_17 -- --check
       - cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
 
   bench:

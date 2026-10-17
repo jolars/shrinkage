@@ -1,4 +1,4 @@
-"""Exercise the native dense boundary used by the forthcoming fitting API."""
+"""Exercise the native dense boundary shared by fitting and prediction."""
 
 from __future__ import annotations
 

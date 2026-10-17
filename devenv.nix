@@ -34,8 +34,11 @@ in
 
   env.DIPLODOCUS_RUST_TOOLCHAIN = rustDocumentationToolchain;
 
-  # NumPy wheels need zlib even when Python has not loaded its zlib module yet.
-  env.LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.zlib ];
+  # NumPy wheels need these shared libraries outside Nix's patched executables.
+  env.LD_LIBRARY_PATH = lib.makeLibraryPath [
+    pkgs.zlib
+    pkgs.stdenv.cc.cc.lib
+  ];
 
   # npm's Linux binary names a conventional loader path unavailable on NixOS.
   env.MINIFLARE_WORKERD_PATH = lib.mkIf pkgs.stdenv.isLinux (

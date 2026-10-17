@@ -1,0 +1,1152 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "centers": [
+          3.5,
+          1.0,
+          3.0,
+          0.75
+        ],
+        "coefficients": [
+          0.611913420629076,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.019787878474779117,
+          0.06622294394658579,
+          -0.19776623363204687,
+          0.11324458878931644,
+          0.07425541121068224,
+          -0.18973376636795047,
+          0.15877705605341255,
+          -0.005212121525220568
+        ],
+        "dual_objective": 0.6621001598418106,
+        "duality_gap": 5.848620199256032e-16,
+        "intercept": 1.158303027798234,
+        "iterations": 1,
+        "kkt_violation": 6.938893903907228e-17,
+        "objective": 0.662100159841811,
+        "predictions": [
+          2.076173158741848,
+          6.0536103928308425
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": [
+          2.29128784747792,
+          1.8708286933869707,
+          1.0,
+          0.82915619758885
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 1.6449999999999995e-6,
+        "stopping_value": 5.848620199256032e-16,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "auto",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.6385816721025969,
+          0.0,
+          0.34165471588030366,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.0031205184551138685,
+          0.0795567725320612,
+          -0.18776593648076242,
+          0.11991135450641187,
+          0.07758864549358743,
+          -0.18973406351923625,
+          0.1554432274679379,
+          -0.011879481544886036
+        ],
+        "dual_objective": 0.7057603011434592,
+        "duality_gap": 5.313150207665596e-6,
+        "intercept": 0.0,
+        "iterations": 34,
+        "kkt_violation": 3.6312486853401493e-6,
+        "objective": 0.7057656142936669,
+        "predictions": [
+          1.9828366557948063,
+          6.133617524461686
+        ],
+        "reference_loss": 7.09,
+        "scales": [
+          2.29128784747792,
+          1.8708286933869707,
+          1.0,
+          0.82915619758885
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 7.09e-6,
+        "stopping_value": 5.313150207665596e-6,
+        "termination": "converged"
+      },
+      "fit_intercept": false,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "auto",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.6414285704785432,
+          0.008571428107461192,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.006875000129886651,
+          0.07651785360760936,
+          -0.19330356351428712,
+          0.1172321378091684,
+          0.07026785439763107,
+          -0.19526784884866508,
+          0.14633928010274974,
+          -0.014910713424319702
+        ],
+        "dual_objective": 0.564866071399738,
+        "duality_gap": 2.883333177448464e-11,
+        "intercept": 1.0464285752176374,
+        "iterations": 57,
+        "kkt_violation": 4.987648877241568e-9,
+        "objective": 0.5648660714285713,
+        "predictions": [
+          2.0042857168817214,
+          6.194999995260906
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": null,
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 1.6449999999999995e-6,
+        "stopping_value": 2.883333177448464e-11,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "none",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.6680966631750807,
+          0.02000069596922533,
+          0.3005536609726643,
+          0.0
+        ],
+        "dual_certificate": [
+          0.00979229013909768,
+          0.09128029423836546,
+          -0.18473196265082492,
+          0.12675621544074833,
+          0.07074378455925084,
+          -0.19526812434532695,
+          0.1387195317693271,
+          -0.017292029150638273
+        ],
+        "dual_objective": 0.6038229289989014,
+        "duality_gap": 5.047197753197709e-6,
+        "intercept": 0.0,
+        "iterations": 34,
+        "kkt_violation": 7.481669175510297e-6,
+        "objective": 0.6038279761966545,
+        "predictions": [
+          1.8938056296960013,
+          6.286435680257089
+        ],
+        "reference_loss": 7.09,
+        "scales": null,
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 7.09e-6,
+        "stopping_value": 5.047197753197709e-6,
+        "termination": "converged"
+      },
+      "fit_intercept": false,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "none",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": [
+          3.5,
+          1.0,
+          3.0,
+          0.75
+        ],
+        "coefficients": [
+          0.6414285714285713,
+          0.008571428571428421,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.00687499999999996,
+          0.07651785714285575,
+          -0.19330357142856822,
+          0.11723214285714081,
+          0.07026785714285598,
+          -0.19526785714285388,
+          0.1463392857142833,
+          -0.014910714285713778
+        ],
+        "dual_objective": 0.5648660714285709,
+        "duality_gap": 2.065621979020759e-16,
+        "intercept": 1.0464285714285722,
+        "iterations": 1,
+        "kkt_violation": 5.551115123125783e-16,
+        "objective": 0.5648660714285714,
+        "predictions": [
+          2.004285714285715,
+          6.194999999999999
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": null,
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 1.6449999999999995e-6,
+        "stopping_value": 2.065621979020759e-16,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "center",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": [
+          3.5,
+          1.0,
+          3.0,
+          0.75
+        ],
+        "coefficients": [
+          0.6414285714285719,
+          0.008571428571428674,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          0.40562499999999846,
+          0.4890178571428552,
+          0.21919642857142774,
+          0.5297321428571407,
+          0.48276785714285503,
+          0.21723214285714187,
+          0.5588392857142831,
+          0.3975892857142838
+        ],
+        "dual_objective": 6.00986607142857,
+        "duality_gap": 8.502313436632484e-16,
+        "intercept": -2.253571428571431,
+        "iterations": 1,
+        "kkt_violation": 2.55351295663786e-15,
+        "objective": 6.009866071428572,
+        "predictions": [
+          -1.2957142857142872,
+          2.895000000000002
+        ],
+        "reference_loss": 7.09,
+        "scales": null,
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 7.09e-6,
+        "stopping_value": 8.502313436632484e-16,
+        "termination": "converged"
+      },
+      "fit_intercept": false,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "center",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": [
+          3.5,
+          1.0,
+          3.0,
+          0.75
+        ],
+        "coefficients": [
+          0.611913420629076,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.019787878474779117,
+          0.06622294394658579,
+          -0.19776623363204687,
+          0.11324458878931644,
+          0.07425541121068224,
+          -0.18973376636795047,
+          0.15877705605341255,
+          -0.005212121525220568
+        ],
+        "dual_objective": 0.6621001598418106,
+        "duality_gap": 5.848620199256032e-16,
+        "intercept": 1.158303027798234,
+        "iterations": 1,
+        "kkt_violation": 6.938893903907228e-17,
+        "objective": 0.662100159841811,
+        "predictions": [
+          2.076173158741848,
+          6.0536103928308425
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": [
+          2.29128784747792,
+          1.8708286933869707,
+          1.0,
+          0.82915619758885
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 1.6449999999999995e-6,
+        "stopping_value": 5.848620199256032e-16,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "standardize",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": [
+          3.5,
+          1.0,
+          3.0,
+          0.75
+        ],
+        "coefficients": [
+          0.6119134206290767,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          0.3927121215252186,
+          0.47872294394658343,
+          0.21473376636795055,
+          0.5257445887893141,
+          0.48675541121067967,
+          0.22276623363204673,
+          0.57127705605341,
+          0.40728787847477643
+        ],
+        "dual_objective": 6.107100159841808,
+        "duality_gap": 6.1062266354406605e-16,
+        "intercept": -2.1416969722017685,
+        "iterations": 1,
+        "kkt_violation": 8.465450562766819e-16,
+        "objective": 6.10710015984181,
+        "predictions": [
+          -1.2238268412581534,
+          2.7536103928308453
+        ],
+        "reference_loss": 7.09,
+        "scales": [
+          2.29128784747792,
+          1.8708286933869707,
+          1.0,
+          0.82915619758885
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 7.09e-6,
+        "stopping_value": 6.1062266354406605e-16,
+        "termination": "converged"
+      },
+      "fit_intercept": false,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "standardize",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": [
+          0.0,
+          -2.0,
+          3.0,
+          0.0
+        ],
+        "coefficients": [
+          0.5040885475956929,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.06687884617230755,
+          0.03248763687472131,
+          -0.21771510877977063,
+          0.10637444986109303,
+          0.08089477980043597,
+          -0.169307965854056,
+          0.19223543871911344,
+          0.04190961555077044
+        ],
+        "dual_objective": 0.9774510485305378,
+        "duality_gap": 8.392298450063292e-7,
+        "intercept": 1.5356900834150748,
+        "iterations": 22,
+        "kkt_violation": 0.00014787501751620247,
+        "objective": 0.9774518877603826,
+        "predictions": [
+          2.291822904808614,
+          5.568398464180618
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": [
+          7.0,
+          6.0,
+          1.0,
+          2.0
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 1.6449999999999995e-6,
+        "stopping_value": 8.392298450063292e-7,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "min_max",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": [
+          0.0,
+          -2.0,
+          3.0,
+          0.0
+        ],
+        "coefficients": [
+          0.7257512166178228,
+          0.12447511670809687,
+          0.0,
+          0.07231474669880748
+        ],
+        "dual_certificate": [
+          0.07831821613378877,
+          0.14757682005350894,
+          -0.14366873088496077,
+          0.19073575664597628,
+          0.0843235514468032,
+          -0.18084301827009136,
+          0.11578556210746237,
+          0.03996584067099296
+        ],
+        "dual_objective": 1.2756627345279614,
+        "duality_gap": 4.387566903115402e-6,
+        "intercept": 0.24895023341619374,
+        "iterations": 14,
+        "kkt_violation": 5.539095530651683e-6,
+        "objective": 1.2756671220948643,
+        "predictions": [
+          1.3476542466876869,
+          6.30391019977497
+        ],
+        "reference_loss": 7.09,
+        "scales": [
+          7.0,
+          6.0,
+          1.0,
+          2.0
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 7.09e-6,
+        "stopping_value": 4.387566903115402e-6,
+        "termination": "converged"
+      },
+      "fit_intercept": false,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "min_max",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.5040885475956929,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.0668788461723076,
+          0.032487636874721344,
+          -0.21771510877977082,
+          0.10637444986109316,
+          0.08089477980043604,
+          -0.16930796585405614,
+          0.19223543871911364,
+          0.04190961555077034
+        ],
+        "dual_objective": 0.9774510485305374,
+        "duality_gap": 8.392298450263587e-7,
+        "intercept": 1.5356900834150737,
+        "iterations": 22,
+        "kkt_violation": 0.00014787501751664656,
+        "objective": 0.9774518877603826,
+        "predictions": [
+          2.291822904808613,
+          5.568398464180617
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": [
+          7.0,
+          4.0,
+          3.0,
+          2.0
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 1.6449999999999995e-6,
+        "stopping_value": 8.392298450263587e-7,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "max_abs",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.5842874692212888,
+          0.0,
+          0.37833128590849646,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.01687423221568612,
+          0.07258983413165244,
+          -0.18794609952100771,
+          0.12651796682633004,
+          0.09098203317366911,
+          -0.16955390047899105,
+          0.1824101658683465,
+          0.021874232215686108
+        ],
+        "dual_objective": 1.137646402441323,
+        "duality_gap": 5.3832810467113745e-6,
+        "intercept": 0.0,
+        "iterations": 34,
+        "kkt_violation": 1.3162016810064348e-6,
+        "objective": 1.1376517857223698,
+        "predictions": [
+          2.0114250615574227,
+          5.8092936114958
+        ],
+        "reference_loss": 7.09,
+        "scales": [
+          7.0,
+          4.0,
+          3.0,
+          2.0
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 7.09e-6,
+        "stopping_value": 5.3832810467113745e-6,
+        "termination": "converged"
+      },
+      "fit_intercept": false,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "max_abs",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.023805506362414297,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.2768773430072328,
+          -0.11747263661975174,
+          -0.3078055134220763,
+          0.07643049644456555,
+          0.11092892312140179,
+          -0.07940395368092278,
+          0.34230394009891246,
+          0.25189608706510397
+        ],
+        "dual_objective": 1.6434515121461335,
+        "duality_gap": 8.788922322234665e-7,
+        "intercept": 3.21668072773155,
+        "iterations": 11,
+        "kkt_violation": 0.00009003898561876778,
+        "objective": 1.643452391038366,
+        "predictions": [
+          3.2523889872751712,
+          3.4071247786308643
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": [
+          28.0,
+          14.0,
+          24.0,
+          6.0
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 1.6449999999999995e-6,
+        "stopping_value": 8.788922322234665e-7,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "l1",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.6622922142857144,
+          0.0,
+          0.0,
+          0.03318634999999963
+        ],
+        "dual_certificate": [
+          0.12498987874927119,
+          0.19640098183790428,
+          -0.0655677441208986,
+          0.23497309857905346,
+          0.19383819650630793,
+          -0.0847223609030183,
+          0.2616113611469767,
+          0.09548658032496005
+        ],
+        "dual_objective": 3.193413442790831,
+        "duality_gap": 1.9409016902738194e-6,
+        "intercept": 0.0,
+        "iterations": 4,
+        "kkt_violation": 9.717187499966307e-6,
+        "objective": 3.193415383692521,
+        "predictions": [
+          1.0266246714285712,
+          5.298337714285715
+        ],
+        "reference_loss": 7.09,
+        "scales": [
+          28.0,
+          14.0,
+          24.0,
+          6.0
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 7.09e-6,
+        "stopping_value": 1.9409016902738194e-6,
+        "termination": "converged"
+      },
+      "fit_intercept": false,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "l1",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.39352210182120806,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.11520022256818556,
+          -0.002021993707969839,
+          -0.23843755135406283,
+          0.09947954026020854,
+          0.08780284536817119,
+          -0.14861271227792186,
+          0.22676085646202543,
+          0.09022923781773497
+        ],
+        "dual_objective": 1.237843278463795,
+        "duality_gap": 9.147558737174367e-7,
+        "intercept": 1.9226726436257708,
+        "iterations": 20,
+        "kkt_violation": 0.0001394350275216727,
+        "objective": 1.2378441932196687,
+        "predictions": [
+          2.512955796357583,
+          5.070849458195435
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": [
+          11.832159566199232,
+          6.0,
+          8.48528137423857,
+          3.1622776601683795
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 1.6449999999999995e-6,
+        "stopping_value": 9.147558737174367e-7,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "l2",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.6201122681940114,
+          0.0,
+          0.26339860211713895,
+          0.0
+        ],
+        "dual_certificate": [
+          0.026225524206072777,
+          0.11121149068182094,
+          -0.15380254284242925,
+          0.15618342363331786,
+          0.11616939010906668,
+          -0.1488446434151836,
+          0.19864132306056337,
+          0.033627289536312804
+        ],
+        "dual_objective": 1.6980416753420928,
+        "duality_gap": 5.682441603760413e-6,
+        "intercept": 0.0,
+        "iterations": 33,
+        "kkt_violation": 7.74462938543663e-7,
+        "objective": 1.6980473577836963,
+        "predictions": [
+          1.720364208642434,
+          5.751093951903508
+        ],
+        "reference_loss": 7.09,
+        "scales": [
+          11.832159566199232,
+          6.0,
+          8.48528137423857,
+          3.1622776601683795
+        ],
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 7.09e-6,
+        "stopping_value": 5.682441603760413e-6,
+        "termination": "converged"
+      },
+      "fit_intercept": false,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "l2",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.6642855692180449,
+          0.04444437242503416,
+          -0.7898146215627296,
+          0.044444424279009444
+        ],
+        "dual_certificate": [
+          0.0,
+          0.0,
+          -0.0,
+          0.0,
+          0.0,
+          -0.0,
+          0.0,
+          -0.0
+        ],
+        "dual_objective": 0.0,
+        "duality_gap": 0.48276289682546086,
+        "intercept": 3.26666668179074,
+        "iterations": 43,
+        "kkt_violation": 7.616052651315819e-7,
+        "objective": 0.48276289682546086,
+        "predictions": [
+          1.915873408996111,
+          6.300396115696979
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": null,
+        "stopping": {
+          "absolute": 1e-6,
+          "kind": "kkt_violation",
+          "relative": 0.0
+        },
+        "stopping_threshold": 1e-6,
+        "stopping_value": 7.616052651315819e-7,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.0,
+      "max_iterations": 10000,
+      "normalization": "none",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.287499999999999,
+          -0.12499999999999958,
+          -0.3124999999999989,
+          0.07499999999999972,
+          0.11249999999999961,
+          -0.07499999999999972,
+          0.34999999999999876,
+          0.262499999999999
+        ],
+        "dual_objective": 1.6449999999999991,
+        "duality_gap": 1.8318679906317214e-16,
+        "intercept": 3.3,
+        "iterations": 0,
+        "kkt_violation": 2.220446049250313e-16,
+        "objective": 1.6449999999999996,
+        "predictions": [
+          3.3,
+          3.3
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": null,
+        "stopping": {
+          "absolute": 0.0,
+          "kind": "duality_gap",
+          "relative": 1e-6
+        },
+        "stopping_threshold": 1.6449999999999995e-6,
+        "stopping_value": 1.8318679906317214e-16,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 100.0,
+      "max_iterations": 10000,
+      "normalization": "none",
+      "stopping": null
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.6414285714097865,
+          0.008571428562254346,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.006875000002568225,
+          0.07651785707295426,
+          -0.1933035712720813,
+          0.11723214275732866,
+          0.0702678570885755,
+          -0.19526785697885507,
+          0.14633928560332812,
+          -0.014910714268681919
+        ],
+        "dual_objective": 0.5648660714280009,
+        "duality_gap": 5.703539394140084e-13,
+        "intercept": 1.0464285715034929,
+        "iterations": 68,
+        "kkt_violation": 9.862113903302827e-11,
+        "objective": 0.5648660714285711,
+        "predictions": [
+          2.004285714337046,
+          6.194999999906294
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": null,
+        "stopping": {
+          "absolute": 1e-10,
+          "kind": "kkt_violation",
+          "relative": 0.0
+        },
+        "stopping_threshold": 1e-10,
+        "stopping_value": 9.862113903302827e-11,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "none",
+      "stopping": {
+        "absolute": 1e-10,
+        "kind": "kkt_violation",
+        "relative": 0.0
+      }
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.19242857142857148,
+          -0.08966666666666669,
+          -0.18127777777777776,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.009848622464426245,
+          -0.0036851058921903487,
+          -0.012847051021437897,
+          0.0031297665902570424,
+          0.005952885544166179,
+          -0.005380822628779013,
+          0.01567016997534703,
+          0.00700877989706325
+        ],
+        "dual_objective": 0.12493548995031536,
+        "duality_gap": 1.029295305684605,
+        "intercept": 3.26,
+        "iterations": 1,
+        "kkt_violation": 2.3572499999999996,
+        "objective": 1.1542307956349203,
+        "predictions": [
+          3.0496428571428575,
+          4.076261904761905
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": null,
+        "stopping": {
+          "absolute": 1e-15,
+          "kind": "kkt_violation",
+          "relative": 0.0
+        },
+        "stopping_threshold": 1e-15,
+        "stopping_value": 2.3572499999999996,
+        "termination": "iteration_limit"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 1,
+      "normalization": "none",
+      "stopping": {
+        "absolute": 1e-15,
+        "kind": "kkt_violation",
+        "relative": 0.0
+      }
+    },
+    {
+      "expected": {
+        "centers": null,
+        "coefficients": [
+          0.6414285704785432,
+          0.008571428107461192,
+          0.0,
+          0.0
+        ],
+        "dual_certificate": [
+          -0.006875000129886651,
+          0.07651785360760936,
+          -0.19330356351428712,
+          0.1172321378091684,
+          0.07026785439763107,
+          -0.19526784884866508,
+          0.14633928010274974,
+          -0.014910713424319702
+        ],
+        "dual_objective": 0.564866071399738,
+        "duality_gap": 2.883333177448464e-11,
+        "intercept": 1.0464285752176374,
+        "iterations": 57,
+        "kkt_violation": 4.987648877241568e-9,
+        "objective": 0.5648660714285713,
+        "predictions": [
+          2.0042857168817214,
+          6.194999995260906
+        ],
+        "reference_loss": 1.6449999999999996,
+        "scales": null,
+        "stopping": {
+          "absolute": 1e-12,
+          "kind": "duality_gap",
+          "relative": 1e-8
+        },
+        "stopping_threshold": 1.6450999999999996e-8,
+        "stopping_value": 2.883333177448464e-11,
+        "termination": "converged"
+      },
+      "fit_intercept": true,
+      "lambda": 0.12,
+      "max_iterations": 10000,
+      "normalization": "none",
+      "stopping": {
+        "absolute": 1e-12,
+        "kind": "duality_gap",
+        "relative": 1e-8
+      }
+    }
+  ],
+  "generator": "cargo run --locked --example python_lasso_fixture --features ndarray_v0_17",
+  "predict_x": [
+    [
+      1.5,
+      -0.5,
+      3.0,
+      1.0
+    ],
+    [
+      8.0,
+      2.0,
+      3.0,
+      0.0
+    ]
+  ],
+  "x": [
+    [
+      0.0,
+      1.0,
+      3.0,
+      0.0
+    ],
+    [
+      1.0,
+      0.0,
+      3.0,
+      2.0
+    ],
+    [
+      2.0,
+      2.0,
+      3.0,
+      0.0
+    ],
+    [
+      3.0,
+      -1.0,
+      3.0,
+      1.0
+    ],
+    [
+      4.0,
+      3.0,
+      3.0,
+      0.0
+    ],
+    [
+      5.0,
+      1.0,
+      3.0,
+      2.0
+    ],
+    [
+      6.0,
+      4.0,
+      3.0,
+      1.0
+    ],
+    [
+      7.0,
+      -2.0,
+      3.0,
+      0.0
+    ]
+  ],
+  "y": [
+    1.0,
+    2.3,
+    0.8,
+    3.9,
+    4.2,
+    2.7,
+    6.1,
+    5.4
+  ]
+}

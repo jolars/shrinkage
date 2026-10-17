@@ -45,6 +45,7 @@ nalgebra = { version = "0.34", default-features = false, features = ["std"] }
 nalgebra-sparse = "0.11"
 ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
 sprs = { version = "0.11.4", default-features = false }
+serde_json = "1"
 
 [[example]]
 name = "normalization"
@@ -65,6 +66,10 @@ required-features = ["faer_v0_24"]
 [[example]]
 name = "zarrs_buffered"
 required-features = ["experimental-block-reader", "zarrs_v0_22"]
+
+[[example]]
+name = "python_lasso_fixture"
+required-features = ["ndarray_v0_17"]
 
 [[bench]]
 name = "lasso"

@@ -16,7 +16,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.30.1"
-shrinkage = { path = "../..", default-features = false }
+ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
+shrinkage = { path = "../..", default-features = false, features = ["ndarray_v0_17"] }
 
 [workspace]
 

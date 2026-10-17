@@ -39,7 +39,7 @@ decision and concrete follow-up tasks.
   inputs and explicit copies or errors for other inputs. Test noncontiguous
   arrays and invalid inputs, and keep Python callbacks outside numerical
   loops.
-- [ ] **Python lasso slice:** Expose Gaussian lasso fitting, prediction, fitted
+- [x] **Python lasso slice:** Expose Gaussian lasso fitting, prediction, fitted
   preprocessing, and convergence diagnostics. Translate Rust errors and
   iteration-limit results, release the GIL during fitting under a safe input
   ownership policy, and compare installed-package results with Rust

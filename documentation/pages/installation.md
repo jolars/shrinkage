@@ -29,9 +29,8 @@ devenv shell -- cargo run --locked --example lasso --features faer_v0_24
 ## Python
 
 The distribution and import names are both `shrinkage`. The package currently
-provides installation, version reporting, and a private validated dense input
-boundary. It requires NumPy 2.0 or newer. Fitting and prediction bindings follow
-in the next milestone.
+fits dense, single-response Gaussian lasso and provides prediction, fitted
+preprocessing, and convergence diagnostics. It requires NumPy 2.0 or newer.
 
 The CI matrix builds an interpreter-specific wheel and tests its installation
 and import for each supported combination:
@@ -42,7 +41,9 @@ and import for each supported combination:
 
 Other interpreters, free-threaded CPython, Linux musl, and additional
 architectures are outside this initial matrix. These are source-build and CI
-targets; portable registry wheels are a later distribution milestone.
+targets; portable registry wheels are a later distribution milestone. CI runs
+fitting and prediction tests on installed wheels, including parity with Rust
+fixtures.
 
 Build and install the checkout with Rust 1.85 or newer and a supported Python:
 

@@ -29,7 +29,10 @@ The artifact check installs a wheel into a fresh environment, tests it outside
 the checkout, and repeats the checks after rebuilding a source distribution. The
 private native smoke function exercises Rust penalty evaluation, and the dense
 input tests verify validation, layouts, snapshots, and ownership against each
-installed artifact. These private probes precede the public fitting API.
+installed artifact. Public lasso tests compare fitting, preprocessing,
+diagnostics, and prediction with Rust fixtures and independent optimality
+calculations. A concurrency test verifies GIL release and snapshot independence.
+`task example` checks that the committed fixtures match the current Rust API.
 
 Use `task format` to format Rust, Python, and Markdown. `task check` runs the
 complete Rust and Python checks. The Python package does not install or build as

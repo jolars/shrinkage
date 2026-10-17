@@ -1740,6 +1740,7 @@ dependencies = [
  "nalgebra",
  "nalgebra-sparse",
  "ndarray",
+ "serde_json",
  "sprs",
  "tempfile",
  "zarrs",
