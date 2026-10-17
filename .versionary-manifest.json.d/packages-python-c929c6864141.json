@@ -1,0 +1,11 @@
+{
+  "manifest-version": 1,
+  "path": "packages/python",
+  "baseline-sha": "70e61827f3bda3e8969bdc082023819681b24d39",
+  "release-target": {
+    "path": "packages/python",
+    "version": "0.2.0",
+    "tag": "shrinkage-python-v0.2.0"
+  },
+  "release-branch": "versionary/release-shrinkage-cdb4ee2aea69"
+}

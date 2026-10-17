@@ -1,10 +1,10 @@
 [package]
 name = "shrinkage-python"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.85"
 description = "Python bindings for Shrinkage regularized statistical models."
-authors = ["Johan Larsson <johan@jolars.co>"]
+authors = [ "Johan Larsson <johan@jolars.co>" ]
 license = "MIT"
 repository = "https://github.com/jolars/shrinkage"
 publish = false
@@ -12,14 +12,17 @@ publish = false
 [lib]
 name = "_shrinkage"
 path = "rust/lib.rs"
-crate-type = ["cdylib"]
+crate-type = [ "cdylib" ]
 
 [dependencies]
 pyo3 = "0.30.1"
-shrinkage = { path = "../..", default-features = false }
+
+[dependencies.shrinkage]
+path = "../.."
+default-features = false
 
 [workspace]
-
 [lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
+
