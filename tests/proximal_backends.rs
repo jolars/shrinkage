@@ -12,9 +12,10 @@ mod matrix;
 
 use shrinkage::lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, RawColumns};
 use shrinkage::{
-    AxisPenalty, Centering, CoefficientLayout, ElasticNet, Gaussian, MatrixDesign,
-    MultivariateGaussian, Normalization, PenaltyAxis, Problem, ProximalGradient, ProximalVector,
-    RuntimeMultivariateProblem, RuntimeProblem, Scaling, Termination,
+    AxisPenalty, Centering, CoefficientLayout, DisjointGroups, ElasticNet, Gaussian, GroupLasso,
+    MatrixDesign, MultivariateGaussian, Normalization, PenaltyAxis, Problem, ProximalGradient,
+    ProximalVector, RuntimeMultivariateProblem, RuntimeProblem, Scaling, Termination,
+    UncoveredPolicy,
 };
 use shrinkage::{ErasedPathPenalty, PathOptions, RuntimePathProblem};
 
@@ -37,6 +38,7 @@ where
     M::Error: std::error::Error + 'static,
     V: ProximalVector + 'static,
 {
+    verify_groups::<M, V>(design);
     verify_multivariate::<M, V>(design);
     verify_paths::<M, V>(design);
     let rows: Vec<_> = ROWS.iter().map(|row| row.as_slice()).collect();
@@ -173,6 +175,66 @@ where
                     {
                         close(*a, b);
                     }
+                }
+            }
+        }
+    }
+}
+
+fn verify_groups<M, V>(design: &M)
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    M::Error: std::error::Error + 'static,
+    V: ProximalVector + 'static,
+{
+    let rows: Vec<_> = ROWS.iter().map(|row| row.as_slice()).collect();
+    let reference = matrix::Matrix::from_rows(&rows);
+    for intercept in [false, true] {
+        for normalization in [
+            Normalization::None,
+            Normalization::Auto,
+            Normalization::Standardize,
+        ] {
+            for weight in [0.0, 1.5] {
+                let groups = DisjointGroups::new(
+                    3,
+                    vec![vec![1, 0]],
+                    vec![weight],
+                    UncoveredPolicy::Unpenalized,
+                )
+                .unwrap();
+                let penalty = GroupLasso::new(0.1, groups);
+                let datafit = Gaussian::new(&Y).fit_intercept(intercept);
+                let actual = Problem::new(design, datafit, penalty.clone())
+                    .normalize(normalization)
+                    .fit_with(&ProximalGradient::<V>::new().tolerance(1e-9))
+                    .unwrap();
+                let runtime = RuntimeProblem::new(
+                    Box::new(MatrixDesign::<_, V>::new(design)),
+                    Box::new(datafit),
+                    Box::new(penalty.clone()),
+                )
+                .normalize(normalization)
+                .fit_with(&ProximalGradient::new().tolerance(1e-9))
+                .unwrap();
+                let expected = Problem::new(&reference, datafit, penalty)
+                    .normalize(normalization)
+                    .fit_with(&ProximalGradient::<Vec<f64>>::new().tolerance(1e-9))
+                    .unwrap();
+                for fit in [&actual, &runtime, &expected] {
+                    assert_eq!(fit.termination(), Termination::Converged);
+                }
+                assert_eq!(actual.coefficients(), runtime.coefficients());
+                assert_eq!(actual.intercept(), runtime.intercept());
+                assert_eq!(actual.iterations(), runtime.iterations());
+                close(actual.objective(), expected.objective());
+                for (&a, b) in actual
+                    .predict(design)
+                    .unwrap()
+                    .iter()
+                    .zip(expected.predict(&reference).unwrap())
+                {
+                    close(a, b);
                 }
             }
         }

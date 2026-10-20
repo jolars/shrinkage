@@ -3,8 +3,8 @@
 use faer::Col;
 use shrinkage::lazymatrix::{LazyMatrix, MatTransposeVecInto, MatVecInto};
 use shrinkage::{
-    ElasticNet, Gaussian, Masked, Penalty, Problem, ProximalGradient, ProximalPenalty, Scaled,
-    Slope, Termination,
+    DisjointGroups, ElasticNet, Gaussian, GroupLasso, Masked, Penalty, Problem, ProximalGradient,
+    ProximalPenalty, Scaled, Slope, Termination, UncoveredPolicy,
 };
 use std::hint::black_box;
 
@@ -128,6 +128,32 @@ fn main() {
         Some(0),
     );
     let slope = Slope::new((0..64).map(|j| (64 - j) as f64 / 64.0).collect());
+    let groups = DisjointGroups::new(
+        64,
+        (0..8).map(|g| (8 * g..8 * (g + 1)).collect()).collect(),
+        vec![1.0; 8],
+        UncoveredPolicy::Reject,
+    )
+    .unwrap();
+    let group_lasso = GroupLasso::new(0.03, groups);
+    measure(
+        "group_lasso_prox",
+        100,
+        || {
+            group_lasso
+                .prox(black_box(&input_slice), 0.5, &mut prox_output)
+                .unwrap();
+        },
+        Some(0),
+    );
+    measure(
+        "group_lasso_value",
+        100,
+        || {
+            black_box(group_lasso.value(black_box(&input_slice)).unwrap());
+        },
+        Some(0),
+    );
     let masked = Masked::new((0..64).map(|j| j % 2 == 0).collect(), penalty);
     measure(
         "masked_elastic_net_prox",

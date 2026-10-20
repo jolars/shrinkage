@@ -2,15 +2,15 @@
 
 Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
 and typed and runtime proximal gradient with Gaussian and binomial datafits,
-ridge, elastic net, SLOPE, and multivariate Gaussian fitting with explicit
-penalty axes, regularization paths, and lasso path screening are implemented.
-This document records commitments and an implementation sequence; illustrative
-API names are not frozen interfaces.
+ridge, elastic net, SLOPE, disjoint Group LASSO, and multivariate Gaussian
+fitting with explicit penalty axes, regularization paths, and lasso path
+screening are implemented. This document records commitments and an
+implementation sequence; illustrative API names are not frozen interfaces.
 
 The next milestone is a first public Rust and Python release that the
-clustered-lasso paper can use and cite. Its remaining new penalties are disjoint
-Group LASSO and uniform clustered lasso, including the hybrid method developed
-in `~/research/clustlasso-cd`. The minimum Python surface covers dense,
+clustered-lasso paper can use and cite. Its remaining new penalty is uniform
+clustered lasso, including the hybrid method developed in
+`~/research/clustlasso-cd`. The minimum Python surface covers dense,
 single-response Gaussian fits, paths, and prediction. Further SLOPE work and
 broader extensions follow publication. [TODO.md](TODO.md) tracks the release
 scope, acceptance checks, and deferred work.
@@ -356,6 +356,39 @@ response-major order. `UncoveredPolicy::Reject` requires full coverage, while
 unpenalized handling. Zero-weight groups still count as coverage and undergo all
 membership checks. An empty collection is valid for zero coefficients under
 either policy, or for any coefficient count with unpenalized handling.
+
+`GroupLasso::new(lambda, groups)` implements the complete convex penalty
+`lambda * sum_g weights[g] * ||theta[g]||₂`. Its exact prox multiplies each
+block by `max(1 - step * lambda * weights[g] / ||input[g]||₂, 0)` and maps
+zero-norm blocks to zero. Zero-strength and zero-weight blocks, along with
+uncovered coordinates, retain their inputs. Singleton groups give weighted L1.
+Strengths must be finite and nonnegative, and input dimensions must match the
+validated definitions even at zero strength. Finite inputs, positive finite
+steps, and finite penalty and threshold arithmetic are checked independently.
+Scaled norms avoid squaring coefficients on their original scale and support
+proximal inputs whose block norm exceeds `f64::MAX`. Neither value evaluation
+nor the prox allocates scratch storage.
+
+Typed and runtime Gaussian problems use the existing proximal-gradient
+iteration, native product buffers, and reusable slice workspaces. The objective
+is `||y - X theta - b||² / (2n) + lambda * sum_g weights[g] * ||theta[g]||₂`,
+where `X` and `theta` denote the optimization scale. The intercept remains
+unpenalized. Fitted normalization and back-transformation follow the same
+prediction-preserving contract as other penalties; group norms act on
+optimization-scale coefficients rather than reported original-scale values. This
+concrete penalty does not introduce generic group composition or automatic path
+thresholds.
+
+Tests certify the block subgradient equations, zero blocks, singleton L1
+equivalence, zero weights, and free coordinates. A correlated Gaussian problem
+has a constructed KKT solution with active and inactive blocks and an uncovered
+coefficient, providing independent coefficients, residual correlations, and an
+objective reference. Explicit and lazy normalization agree with and without a
+free intercept. Native dense, strided, and CSC adapters exercise typed and
+runtime fitting. Run `cargo run --example group_lasso --features faer_v0_24` for
+an orthogonal Gaussian example, `task bench:groups` for block operations and
+complete dense and CSC fits, and `task bench:proximal:heap` for allocation
+checks.
 
 The proximal map of a sum is not generally the composition of its individual
 proximal maps. Consequently:
@@ -829,12 +862,12 @@ benefit; test mathematical correctness before optimizing.
 6. **First Python slice:** establish packaging and dense input ownership, then
    expose Gaussian lasso fitting, prediction, and diagnostics. Keep the Rust
    default build lean and test the installed package early.
-7. **First-release penalties:** add disjoint Group LASSO and uniform clustered
-   lasso with exact complete proximal maps and Gaussian reference fits. Add the
-   dense hybrid of PG and cluster coordinate descent, signed cluster state,
-   full-space stopping checks, normalization, intercepts, and paths. Test the
-   conversion from the research project's unaveraged loss to Shrinkage's average
-   loss.
+7. **First-release penalties:** disjoint Group LASSO has an exact proximal map
+   and independent Gaussian reference fits. Add uniform clustered lasso with an
+   exact complete proximal map and Gaussian reference fits. Add the dense hybrid
+   of PG and cluster coordinate descent, signed cluster state, full-space
+   stopping checks, normalization, intercepts, and paths. Test the conversion
+   from the research project's unaveraged loss to Shrinkage's average loss.
 8. **Python release surface:** expose dense Gaussian fitting, paths, prediction,
    and explicit solver selection for lasso, ridge, elastic net, Group LASSO, and
    clustered lasso. Publish the tested compatibility matrix and verify parity

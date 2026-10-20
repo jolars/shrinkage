@@ -77,7 +77,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 The [examples](examples) cover dense and sparse fitting, normalization,
-multivariate models, and regularization paths. Run one from a checkout with:
+multivariate models, Group LASSO, and regularization paths. Run one from a
+checkout with:
 
 ```console
 cargo run --locked --example regularization_path --features faer
@@ -86,8 +87,9 @@ cargo run --locked --example regularization_path --features faer
 ## Models and solvers
 
 - **Losses:** Gaussian, binomial (logistic), and multivariate Gaussian.
-- **Penalties:** lasso, ridge, elastic net, and SLOPE, with scaling, masking of
-  unpenalized coefficients, and explicit penalty axes for multivariate models.
+- **Penalties:** lasso, ridge, elastic net, SLOPE, and weighted disjoint Group
+  LASSO. Supported compositions include scaling, masking of unpenalized
+  coefficients, and explicit penalty axes for multivariate models.
 - **Solvers:** coordinate descent for Gaussian lasso and proximal gradient for
   smooth convex losses with a complete proximal penalty.
 - **Regularization paths:** explicit or automatic penalty sequences, warm
@@ -96,6 +98,12 @@ cargo run --locked --example regularization_path --features faer
 The typed and runtime APIs also accept custom datafits and penalties. See the
 [Rust API reference](https://shrinkage.cc/packages/rust/) for component
 interfaces and supported combinations.
+
+`GroupLasso::new(lambda, groups)` accepts validated `DisjointGroups` with one
+explicit weight per group and an explicit policy for uncovered coefficients. It
+fits through `Problem` and `RuntimeProblem` with `ProximalGradient`. The penalty
+acts on optimization-scale group norms, and intercepts remain free. See the
+[Group LASSO example](examples/group_lasso.rs) for fitting and prediction.
 
 ## Matrix backends
 

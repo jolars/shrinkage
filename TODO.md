@@ -47,7 +47,7 @@ decision and concrete follow-up tasks.
 
 ### 2. Group LASSO
 
-- [ ] **Disjoint Group LASSO:** Build on the validated group definitions to
+- [x] **Disjoint Group LASSO:** Build on the validated group definitions to
   implement the weighted group L2 penalty and exact block soft-thresholding
   prox. Preserve explicit weights and uncovered-coordinate policies.
   Integrate Gaussian proximal fits with reusable workspaces, and test

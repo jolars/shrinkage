@@ -40,6 +40,7 @@ tasks:
       - cargo run --locked --example normalization --features faer_v0_24
       - cargo run --locked --example lasso --features faer_v0_24
       - cargo run --locked --example multivariate --features faer_v0_24
+      - cargo run --locked --example group_lasso --features faer_v0_24
       - cargo run --locked --example regularization_path --features faer_v0_24
       - cargo run --locked --example python_lasso_fixture --features ndarray_v0_17 -- --check
       - cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
@@ -68,6 +69,12 @@ tasks:
     desc: Benchmark exact SLOPE proximal maps with distinct and tied magnitudes
     cmds:
       - cargo bench --locked --no-default-features --bench slope
+
+  bench:groups:
+    desc: Benchmark weighted Group LASSO values, proximal maps, and Gaussian fits
+    cmds:
+      - cargo bench --locked --no-default-features --bench group_lasso
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench proximal -- group_lasso
 
   bench:scaled:
     desc: Compare scaled penalty values and proximal maps with built-in strengths
