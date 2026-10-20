@@ -1,21 +1,11 @@
 # Shrinkage <img src="https://raw.githubusercontent.com/jolars/shrinkage/refs/heads/main/assets/logo.png" align="right" width="160" alt="A shrink ray reducing beta coefficients" />
 
-[Documentation](https://shrinkage.cc/) covers the Rust API and the developing
-Python package. The optional Python package lives in
-[`packages/python`](packages/python/README.md); Rust and Python have independent
-versions and release schedules.
+[![CI](https://github.com/jolars/shrinkage/actions/workflows/ci.yml/badge.svg)](https://github.com/jolars/shrinkage/actions/workflows/ci.yml)
 
-The Python package fits dense Gaussian lasso and predicts with original-scale
-parameters, fitted preprocessing, and convergence diagnostics. See its [fitting
-example and input contract](packages/python/README.md#gaussian-lasso).
-
-Shrinkage is a Rust library for regularized statistical models. It currently
-fits Gaussian lasso models with dense or sparse CSC input through coordinate
-descent and fits lasso, ridge, elastic net, and SLOPE through proximal gradient.
-The typed and runtime APIs also accept external smooth datafits and complete
-proximal penalties. See [DESIGN.md](DESIGN.md) for the architecture and
-statistical conventions, and [TODO.md](TODO.md) for the implementation
-checklist.
+Shrinkage is a Rust library for regularized statistical models. It combines loss
+functions, penalties, and solvers, with support for dense and sparse matrices,
+regularization paths, and custom components. Use the `Lasso` convenience API, or
+compose a model from its parts.
 
 See the [documentation](https://shrinkage.cc/) for installation, the Rust API
 reference, and contributor guides.
