@@ -56,6 +56,10 @@ name = "lasso"
 required-features = ["faer_v0_24"]
 
 [[example]]
+name = "binomial"
+required-features = ["faer_v0_24"]
+
+[[example]]
 name = "multivariate"
 required-features = ["faer_v0_24"]
 
@@ -82,6 +86,16 @@ required-features = ["faer_v0_24"]
 
 [[bench]]
 name = "lasso_heap"
+harness = false
+required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "irls"
+harness = false
+required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "irls_heap"
 harness = false
 required-features = ["faer_v0_24"]
 

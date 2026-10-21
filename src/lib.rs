@@ -64,10 +64,12 @@ pub mod penalty;
 pub mod problem;
 pub mod solver;
 
-pub use datafit::{Binomial, Datafit, Gaussian, MultivariateGaussian, SmoothDatafit};
+pub use datafit::{
+    Binomial, Datafit, DiagonalHessianDatafit, Gaussian, MultivariateGaussian, SmoothDatafit,
+};
 pub use error::FitError as LassoError;
 pub use error::{BackendError, FitError};
-pub use fit::{LassoFit, MultivariateFit, Preprocessing, ProximalFit, Termination};
+pub use fit::{IrlsFit, LassoFit, MultivariateFit, Preprocessing, ProximalFit, Termination};
 pub use lasso::Lasso;
 pub use layout::CoefficientLayout;
 pub use normalization::{Centering, Normalization, Scaling};
@@ -76,15 +78,16 @@ pub use path::{
     PathSolver, PenaltyMaximum, RegularizationPathSolver,
 };
 pub use penalty::{
-    AxisPenalty, DisjointGroups, ElasticNet, GroupLasso, L1, Masked, Penalty, PenaltyAxis,
-    ProximalPenalty, RestrictedProximalPenalty, Ridge, Scaled, Slope, UncoveredPolicy,
+    AxisPenalty, CoordinatePenalty, DisjointGroups, ElasticNet, GroupLasso, L1, Masked, Penalty,
+    PenaltyAxis, ProximalPenalty, RestrictedProximalPenalty, Ridge, Scaled, Slope, UncoveredPolicy,
 };
 pub use problem::{
     MatrixDesign, Problem, RuntimeDesign, RuntimeMultivariateProblem, RuntimePathProblem,
     RuntimeProblem,
 };
 pub use solver::{
-    CoordinateDescent, ProximalDesign, ProximalGradient, ProximalVector, Solver, StoppingCriterion,
+    CoordinateDescent, Irls, ProximalDesign, ProximalGradient, ProximalVector, Solver,
+    StoppingCriterion,
 };
 
 /// Matrix capabilities, borrowed columns, and lazy normalization.

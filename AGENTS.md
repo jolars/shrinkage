@@ -17,6 +17,12 @@ aliases. sprs input uses LazyMatrix's checked `SprsCsc` wrapper.
 file-backed demonstration through the published LazyMatrix `ReadBlock`
 capability. Solver iteration stays in `src/solver/proximal.rs`.
 
+`Irls` in `src/solver/irls.rs` fits Gaussian and binomial models through
+`DiagonalHessianDatafit` and `CoordinatePenalty`. It uses weighted coordinate
+sweeps, reusable working sets, and full original-loss KKT checks, with results
+in `IrlsFit`. Paths reuse its workspace. IRLS is exposed through the typed Rust
+API; the Gaussian `Lasso` convenience API retains its specialized solver.
+
 Start with modules in this crate. Use `name.rs` and `name/child.rs`, never
 `mod.rs`. Add solver tests and benchmarks with the numerical implementations.
 
@@ -65,9 +71,11 @@ cargo test --locked --no-default-features --features experimental-block-reader,z
 cargo test --locked --all-features
 cargo run --locked --example normalization --features faer_v0_24
 cargo run --locked --example lasso --features faer_v0_24
+cargo run --locked --example binomial --features faer_v0_24
 cargo run --locked --example multivariate --features faer_v0_24
 cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
 cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso_heap
+cargo bench --locked --no-default-features --features faer_v0_24 --bench irls_heap
 RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
 ```
 

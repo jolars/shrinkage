@@ -2,6 +2,7 @@
 
 mod coordinate;
 mod datafit;
+mod irls;
 mod penalty;
 mod proximal;
 

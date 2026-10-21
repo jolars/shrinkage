@@ -18,6 +18,8 @@ use lazymatrix::{ColumnStats, LazyMatrix, RawColumn, RawColumns};
 /// uses native forward and transposed products with [`crate::SmoothDatafit`]
 /// and a complete [`crate::ProximalPenalty`], returning [`crate::ProximalFit`].
 /// Both results retain original-scale parameters and training normalization.
+/// [`crate::Irls`] uses column access with [`crate::DiagonalHessianDatafit`] and
+/// [`crate::CoordinatePenalty`], returning [`crate::IrlsFit`] with full KKT checks.
 /// [`crate::MultivariateGaussian`] with [`crate::AxisPenalty`] uses the same
 /// proximal iteration and returns [`crate::MultivariateFit`]. Its coefficient
 /// feature and response dimensions and penalty axis are explicit.

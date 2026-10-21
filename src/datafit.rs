@@ -66,6 +66,54 @@ pub trait SmoothDatafit: Datafit<Error = FitError> {
     fn gradient(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError>;
 }
 
+/// A convex smooth loss whose predictor Hessian is diagonal.
+///
+/// Off-diagonal Hessian entries must be zero. Entries use exactly the same
+/// normalization as [`SmoothDatafit::gradient`], including any row averaging.
+/// This excludes losses that couple observations. Zero curvature is allowed;
+/// [`crate::Irls`] stabilizes its quadratic model without changing the loss.
+pub trait DiagonalHessianDatafit: SmoothDatafit {
+    /// Write finite, nonnegative predictor Hessian entries into reusable storage.
+    ///
+    /// # Errors
+    /// Reject invalid data, predictor values, dimensions, or arithmetic.
+    /// Output is unspecified after an error.
+    fn hessian_diagonal(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError>;
+}
+
+impl DiagonalHessianDatafit for Gaussian<'_> {
+    fn hessian_diagonal(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError> {
+        self.value(predictor)?;
+        if output.len() != predictor.len() {
+            return Err(invalid("predictor and Hessian lengths must match"));
+        }
+        output.fill(1.0 / predictor.len() as f64);
+        Ok(())
+    }
+}
+
+impl DiagonalHessianDatafit for Binomial<'_> {
+    fn hessian_diagonal(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError> {
+        self.validate(predictor)?;
+        if output.len() != predictor.len() {
+            return Err(invalid("predictor and Hessian lengths must match"));
+        }
+        for (&eta, curvature) in predictor.iter().zip(output) {
+            // Using the small tail avoids losing curvature when the fitted
+            // probability rounds to one.
+            let tail = (-eta.abs()).exp();
+            *curvature = tail / (1.0 + tail).powi(2) / predictor.len() as f64;
+        }
+        Ok(())
+    }
+}
+
+impl<D: DiagonalHessianDatafit + ?Sized> DiagonalHessianDatafit for Box<D> {
+    fn hessian_diagonal(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError> {
+        (**self).hessian_diagonal(predictor, output)
+    }
+}
+
 impl SmoothDatafit for Gaussian<'_> {
     fn nobs(&self) -> usize {
         self.response.len()
@@ -167,6 +215,8 @@ impl Datafit for Gaussian<'_> {
 /// column, the coefficient gradient has Lipschitz constant at most
 /// `||[X, 1]||² / (4n)`. [`crate::ProximalGradient`] uses backtracking to enforce
 /// the corresponding quadratic upper bound without computing this norm.
+/// [`crate::Irls`] uses the exact diagonal predictor Hessian to construct
+/// weighted quadratic models solved by coordinate descent.
 ///
 /// ```
 /// # #[cfg(feature = "faer_v0_24")] {

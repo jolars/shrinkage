@@ -90,14 +90,35 @@ cargo run --locked --example regularization_path --features faer
 - **Penalties:** lasso, ridge, elastic net, SLOPE, and weighted disjoint Group
   LASSO. Supported compositions include scaling, masking of unpenalized
   coefficients, and explicit penalty axes for multivariate models.
-- **Solvers:** coordinate descent for Gaussian lasso and proximal gradient for
-  smooth convex losses with a complete proximal penalty.
+- **Solvers:** coordinate descent for Gaussian lasso, coordinate-descent IRLS
+  for Gaussian and binomial models with lasso, ridge, or elastic net, and
+  proximal gradient for smooth convex losses with a complete proximal penalty.
 - **Regularization paths:** explicit or automatic penalty sequences, warm
-  starts, and screening for Gaussian lasso.
+  starts, working sets for coordinate descent and IRLS, and screening for
+  Gaussian lasso.
 
 The typed and runtime APIs also accept custom datafits and penalties. See the
 [Rust API reference](https://shrinkage.cc/packages/rust/) for component
 interfaces and supported combinations.
+
+Fit binomial lasso through the typed Rust API:
+
+```rust
+use shrinkage::{Binomial, Irls, L1, Problem};
+
+let fit = Problem::new(&x, Binomial::new(&y), L1::new(0.1))
+    .fit_with(&Irls::new())?;
+let logits = fit.predict(&x)?;
+```
+
+`Irls` uses weighted coordinate sweeps, backtracking against the original
+penalized objective, and full KKT checks. Its intercept is unpenalized, and
+binomial predictions are logits. It supports explicit and automatic paths
+through the same `Problem` methods as other solvers. `DiagonalHessianDatafit`
+and `CoordinatePenalty` allow external losses and separable penalties to opt in.
+See the `binomial` example for probability predictions and a regularization
+path. Run `task bench:irls` for timing comparisons with proximal gradient and
+`task bench:irls:heap` for workspace checks.
 
 `GroupLasso::new(lambda, groups)` accepts validated `DisjointGroups` with one
 explicit weight per group and an explicit policy for uncovered coefficients. It

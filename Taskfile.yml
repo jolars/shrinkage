@@ -39,6 +39,7 @@ tasks:
     cmds:
       - cargo run --locked --example normalization --features faer_v0_24
       - cargo run --locked --example lasso --features faer_v0_24
+      - cargo run --locked --example binomial --features faer_v0_24
       - cargo run --locked --example multivariate --features faer_v0_24
       - cargo run --locked --example group_lasso --features faer_v0_24
       - cargo run --locked --example regularization_path --features faer_v0_24
@@ -54,6 +55,16 @@ tasks:
     desc: Measure lasso allocations and peak live heap with linear memory budgets
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso_heap
+
+  bench:irls:
+    desc: Benchmark binomial IRLS and proximal gradient with dense and CSC input
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench irls
+
+  bench:irls:heap:
+    desc: Verify linear IRLS workspace and reuse across coordinate sweeps
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench irls_heap
 
   bench:proximal:
     desc: Benchmark proximal vector and multivariate fits with dense and CSC input
@@ -100,6 +111,7 @@ tasks:
       - task: test
       - task: example
       - task: bench:heap
+      - task: bench:irls:heap
       - task: bench:proximal:heap
       - RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
       - panache format --check .

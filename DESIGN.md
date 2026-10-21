@@ -147,6 +147,37 @@ capabilities.
 Build working numerical code before stabilizing abstractions. Do not introduce
 an elaborate type system or one crate per prospective feature at bootstrap.
 
+`Irls` adds a typed solver for `DiagonalHessianDatafit` and `CoordinatePenalty`.
+Gaussian and binomial losses supply exact diagonal predictor Hessians; L1,
+ridge, and elastic net supply exact scalar minimizers and coordinate KKT
+violations. External components can implement these capabilities without
+providing native matrix products or a complete proximal map. Coupled penalties
+do not acquire coordinate updates from a proximal map.
+
+IRLS solves each quadratic model with coordinate descent and an unpenalized
+intercept. It maintains gradient residuals rather than dividing by observation
+curvatures to construct a working response. Predictor curvature is floored at
+`1e-12 / nobs` for the quadratic model only. Binomial curvature uses
+`exp(-abs(eta)) / (1 + exp(-abs(eta)))² / nobs` to retain representable tails.
+Backtracking halves a full candidate step until the original objective passes an
+Armijo check with constant `1e-4`. Decrease of the inner quadratic bounds the
+composite directional slope by `-d_eta' H d_eta / 2`, avoiding cancellation
+between nearly equal penalty values near convergence.
+
+The default IRLS KKT tolerance is `1e-6`, with 100 accepted outer steps, 1,000
+inner sweeps per model, and at most 100 step halvings. Each inner target is
+`0.1 * max(current_outer_KKT, outer_tolerance)`. An inner iteration limit can
+still yield a valid descent direction. Full original-loss KKT checks include the
+intercept, and freshly reconstructed predictors certify convergence and outer
+iteration-limit results. A small KKT violation for a separated binomial model
+certifies approximate stationarity, not existence of a finite optimum.
+
+`IrlsFit` stores original-scale parameters, preprocessing, objective, full KKT
+violation, accepted outer steps, and total coordinate sweeps. Predictions are
+linear predictors, including binomial logits. Only absolute KKT stopping is
+implemented. The runtime proximal oracles and Python bindings do not expose
+IRLS.
+
 ## 4. Static computation and runtime composition
 
 The typed Rust API is foundational. Trait bounds express solver requirements,
@@ -624,6 +655,23 @@ convergence and at iteration limits. Screening eligibility is rebuilt at each
 strength and disabled at zero penalty. Single fits retain complete cyclic
 sweeps. Proximal and multivariate paths reuse native products and iteration
 storage with complete mapping checks, including all unpenalized intercepts.
+
+IRLS paths reuse preprocessing, weighted summaries, residual buffers, and
+working-set storage across strengths. Working sets apply to both standalone fits
+and paths; every inner sweep checks the complete quadratic KKT conditions and
+restores excluded violators. Eligibility is rebuilt for every quadratic model,
+and only a full original-loss check certifies convergence. IRLS does not provide
+safe screening or a dual certificate. Automatic paths reuse `NullModelDatafit`
+and `PathPenalty`, including binomial null-intercept errors and ridge path
+anchors. Standalone fits and explicit paths start at zero; automatic paths start
+at the optimized null intercept.
+
+IRLS workspace is linear in observations and features, in addition to stored
+path results. LazyMatrix 0.6.0 computes each weighted column norm in
+`O(nobs + nnz)` time, including implicit zeros. These norms are cached once per
+outer iteration. Noncanonical sparse columns can require temporary linear
+scratch inside LazyMatrix. Sparse residual updates preserve centering through a
+weighted offset rather than visiting implicit zeros for each coordinate.
 
 ## 9. Out-of-core execution
 

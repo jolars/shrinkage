@@ -64,7 +64,7 @@ pub enum FitError<E = Infallible> {
         /// Original backend error.
         source: E,
     },
-    /// Backtracking could not establish a valid smooth quadratic upper bound.
+    /// Backtracking could not establish the solver's acceptance condition.
     LineSearchFailure {
         /// Iteration whose trial steps were rejected.
         iteration: usize,
@@ -97,7 +97,7 @@ impl<E: fmt::Display> fmt::Display for FitError<E> {
             }
             Self::LineSearchFailure { iteration, step } => write!(
                 f,
-                "proximal line search failed at iteration {iteration} with step {step}; reduce the initial step or increase max_backtracks"
+                "line search failed at iteration {iteration} with step {step}; increase max_backtracks or check scaling and solver settings"
             ),
         }
     }

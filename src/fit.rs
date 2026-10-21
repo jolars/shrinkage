@@ -1,6 +1,8 @@
 //! Owned fitted parameters, training transformations, and diagnostics.
 
+mod irls;
 mod multivariate;
+pub use irls::IrlsFit;
 pub use multivariate::MultivariateFit;
 
 use crate::error::{finite, invalid};
