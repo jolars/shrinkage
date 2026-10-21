@@ -38,10 +38,14 @@ jobs:
             cargo +1.85.0 build --locked --lib --no-default-features --features "$features"
           done
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
       - name: Build Python bindings
         run: cargo +1.85.0 build --locked --lib --manifest-path packages/python/Cargo.toml
         env:
-          PYO3_PYTHON: python3
+          PYO3_PYTHON: python
 
   check:
     runs-on: ubuntu-latest
