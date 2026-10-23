@@ -162,14 +162,14 @@ tasks:
     desc: Preview the shared Rust and Python documentation
     deps: [docs:prepare]
     cmds:
-      - uv run --locked --project packages/python diplodocus serve --config documentation/diplodocus.toml --output documentation/site
+      - uv run --locked --project packages/python diplodocus serve --config documentation/diplodocus.yaml --output documentation/site
 
   docs:build:
     desc: Validate and build the shared documentation site
     deps: [docs:prepare]
     cmds:
-      - uv run --locked --project packages/python diplodocus check --config documentation/diplodocus.toml
-      - uv run --locked --project packages/python diplodocus build --config documentation/diplodocus.toml --output documentation/site
+      - uv run --locked --project packages/python diplodocus check --config documentation/diplodocus.yaml
+      - uv run --locked --project packages/python diplodocus build --config documentation/diplodocus.yaml --output documentation/site
       - python scripts/prepare_documentation.py
 
   docs:check:

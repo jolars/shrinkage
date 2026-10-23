@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: jolars/diplodocus
-          ref: b622de82fe33baee0c72ad95edb2fe5d7b060ffc
+          ref: 7089f6a26561a5493807718f89077778c3076be9
           path: .build/diplodocus
           persist-credentials: false
       - name: Install Rust toolchains
@@ -52,9 +52,9 @@ jobs:
           uv sync --locked --project packages/python
           cargo fetch --locked
       - name: Check documentation
-        run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus check --config documentation/diplodocus.toml
+        run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus check --config documentation/diplodocus.yaml
       - name: Build documentation
-        run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus build --config documentation/diplodocus.toml --output documentation/site
+        run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus build --config documentation/diplodocus.yaml --output documentation/site
       - name: Install public assets and shared head markup
         run: python scripts/prepare_documentation.py
       - uses: actions/setup-node@v7
