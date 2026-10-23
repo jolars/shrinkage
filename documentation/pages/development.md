@@ -9,7 +9,8 @@ Documentation uses `documentation/diplodocus.yaml`, a separately pinned
 Diplodocus 0.6.0 build, and its `nightly-2026-09-28` extraction toolchain. The
 pinned Diplodocus build includes a small compatibility patch that excludes
 generated Python environments, build checkouts, and Nix hook symlinks from its
-Rust input inventory. Its regression test runs in documentation CI.
+Rust input inventory. CI installs the prebuilt 0.6.0 CLI with
+`jolars/setup-diplodocus` and keeps its Python environment outside the checkout.
 
 ## Python package
 

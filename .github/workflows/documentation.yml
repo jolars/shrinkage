@@ -18,43 +18,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Check out Diplodocus
-        uses: actions/checkout@v7
+      - name: Install Diplodocus
+        uses: jolars/setup-diplodocus@c24f7f8cac71f80beab04350ac6b98062612345c # v1.0.0
         with:
-          repository: jolars/diplodocus
-          ref: 7089f6a26561a5493807718f89077778c3076be9
-          path: .build/diplodocus
-          persist-credentials: false
+          version: "0.6.0"
       - name: Install Rust toolchains
         run: |
           rustup toolchain install 1.89.0 --profile minimal
-          rustup toolchain install 1.98.0 --profile minimal
           rustup toolchain install nightly-2026-09-28 --profile minimal
           echo "DIPLODOCUS_RUST_TOOLCHAIN=$(dirname "$(dirname "$(rustup which --toolchain nightly-2026-09-28 rustc)")")" >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             .
-            .build/diplodocus
             packages/python
           key: documentation
-      - name: Build Diplodocus
-        run: |
-          git -C .build/diplodocus apply "$GITHUB_WORKSPACE/documentation/diplodocus-generated-inputs.patch"
-          cargo +1.98.0 test --locked --manifest-path .build/diplodocus/Cargo.toml --lib inventory_
-          cargo +1.98.0 build --locked --manifest-path .build/diplodocus/Cargo.toml --bin diplodocus
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           enable-cache: true
           python-version: "3.11"
+      - name: Configure the Python environment
+        # Keep generated environment symlinks outside the Rust input inventory.
+        run: echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/shrinkage-docs-venv" >> "$GITHUB_ENV"
       - name: Prepare package dependencies
         run: |
           uv sync --locked --project packages/python
           cargo fetch --locked
       - name: Check documentation
-        run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus check --config documentation/diplodocus.yaml
+        run: uv run --no-sync --project packages/python diplodocus check --config documentation/diplodocus.yaml
       - name: Build documentation
-        run: uv run --no-sync --project packages/python .build/diplodocus/target/debug/diplodocus build --config documentation/diplodocus.yaml --output documentation/site
+        run: uv run --no-sync --project packages/python diplodocus build --config documentation/diplodocus.yaml --output documentation/site
       - name: Install public assets and shared head markup
         run: python scripts/prepare_documentation.py
       - uses: actions/setup-node@v7
