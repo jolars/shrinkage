@@ -1,6 +1,8 @@
 # Shrinkage <img src="https://raw.githubusercontent.com/jolars/shrinkage/refs/heads/main/assets/logo.png" align="right" width="160" alt="A shrink ray reducing beta coefficients" />
 
 [![CI](https://github.com/jolars/shrinkage/actions/workflows/ci.yml/badge.svg)](https://github.com/jolars/shrinkage/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/shrinkage.svg)](https://crates.io/crates/shrinkage)
+[![docs.rs](https://img.shields.io/docsrs/shrinkage)](https://docs.rs/shrinkage)
 
 Shrinkage is a Rust library for regularized statistical models. It combines loss
 functions, penalties, and solvers, with support for dense and sparse matrices,
