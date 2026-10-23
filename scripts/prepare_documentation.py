@@ -5,7 +5,7 @@ from shutil import copyfile
 
 
 def main() -> None:
-    documentation = Path(__file__).resolve().parents[1] / "documentation"
+    documentation = Path(__file__).resolve().parents[1] / "docs"
     site = documentation / "site"
     pages = list(site.rglob("*.html"))
     if not pages:

@@ -86,7 +86,7 @@ content:
   - id: "guide"
     owner: "project"
     repository: "shrinkage"
-    path: "documentation/pages"
+    path: "docs/pages"
     mount: ""
     format: "gfm"
     execution:

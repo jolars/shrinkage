@@ -4,8 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createReleasePlan } from "../documentation/node_modules/versionary/dist/release/plan.js";
-import { prepareSeparateReleasePrs } from "../documentation/node_modules/versionary/dist/release/pr.js";
+import { createReleasePlan } from "../docs/node_modules/versionary/dist/release/plan.js";
+import { prepareSeparateReleasePrs } from "../docs/node_modules/versionary/dist/release/pr.js";
 
 const repository = fileURLToPath(new URL("..", import.meta.url));
 const config = JSON.parse(
@@ -81,7 +81,7 @@ for (const scenario of ["rust", "python", "both", "documentation"]) {
       commit("fix: repair Python binding");
     }
     if (scenario === "documentation") {
-      write("documentation/pages/index.md", "# Documentation\n");
+      write("docs/pages/index.md", "# Documentation\n");
       commit("feat: improve documentation");
     }
     const expected = {

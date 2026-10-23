@@ -23,7 +23,7 @@ in
     pkgs.nodejs
     pkgs.ruff
     (inputs.diplodocus.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
-      patches = (old.patches or [ ]) ++ [ ./documentation/diplodocus-generated-inputs.patch ];
+      patches = (old.patches or [ ]) ++ [ ./docs/diplodocus-generated-inputs.patch ];
     }))
   ];
 
@@ -44,7 +44,7 @@ in
   env.MINIFLARE_WORKERD_PATH = lib.mkIf pkgs.stdenv.isLinux (
     pkgs.writeShellScript "shrinkage-workerd" ''
       exec ${pkgs.stdenv.cc.bintools.dynamicLinker} \
-        "${config.devenv.root}/documentation/node_modules/@cloudflare/workerd-linux-${
+        "${config.devenv.root}/docs/node_modules/@cloudflare/workerd-linux-${
           if pkgs.stdenv.hostPlatform.isAarch64 then "arm64" else "64"
         }/bin/workerd" "$@"
     ''

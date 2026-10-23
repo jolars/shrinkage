@@ -45,27 +45,27 @@ jobs:
           uv sync --locked --project packages/python
           cargo fetch --locked
       - name: Check documentation
-        run: uv run --no-sync --project packages/python diplodocus check --config documentation/diplodocus.yaml
+        run: uv run --no-sync --project packages/python diplodocus check --config docs/diplodocus.yaml
       - name: Build documentation
-        run: uv run --no-sync --project packages/python diplodocus build --config documentation/diplodocus.yaml --output documentation/site
+        run: uv run --no-sync --project packages/python diplodocus build --config docs/diplodocus.yaml --output docs/site
       - name: Install public assets and shared head markup
         run: python scripts/prepare_documentation.py
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
-          cache-dependency-path: documentation/package-lock.json
+          cache-dependency-path: docs/package-lock.json
       - name: Install deployment dependencies
-        run: npm --prefix documentation ci --ignore-scripts
+        run: npm --prefix docs ci --ignore-scripts
       - name: Check Worker package
-        run: npm --prefix documentation run check
+        run: npm --prefix docs run check
       - uses: actions/upload-artifact@v7
         with:
           name: documentation
-          path: documentation/site
+          path: docs/site
       - name: Deploy documentation
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        run: npm --prefix documentation run deploy
+        run: npm --prefix docs run deploy
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -9,10 +9,10 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 /dist/
-/documentation/.diplodocus/
-/documentation/site/
-/documentation/node_modules/
-/documentation/.wrangler/
+/docs/.diplodocus/
+/docs/site/
+/docs/node_modules/
+/docs/.wrangler/
 /.build/
 .env
 .env.*

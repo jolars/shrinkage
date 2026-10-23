@@ -9,7 +9,7 @@
   "release-reference-comments": "best-effort",
   "packages": {
     ".": {
-      "exclude-paths": ["packages", "documentation"]
+      "exclude-paths": ["packages", "docs"]
     },
     "packages/python": {
       "release-type": "python",

@@ -5,12 +5,12 @@ library and Python extension support Rust 1.85. Some optional backends and
 development dependencies require newer Rust, so use the pinned toolchain for
 tests and benchmarks. CI checks the MSRV separately by building the compatible
 library features and Python extension without development dependencies.
-Documentation uses `documentation/diplodocus.yaml`, a separately pinned
-Diplodocus 0.6.0 build, and its `nightly-2026-09-28` extraction toolchain. The
-pinned Diplodocus build includes a small compatibility patch that excludes
-generated Python environments, build checkouts, and Nix hook symlinks from its
-Rust input inventory. CI installs the prebuilt 0.6.0 CLI with
-`jolars/setup-diplodocus` and keeps its Python environment outside the checkout.
+Documentation uses `docs/diplodocus.yaml`, a separately pinned Diplodocus 0.6.0
+build, and its `nightly-2026-09-28` extraction toolchain. The pinned Diplodocus
+build includes a small compatibility patch that excludes generated Python
+environments, build checkouts, and Nix hook symlinks from its Rust input
+inventory. CI installs the prebuilt 0.6.0 CLI with `jolars/setup-diplodocus` and
+keeps its Python environment outside the checkout.
 
 ## Python package
 
@@ -53,8 +53,8 @@ then run with locked, offline dependency resolution. Documentation builds also
 execute the Python package's doctest against the prepared checkout.
 
 `task docs:check` validates the generated Worker package without deploying it.
-To test deployment routing locally, run `npm --prefix documentation run preview`
-after building. Generated site output, environments, and caches are ignored.
+To test deployment routing locally, run `npm --prefix docs run preview` after
+building. Generated site output, environments, and caches are ignored.
 
 The documentation workflow builds every push and pull request, and deploys
 successful `main` builds to `https://shrinkage.cc/`. It uses the repository's

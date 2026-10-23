@@ -9,7 +9,7 @@ license = "MIT"
 repository = "https://github.com/jolars/shrinkage"
 readme = "README.md"
 documentation = "https://shrinkage.cc/packages/rust/"
-exclude = ["packages/**", "documentation/**", "scripts/**"]
+exclude = ["packages/**", "docs/**", "scripts/**"]
 keywords = ["statistics", "optimization", "regression", "regularization"]
 categories = ["mathematics", "science"]
 

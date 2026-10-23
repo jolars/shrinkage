@@ -28,8 +28,8 @@ Start with modules in this crate. Use `name.rs` and `name/child.rs`, never
 
 The optional Python package lives in `packages/python` as a separate Cargo
 workspace with maintained Python source and native stubs. Keep it out of the
-root Rust dependency graph. `documentation` contains the shared Diplodocus site
-and Cloudflare Worker configuration.
+root Rust dependency graph. `docs` contains the shared Diplodocus site and
+Cloudflare Worker configuration.
 
 ## Architecture
 

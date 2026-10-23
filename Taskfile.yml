@@ -123,8 +123,8 @@ tasks:
   releases:check:
     desc: Verify independent versions and release PRs in disposable repositories
     cmds:
-      - npm --prefix documentation ci --ignore-scripts
-      - npm --prefix documentation run check:releases
+      - npm --prefix docs ci --ignore-scripts
+      - npm --prefix docs run check:releases
 
   python:install:
     desc: Build and install the editable Python package and development tools
@@ -162,19 +162,19 @@ tasks:
     desc: Preview the shared Rust and Python documentation
     deps: [docs:prepare]
     cmds:
-      - uv run --locked --project packages/python diplodocus serve --config documentation/diplodocus.yaml --output documentation/site
+      - uv run --locked --project packages/python diplodocus serve --config docs/diplodocus.yaml --output docs/site
 
   docs:build:
     desc: Validate and build the shared documentation site
     deps: [docs:prepare]
     cmds:
-      - uv run --locked --project packages/python diplodocus check --config documentation/diplodocus.yaml
-      - uv run --locked --project packages/python diplodocus build --config documentation/diplodocus.yaml --output documentation/site
+      - uv run --locked --project packages/python diplodocus check --config docs/diplodocus.yaml
+      - uv run --locked --project packages/python diplodocus build --config docs/diplodocus.yaml --output docs/site
       - python scripts/prepare_documentation.py
 
   docs:check:
     desc: Build documentation and verify its Cloudflare Worker package
     cmds:
       - task: docs:build
-      - npm --prefix documentation ci --ignore-scripts
-      - npm --prefix documentation run check
+      - npm --prefix docs ci --ignore-scripts
+      - npm --prefix docs run check
