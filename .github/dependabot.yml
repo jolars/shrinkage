@@ -28,5 +28,9 @@ updates:
       interval: "weekly"
   - package-ecosystem: "npm"
     directory: "/docs"
+    groups:
+      npm:
+        patterns:
+          - "*"
     schedule:
       interval: "weekly"
