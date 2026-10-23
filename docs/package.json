@@ -8,8 +8,8 @@
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "wrangler": "4.151.1",
-    "versionary": "1.6.0"
+    "wrangler": "4.151.3",
+    "versionary": "1.6.1"
   },
   "overrides": {
     "miniflare": {
