@@ -5,6 +5,27 @@ presentation:
   site-url: "https://shrinkage.cc/"
   canonical-url-style: "clean"
   description: "Regularized statistical models in Rust and Python."
+  home:
+    tagline: "Regularized models.\nComposable by design."
+    description: "Fit regularized statistical models with a Rust numerical core. Start with lasso, explore regularization paths, or compose a model from losses, penalties, and solvers."
+    guide: "installation.html"
+    actions:
+      - label: "Get started"
+        path: "installation.html"
+      - label: "Rust API"
+        path: "packages/rust/index.html"
+      - label: "Python API"
+        path: "packages/python/index.html"
+    features:
+      - title: "Models from reusable parts"
+        description: "Combine Gaussian, binomial, and multivariate Gaussian losses with compatible penalties and solvers. Extend the Rust API with your own components."
+        path: "packages/rust/index.html"
+      - title: "Dense and sparse matrices"
+        description: "Use faer, nalgebra, ndarray, or sparse CSC matrices. Enable the integrations you need through optional Rust features."
+        path: "installation.html"
+      - title: "Lasso from Python"
+        description: "Fit dense Gaussian lasso from NumPy arrays, predict on new observations, and inspect convergence diagnostics."
+        path: "packages/python/index.html"
   logo:
     repository: "shrinkage"
     path: "assets/logo-small.png"

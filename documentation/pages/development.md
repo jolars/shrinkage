@@ -56,7 +56,7 @@ execute the Python package's doctest against the prepared checkout.
 To test deployment routing locally, run `npm --prefix documentation run preview`
 after building. Generated site output, environments, and caches are ignored.
 
-The documentation workflow builds pull requests and `main`, and deploys
+The documentation workflow builds every push and pull request, and deploys
 successful `main` builds to `https://shrinkage.cc/`. It uses the repository's
 `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` secrets. Manual workflow runs
 deploy only when they target `main`.

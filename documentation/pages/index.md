@@ -1,21 +1,47 @@
 # Shrinkage
 
-Shrinkage is a Rust library for regularized statistical models, with a Python
-package under development. Both packages share numerical implementations and
-statistical conventions, and each has its own version and release schedule.
+## Start with lasso
 
-The Rust library fits Gaussian lasso models with coordinate descent and supports
-lasso, ridge, elastic net, SLOPE, and disjoint Group LASSO through proximal
-gradient. Its typed and runtime APIs also accept external smooth datafits and
-proximal penalties.
+Fit a Gaussian lasso model with the Rust convenience API:
 
-Start with [installation](installation.md), consult the [Rust API
-reference](https://shrinkage.cc/packages/rust/), or read the [statistical
-conventions](https://github.com/jolars/shrinkage/blob/main/DESIGN.md). The
-[Python package](https://shrinkage.cc/packages/python/) fits dense Gaussian
-lasso and provides prediction, fitted preprocessing, and convergence
-diagnostics. Both numerical operations release the GIL after copying validated
-NumPy inputs into Rust-owned storage.
+```rust
+use faer::Mat;
+use shrinkage::Lasso;
 
-For contributors, see [development](development.md) and [release
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let x = Mat::from_fn(3, 1, |i, _| i as f64);
+    let y = [1.0, 3.0, 5.0];
+
+    let fit = Lasso::new(0.1).fit(&x, &y)?;
+    println!("Coefficients: {:?}", fit.coefficients());
+    println!("Predictions: {:?}", fit.predict(&x)?);
+    Ok(())
+}
+```
+
+By default, `Lasso` fits an unpenalized intercept and standardizes features
+using training data. Returned coefficients use the original input scale, and
+prediction reuses the fitted preprocessing. Check `fit.termination()` to inspect
+convergence.
+
+Follow the [installation guide](installation.md) to enable the `faer` feature
+and run the example. Shrinkage is under development; the Rust and Python
+packages are available from source and have not yet been published to package
+registries.
+
+## Explore further
+
+The Rust API supports regularization paths and penalties including lasso, ridge,
+elastic net, SLOPE, and disjoint Group LASSO. See the [Rust API
+reference](https://shrinkage.cc/packages/rust/) for supported combinations and
+the [statistical
+conventions](https://github.com/jolars/shrinkage/blob/main/DESIGN.md) for loss
+normalization, penalty scales, and intercept handling.
+
+The [Python API](https://shrinkage.cc/packages/python/) provides dense Gaussian
+lasso, prediction, fitted preprocessing, and convergence diagnostics. Both
+packages share numerical implementations and statistical conventions, with
+independent versions and release schedules.
+
+To contribute, read the [development guide](development.md) and [release
 conventions](releases.md).
