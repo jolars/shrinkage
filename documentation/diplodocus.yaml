@@ -6,7 +6,7 @@ presentation:
   canonical-url-style: "clean"
   description: "Regularized statistical models in Rust and Python."
   home:
-    tagline: "Regularized models.\nComposable by design."
+    tagline: "Big models. Small coefficients."
     description: "Fit regularized statistical models with a Rust numerical core. Start with lasso, explore regularization paths, or compose a model from losses, penalties, and solvers."
     guide: "installation.html"
     actions:
@@ -28,7 +28,7 @@ presentation:
         path: "packages/python/index.html"
   logo:
     repository: "shrinkage"
-    path: "assets/logo-small.png"
+    path: "assets/logo-large.png"
   footer:
     docs-version: "dev"
     copyright: "© 2026 Johan Larsson"
