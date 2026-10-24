@@ -1,21 +1,31 @@
 # Shrinkage roadmap
 
-The next goal is a first public release of both the Rust crate and a Python
-package that can be installed, used, and cited by the clustered-lasso paper in
-`~/research/clustlasso-cd`. The remaining new penalties for this release are
-Group LASSO and clustered lasso, including the research project's hybrid of
-proximal gradient and cluster coordinate descent.
+The next goal is an MVP built around hybrid proximal-gradient and cluster
+coordinate-descent methods for clustered lasso, chain fused lasso, and SLOPE.
+Complete the MVP, then publish the Python package so the paper in
+`~/research/clustlasso-cd` can cite and use a released implementation.
 
-The minimum Python release covers dense `float64`, single-response Gaussian
-fitting, regularization paths, and prediction with lasso, ridge, elastic net,
-Group LASSO, and clustered lasso. Preserve existing Rust capabilities and the
-lean default build. Further SLOPE work, other new penalties and datafits,
-cross-validation, R bindings, out-of-core extensions, and accelerators belong to
-the backlog after this release.
+The MVP includes:
 
-Work through the first-release milestones in order, starting Python packaging
-early. Keep architectural decisions and statistical conventions in
-[DESIGN.md](DESIGN.md), and update this checklist as work lands. Check off
+- Hybrid fitting for all three penalties, with proximal-gradient reference
+  solvers and full optimality checks.
+- Gaussian regression, plus logistic regression through IRLS.
+- Regularization paths with warm starts and reusable workspaces.
+- Cross-validation for tuning selection and refitting.
+- Plotting for coefficient paths and cross-validation results.
+- Screening rules and working sets integrated with fitting and paths.
+- A documented Python API for fitting, prediction, paths, cross-validation, and
+  plotting, verified from installed release artifacts.
+
+Use dense `float64`, single-response input for the initial Python release.
+Preserve existing Rust capabilities and the lean default build. Broader model
+coverage, general fusion graphs, sparse hybrid extensions, R bindings,
+out-of-core execution, and accelerators remain after the MVP.
+
+Work through the MVP milestones in dependency order. The existing Python
+scaffold, exact SLOPE prox, paths, lasso screening, working sets, and IRLS are
+foundations to extend. Keep architectural decisions and statistical conventions
+in [DESIGN.md](DESIGN.md), and update this checklist as work lands. Check off
 numerical features only after correctness tests, relevant benchmarks, and
 documentation are in place. Add dependencies or crate boundaries when an
 implemented consumer needs them.
@@ -25,37 +35,9 @@ item, including its scope and checks, when starting a goal. Complete named
 prerequisites first. Where a design choice is still open, the item produces a
 decision and concrete follow-up tasks.
 
-## First release
+## MVP
 
-### 1. Start the Python package
-
-- [x] **Python package scaffold:** Add an optional binding package, build
-  metadata, and an installable native extension backed by the Rust crate.
-  Record the distribution and import names, supported Python versions, and
-  supported platforms. Verify a clean local build and import while keeping
-  Python dependencies out of the default Rust build and preserving its MSRV.
-- [x] **Python input contract:** Validate dense array dtype, dimensions,
-  ownership, lifetime, layout, and mutability. Document accepted zero-copy
-  inputs and explicit copies or errors for other inputs. Test noncontiguous
-  arrays and invalid inputs, and keep Python callbacks outside numerical
-  loops.
-- [x] **Python lasso slice:** Expose Gaussian lasso fitting, prediction, fitted
-  preprocessing, and convergence diagnostics. Translate Rust errors and
-  iteration-limit results, release the GIL during fitting under a safe input
-  ownership policy, and compare installed-package results with Rust
-  fixtures.
-
-### 2. Group LASSO
-
-- [x] **Disjoint Group LASSO:** Build on the validated group definitions to
-  implement the weighted group L2 penalty and exact block soft-thresholding
-  prox. Preserve explicit weights and uncovered-coordinate policies.
-  Integrate Gaussian proximal fits with reusable workspaces, and test
-  proximal optimality, zero groups, singleton groups, normalization,
-  intercepts, and independent reference fits. Generic group composition
-  remains in the later backlog.
-
-### 3. Clustered lasso and the paper's hybrid method
+### 1. Clustered lasso and the paper's hybrid method
 
 - [ ] **Clustered-lasso contract:** Specify uniform all-pairs fusion of signed
   optimization-scale coefficients, with separate nonnegative L1 and fusion
@@ -110,29 +92,166 @@ decision and concrete follow-up tasks.
   optimization-scale coefficients; scaling can change equality among
   reported original-scale coefficients. Preserve the paper's unnormalized,
   no-intercept configuration as a tested case.
-- [ ] **Paths for the new penalties:** Reuse path workspaces and warm starts for
-  Group LASSO strengths and explicit clustered-lasso strength pairs,
-  including fixed-ratio sequences. Rebuild hybrid state correctly at each
-  point, retain both strengths in results, and compare with cold fits.
-  Automatic maximum-penalty calculations require a justified null model and
-  tuning direction; reject unsupported requests rather than treating two
-  independent strengths as one.
 
-### 4. Complete the Python release surface
+### 2. Chain fused lasso
 
-- [ ] **Python Gaussian penalty coverage:** Extend fitting and prediction to
-  ridge, elastic net, Group LASSO, and clustered lasso, including explicit
-  selection of the hybrid and proximal baseline. Expose group definitions,
-  independent strengths, normalization, stopping controls, and diagnostics.
-  Verify agreement between Rust and Python results and actionable errors for
-  unsupported combinations.
-- [ ] **Python paths:** Bind the supported existing and new Gaussian paths with
-  explicit output shapes, both clustered-lasso strengths, per-point
-  diagnostics, and prediction. Compare warm starts, failures, and
-  predictions with Rust paths. Cover the dense input contract in
-  installed-package tests.
+- [ ] **Chain fused-lasso contract:** Define the L1-plus-fusion objective on
+  adjacent coefficients, with independent strengths and validated edge
+  weights. Count each edge once and preserve the average-loss convention.
+  Fused blocks are contiguous constant segments; equal values on separate
+  segments remain separate blocks. Record the contract in `DESIGN.md`, and
+  test zero-strength limits, empty chains, and single-feature cases.
+- [ ] **Chain fused-lasso penalty and prox:** Implement penalty evaluation and a
+  validated complete proximal map with reusable storage. Support the
+  documented edge weights, and state accuracy requirements if the prox is
+  iterative. Test independent small-problem references, constant segments,
+  zero coefficients, and each zero-strength limit. Establish Gaussian
+  proximal-gradient reference fits before adding the hybrid.
+- [ ] **Fused-segment updates:** Represent contiguous fused segments, aggregate
+  columns, and boundary edge weights. Implement exact scalar segment
+  updates, crossings, adjacent merges, and zero-curvature handling. Compare
+  updates and complete sweeps with independent restricted problems, and
+  check reconstruction, residuals, and objective descent.
+- [ ] **Chain fused-lasso hybrid:** Interleave segment sweeps with full PG steps
+  that rebuild segments and permit splitting. Reuse the validated
+  scheduling, stopping, and diagnostic machinery where applicable. Integrate
+  normalization and intercepts, compare complete fits with the proximal
+  baseline, and benchmark setup, rebuilds, allocations, and solve time.
 
-### 5. Publish a usable, citable release
+### 3. SLOPE
+
+- [ ] **SLOPE cluster state:** Build on the exact prox to represent coefficient
+  ordering, signs, and equal-magnitude clusters, including the zero block.
+  Use signed aggregate columns and retain individual coefficient signs. Test
+  ties, opposite signs, permutations, repeated and zero weights, and
+  coefficient and prediction reconstruction.
+- [ ] **SLOPE cluster updates:** Implement exact Gaussian cluster-coordinate
+  sweeps with residual updates, rank-dependent weight sums, crossings, sign
+  changes, merges, and zero-curvature handling. Hold the zero block fixed
+  during restricted sweeps and allow full PG steps to reactivate its
+  coordinates. Verify scalar updates against independent subproblems and
+  check objective descent and state invariants.
+- [ ] **SLOPE hybrid iteration:** Alternate cluster sweeps with full PG steps
+  that rebuild ordering, signs, and clusters and allow splitting. Reuse
+  workspaces and common controls while preserving SLOPE's cluster semantics.
+  Require full optimality checks, and test merges, splits, iteration limits,
+  and agreement with the proximal-gradient baseline.
+- [ ] **SLOPE normalization and solver comparison:** Integrate dense lazy
+  normalization and unpenalized intercepts. Check explicit/lazy agreement
+  and prediction-preserving back-transformation, and document the scale on
+  which clusters are defined. Benchmark complete hybrid and proximal fits on
+  distinct, tied, and highly clustered solutions.
+
+### 4. Logistic regression through IRLS
+
+- [ ] **Hybrid quadratic subproblems:** Extend the existing curvature and IRLS
+  capabilities to weighted Gaussian subproblems for clustered lasso, chain
+  fused lasso, and SLOPE. Provide compatible proximal and hybrid inner
+  solvers with reusable weighted summaries, aggregates, and residual
+  storage. Test weighted scalar updates, zero weights and curvatures, and
+  agreement with independently solved quadratic subproblems.
+- [ ] **Logistic hybrid IRLS:** Integrate the three penalties with stable
+  binomial weights, an unpenalized intercept, controlled inner accuracy, and
+  globalization against the original penalized logistic objective. Rebuild
+  curvature-dependent state as weights change, and certify convergence using
+  full original-loss optimality checks. Compare with proximal-gradient
+  references, including extreme logits, separated data, normalization,
+  failed inner solves, and iteration limits. Report inner and outer work
+  separately and benchmark complete fits.
+
+### 5. Screening rules and working sets
+
+- [ ] **Screening certificates:** Establish valid certificates and safe bounds
+  for the complete MVP penalties under Gaussian and binomial losses. Account
+  for normalization, free intercepts, zero strengths, and SLOPE weights.
+  Check feasibility and gap calculations independently, including
+  rank-deficient cases, before using certificates to remove variables or
+  impose equalities.
+- [ ] **Screening rules:** Implement penalty- and family-specific safe rules,
+  including zero and fusion screening for clustered lasso where certified.
+  Document the restrictions each rule certifies and preserve the exact
+  reduced objective. Test strict boundaries, conservative rounding, lifted
+  coefficients and predictions, and agreement with unscreened fits. Rebuild
+  certificates at each path point, and check stopping in the original space.
+- [ ] **Hybrid working sets:** Extend existing working-set machinery to select
+  coefficients or clusters using full optimality violations. Permit excluded
+  coordinates to reactivate and clusters to split. Refresh eligibility after
+  PG transitions, IRLS weight changes, and path-strength changes. Test
+  deliberately omitted violators, compare with full sweeps, and require a
+  full original-loss check before accepting convergence.
+- [ ] **Screening and working-set integration:** Expose independent controls and
+  diagnostics for screening and working sets across MVP fits and paths.
+  Compare enabled and disabled combinations at matched accuracy, including
+  warm starts and IRLS. Benchmark complete solve time, certificate passes,
+  rebuilds, active dimensions, allocations, and memory.
+
+### 6. Paths, cross-validation, and plotting
+
+- [ ] **Hybrid regularization paths:** Extend existing warm-start paths to all
+  three hybrid solvers. Support explicit L1/fusion strength pairs for
+  clustered and chain fused lasso, including fixed-ratio sequences, and
+  scaled SLOPE weight profiles. Retain all tuning parameters and per-point
+  diagnostics, rebuild cluster and screening state correctly, and compare
+  with cold fits. Automatic sequences require a justified null model and
+  tuning direction for the complete penalty.
+- [ ] **Logistic hybrid paths:** Reuse IRLS workspaces and warm starts across
+  tuning points for all three penalties. Refresh weighted summaries, working
+  sets, and screening eligibility, and preserve inner and outer diagnostics.
+  Compare with cold logistic fits, test boundary null models and failures,
+  and verify original-scale predictions at every path point.
+- [ ] **Cross-validation folds and metrics:** Add validated user-supplied and
+  seeded fold assignments, including binomial stratification, and
+  family-appropriate scoring for Gaussian and logistic models. Document
+  score normalization and aggregation, and test coverage, invalid folds,
+  reproducibility, and degenerate training folds.
+- [ ] **Cross-validation paths:** Fit preprocessing and any automatic path
+  anchors using training-fold data only. Define comparable tuning candidates
+  across folds while preserving independent fusion strengths and SLOPE
+  weight profiles. Reuse each fold's path workspace, verify held-out
+  predictions against independent fits, and check absence of preprocessing
+  and tuning-grid leakage with targeted fixtures.
+- [ ] **Cross-validation selection:** Aggregate scores and uncertainty, expose
+  minimum-error and one-standard-error selection rules, and refit the chosen
+  tuning point on all training observations. Document tuning order for
+  multiple strengths. Test failed and nonconverged fits, ties, independently
+  checked selections, and reproducibility for all three penalties and both
+  families.
+- [ ] **Coefficient-path plotting:** Add an optional Python plotting layer over
+  path results for all three penalties. Show the tuning direction,
+  coefficient scale, and selected points clearly, including clustered and
+  fused coefficient trajectories. Return plot objects for customization,
+  keep plotting dependencies optional, and verify plotted data and
+  noninteractive rendering with runnable examples.
+- [ ] **Cross-validation plotting:** Plot mean validation scores, uncertainty,
+  and selected tuning points from cross-validation results. Support the
+  documented multi-parameter tuning representation and both selection rules.
+  Verify plotted values against result arrays and add an example that fits,
+  selects, refits, and plots through the installed Python package.
+
+### 7. Complete the Python MVP surface
+
+- [ ] **Python hybrid fitting and prediction:** Expose clustered lasso, chain
+  fused lasso, and SLOPE through the Rust fitting facade, with Gaussian
+  hybrids and logistic IRLS using hybrid inner solves. Provide explicit
+  solver choice, penalty parameters, normalization, stopping controls,
+  screening, working sets, and diagnostics. Preserve the dense input and GIL
+  contracts, verify Rust/Python agreement, and return actionable
+  compatibility errors.
+- [ ] **Python paths:** Bind Gaussian and logistic paths for all three penalties
+  with explicit output shapes, complete tuning metadata, per-point
+  diagnostics, and prediction. Compare warm starts, failures, screening,
+  working sets, and predictions with Rust paths in installed-package tests.
+- [ ] **Python cross-validation:** Bind fold configuration, scoring, selection,
+  and refitting, and connect the result objects to plotting. Verify selected
+  penalties, uncertainty, refits, failure handling, and leakage checks
+  against Rust results. Add an installed-package workflow for each MVP
+  penalty and family.
+
+## Release the MVP and cite it in the paper
+
+Publish the Python package after the MVP works through installed artifacts.
+These release tasks make that implementation reproducible and citable by
+`~/research/clustlasso-cd`.
 
 - [ ] **Paper integration check:** Run a small frozen research example through
   the installed Python package, using the documented conversion of the loss
@@ -143,17 +262,17 @@ decision and concrete follow-up tasks.
   can identify the implementation.
 - [ ] **Release documentation:** Publish the tested compatibility matrix for
   Rust and Python, statistical conventions, input ownership and copying, and
-  solver diagnostics. Add runnable fitting, path, and prediction examples
-  for the release penalties, including a paper-style hybrid example. State
-  the supported scope and measured performance without requiring broader
-  model coverage or automatic solver selection.
+  solver diagnostics. Add runnable Gaussian and logistic examples for all
+  three penalties covering fitting, prediction, paths, cross-validation,
+  plotting, screening, and working sets, including a paper-style hybrid
+  example. State the supported graph scope and measured performance.
 - [ ] **Distribution and CI:** Build the Rust package, Python source
   distribution, and wheels for the declared support matrix. Test
-  installation, import, fitting, paths, and prediction from built artifacts
-  in clean environments, including a source-distribution build without
-  either checkout. Keep each package's version metadata aligned with its
-  independent Versionary release, verify packaged Rust sources and metadata,
-  and run `task check` plus the Python checks.
+  installation and complete MVP workflows from built artifacts in clean
+  environments, including optional plotting and a source-distribution build
+  without either checkout. Keep each package's version metadata aligned with
+  its independent Versionary release, verify packaged Rust sources and
+  metadata, and run `task check` and `task docs:check`.
 - [ ] **Citation and release metadata:** Add software citation metadata, a
   versioned source archive with a persistent identifier, and documented
   citation instructions. Check that each package's release tag, published
@@ -300,39 +419,73 @@ These milestones record the tested capabilities already available to build on.
   and a policy for uncovered coefficients. Reject duplicate, overlapping,
   empty, and out-of-range groups in the disjoint representation.
 
-## After the first release
+- [x] **Disjoint Group LASSO:** Build on the validated group definitions to
+  implement the weighted group L2 penalty and exact block soft-thresholding
+  prox. Preserve explicit weights and uncovered-coordinate policies.
+  Integrate Gaussian proximal fits with reusable workspaces, and test
+  proximal optimality, zero groups, singleton groups, normalization,
+  intercepts, and independent reference fits. Generic group composition
+  remains in the later backlog.
+
+### IRLS and working sets
+
+- [x] Add `DiagonalHessianDatafit` and `CoordinatePenalty` capabilities and
+  reusable weighted coordinate subproblems for Gaussian and binomial IRLS.
+- [x] Fit lasso, ridge, and elastic net through IRLS with stable binomial
+  weights, backtracking against the original objective, unpenalized
+  intercepts, and full original-loss KKT checks. Verify dense and CSC input,
+  normalization, extreme predictors, and independent reference fits.
+- [x] Reuse IRLS workspaces and working sets in standalone fits and paths.
+  Restore excluded violators through complete quadratic checks, and add
+  timing and heap benchmarks. Safe screening remains separate work.
+
+### Python package
+
+- [x] **Python package scaffold:** Add an optional binding package, build
+  metadata, and an installable native extension backed by the Rust crate.
+  Record the distribution and import names, supported Python versions, and
+  supported platforms. Verify a clean local build and import while keeping
+  Python dependencies out of the default Rust build and preserving its MSRV.
+- [x] **Python input contract:** Validate dense array dtype, dimensions,
+  ownership, lifetime, layout, and mutability. Document accepted zero-copy
+  inputs and explicit copies or errors for other inputs. Test noncontiguous
+  arrays and invalid inputs, and keep Python callbacks outside numerical
+  loops.
+- [x] **Python lasso slice:** Expose Gaussian lasso fitting, prediction, fitted
+  preprocessing, and convergence diagnostics. Translate Rust errors and
+  iteration-limit results, release the GIL during fitting under a safe input
+  ownership policy, and compare installed-package results with Rust
+  fixtures.
+
+## After the MVP release
 
 These items are deferred. Revisit their order around concrete use cases after
-publication; they do not gate the first Rust and Python release.
+publication; they do not gate the MVP or its Python release.
 
-### SLOPE
+### General fusion graphs and sparse hybrids
 
-The existing exact prox remains available. All further SLOPE work starts here.
-
-- [ ] **SLOPE cluster state:** Represent coefficient ordering, signs, and
-  equal-magnitude clusters. Test zero coefficients, ties, permutations, and
-  reconstruction of the coefficient vector.
-- [ ] **SLOPE cluster updates:** Implement Gaussian cluster-coordinate sweeps
-  using the cluster state, residual updates, and cluster merges. Verify each
-  restricted update against a small independently solved subproblem.
-- [ ] **SLOPE hybrid iteration:** Alternate cluster sweeps with full proximal
-  steps that allow cluster splitting. Start with typed Gaussian/SLOPE fits,
-  reusable workspaces, and an appropriate full optimality check. Test
-  merges, splits, iteration limits, and agreement with proximal gradient.
-- [ ] **SLOPE storage and normalization:** Extend the hybrid solver to dense and
-  CSC input with lazy normalization. Check explicit/lazy agreement,
-  intercept policies, and prediction-preserving back-transformation.
-- [ ] **SLOPE solver comparison:** Benchmark hybrid and generic proximal fits on
-  distinct, tied, and highly clustered solutions. Record correctness, time,
-  allocations, and memory before recommending the hybrid solver.
-
-### Clustered-lasso storage extensions
+- [ ] **General fusion graphs:** Extend the chain fused-lasso contract to
+  weighted undirected graphs. Specify edge validation, connected fused
+  blocks, boundary weights, and complete proximal-map requirements. Add
+  focused implementation tasks for the prox, block updates, and hybrid
+  integration, with independent references and chain and complete-graph
+  equivalence checks.
 
 - [ ] **Sparse clustered-lasso hybrid:** Extend the dense hybrid to CSC input
   using LazyMatrix's sparse column capabilities and lazy normalization.
   Bound and measure aggregate-column storage, verify agreement between
   explicit and lazy normalization and between dense and sparse fits, and
   test residual refreshes and prediction back-transformation.
+
+- [ ] **Sparse chain fused-lasso hybrid:** Extend segment aggregates and hybrid
+  iteration to CSC input with lazy normalization. Compare with dense fits,
+  verify residual refreshes and original-scale predictions, and measure
+  aggregate storage and complete solve costs.
+
+- [ ] **Sparse SLOPE hybrid:** Extend signed cluster aggregates and hybrid
+  iteration to CSC input with lazy normalization. Check dense/sparse and
+  explicit/lazy agreement, intercepts, and prediction-preserving
+  back-transformation, and benchmark allocations and memory.
 
 ### Broader penalties and solvers
 
@@ -347,6 +500,10 @@ The existing exact prox remains available. All further SLOPE work starts here.
 
 #### Convex penalties
 
+- [ ] **Group LASSO paths:** Add warm-start paths with reusable workspaces for
+  group-penalty strengths, and compare with cold fits. Require a justified
+  null model and maximum-penalty calculation before exposing automatic
+  sequences.
 - [ ] **Sparse-group lasso:** Implement the complete prox for L1 plus disjoint
   group L2 penalties. Check limiting cases against lasso and group lasso,
   and verify proximal optimality.
@@ -501,17 +658,8 @@ The existing exact prox remains available. All further SLOPE work starts here.
   strata. Compare with sums of stratum-specific likelihoods and reference
   fits, including strata with no events.
 
-#### Curvature-based solvers
+#### Further curvature-based solvers
 
-- [ ] **Curvature capability:** Derive a small fallible predictor-curvature or
-  weighted-product capability from binomial fitting. Check derivatives and
-  error propagation without adding requirements to unrelated datafits.
-- [ ] **Binomial IRLS:** Use the curvature capability for ridge-regularized
-  binomial fitting with stable weights and globalization. Compare with
-  proximal gradient and test extreme predictors and failed inner solves.
-- [ ] **Binomial proximal Newton:** Solve binomial/L1 quadratic subproblems with
-  a compatible inner solver and line search. Report inner accuracy, verify
-  final optimality, and compare with proximal-gradient reference fits.
 - [ ] **Further specialized methods:** Choose one additional datafit/solver
   pairing only after its required curvature or product capability is
   justified. Add a bounded implementation task and reference checks.
@@ -587,26 +735,16 @@ The existing exact prox remains available. All further SLOPE work starts here.
   memory policy, and measured solver preferences. Report the selected solver
   and test explicit overrides and unsupported requests.
 
-#### Cross-validation
-
-- [ ] **Cross-validation folds and metrics:** Add validated deterministic fold
-  assignments and family-appropriate scoring for Gaussian and binomial
-  models. Test coverage, invalid folds, and score normalization.
-- [ ] **Cross-validation paths:** Fit preprocessing on each training fold and
-  reuse it across that fold's path. Verify held-out predictions and prove
-  absence of preprocessing leakage with a targeted fixture.
-- [ ] **Cross-validation selection:** Aggregate fold scores, select a tuning
-  point under a documented rule, and refit on all training observations.
-  Test reproducibility, failed fits, and independently checked selections.
-
 #### Python extensions
 
+- [ ] **Python penalty coverage:** Expose remaining implemented Rust penalties
+  and compositions beyond the MVP, including ridge, elastic net, and Group
+  LASSO. Preserve their parameters and diagnostics, and compare fitting,
+  prediction, and supported paths with Rust results.
 - [ ] **Python sparse input:** Add a checked sparse CSC input contract and bind
   the compatible Rust fits and paths. Verify ownership, copies, validation,
   and agreement with dense input, and keep the advertised solver coverage
   within the tested matrix.
-- [ ] **Python cross-validation:** Bind the Rust cross-validation API and verify
-  selected penalties, refits, and leakage checks against Rust results.
 
 #### R bindings
 
