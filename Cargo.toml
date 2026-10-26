@@ -72,6 +72,10 @@ name = "clustered_lasso"
 required-features = ["faer_v0_24"]
 
 [[example]]
+name = "chain_fused_lasso"
+required-features = ["faer_v0_24"]
+
+[[example]]
 name = "regularization_path"
 required-features = ["faer_v0_24"]
 
@@ -144,5 +148,15 @@ required-features = ["faer_v0_24"]
 
 [[bench]]
 name = "clustered_lasso_heap"
+harness = false
+required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "chain_fused_lasso"
+harness = false
+required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "chain_fused_lasso_heap"
 harness = false
 required-features = ["faer_v0_24"]

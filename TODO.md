@@ -95,24 +95,24 @@ decision and concrete follow-up tasks.
 
 ### 2. Chain fused lasso
 
-- [ ] **Chain fused-lasso contract:** Define the L1-plus-fusion objective on
+- [x] **Chain fused-lasso contract:** Define the L1-plus-fusion objective on
   adjacent coefficients, with independent strengths and validated edge
   weights. Count each edge once and preserve the average-loss convention.
   Fused blocks are contiguous constant segments; equal values on separate
   segments remain separate blocks. Record the contract in `DESIGN.md`, and
   test zero-strength limits, empty chains, and single-feature cases.
-- [ ] **Chain fused-lasso penalty and prox:** Implement penalty evaluation and a
+- [x] **Chain fused-lasso penalty and prox:** Implement penalty evaluation and a
   validated complete proximal map with reusable storage. Support the
   documented edge weights, and state accuracy requirements if the prox is
   iterative. Test independent small-problem references, constant segments,
   zero coefficients, and each zero-strength limit. Establish Gaussian
   proximal-gradient reference fits before adding the hybrid.
-- [ ] **Fused-segment updates:** Represent contiguous fused segments, aggregate
+- [x] **Fused-segment updates:** Represent contiguous fused segments, aggregate
   columns, and boundary edge weights. Implement exact scalar segment
   updates, crossings, adjacent merges, and zero-curvature handling. Compare
   updates and complete sweeps with independent restricted problems, and
   check reconstruction, residuals, and objective descent.
-- [ ] **Chain fused-lasso hybrid:** Interleave segment sweeps with full PG steps
+- [x] **Chain fused-lasso hybrid:** Interleave segment sweeps with full PG steps
   that rebuild segments and permit splitting. Reuse the validated
   scheduling, stopping, and diagnostic machinery where applicable. Integrate
   normalization and intercepts, compare complete fits with the proximal

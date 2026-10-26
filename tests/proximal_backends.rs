@@ -41,6 +41,7 @@ where
     verify_groups::<M, V>(design);
     verify_multivariate::<M, V>(design);
     verify_paths::<M, V>(design);
+    verify_chain::<M, V>(design);
     let rows: Vec<_> = ROWS.iter().map(|row| row.as_slice()).collect();
     let reference = matrix::Matrix::from_rows(&rows);
     for intercept in [false, true] {
@@ -177,6 +178,57 @@ where
                     }
                 }
             }
+        }
+    }
+}
+
+fn verify_chain<M, V>(design: &M)
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    M::Error: std::error::Error + 'static,
+    V: ProximalVector + 'static,
+{
+    use shrinkage::ChainFusedLasso;
+    let reference =
+        matrix::Matrix::from_rows(&ROWS.iter().map(|row| row.as_slice()).collect::<Vec<_>>());
+    let penalty = ChainFusedLasso::new(0.03, 0.07).with_weights(vec![0.0, 2.0]);
+    for free_intercept in [false, true] {
+        let datafit = Gaussian::new(&Y).fit_intercept(free_intercept);
+        let fit = Problem::new(design, datafit, penalty.clone())
+            .normalize(Normalization::None)
+            .fit_with(
+                &ProximalGradient::<V>::new()
+                    .tolerance(1e-9)
+                    .max_iterations(200_000),
+            )
+            .unwrap();
+        let expected = Problem::new(&reference, datafit, penalty.clone())
+            .normalize(Normalization::None)
+            .fit_with(
+                &ProximalGradient::<Vec<f64>>::new()
+                    .tolerance(1e-9)
+                    .max_iterations(200_000),
+            )
+            .unwrap();
+        let runtime = RuntimeProblem::new(
+            Box::new(MatrixDesign::<_, V>::new(design)),
+            Box::new(datafit),
+            Box::new(penalty.clone()),
+        )
+        .normalize(Normalization::None)
+        .fit_with(
+            &ProximalGradient::new()
+                .tolerance(1e-9)
+                .max_iterations(200_000),
+        )
+        .unwrap();
+        assert_eq!(fit.termination(), Termination::Converged);
+        assert_eq!(expected.termination(), Termination::Converged);
+        assert_eq!(runtime.termination(), Termination::Converged);
+        close(fit.objective(), expected.objective());
+        close(runtime.objective(), expected.objective());
+        for (&actual, &expected) in fit.coefficients().iter().zip(expected.coefficients()) {
+            close(actual, expected);
         }
     }
 }

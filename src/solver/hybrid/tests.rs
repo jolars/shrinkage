@@ -1,8 +1,9 @@
+use super::cluster::State;
 use super::*;
 use lazymatrix::LazyMatrix;
 
 #[path = "../../../tests/common/matrix.rs"]
-mod matrix;
+pub(super) mod matrix;
 use matrix::Matrix;
 
 fn close(actual: f64, expected: f64) {
@@ -69,12 +70,14 @@ fn assert_state(state: &State, x: &[Vec<f64>], y: &[f64], beta: &[f64]) {
 
 // Enumerate knots and affine intervals directly instead of following the
 // production kernel's cumulative-threshold scan.
-fn independent_scalar(q: f64, b: f64, current: f64, knots: &[(f64, f64)]) -> f64 {
+pub(super) fn independent_scalar(q: f64, b: f64, current: f64, knots: &[(f64, f64)]) -> f64 {
     let mut levels: Vec<_> = knots.iter().map(|&(t, _)| t).collect();
     levels.sort_by(f64::total_cmp);
     levels.dedup();
     let mut candidates = levels.clone();
-    candidates.push(current);
+    if q == 0.0 {
+        candidates.push(current);
+    }
     if q > 0.0 {
         for i in 0..=levels.len() {
             let left = if i == 0 {
@@ -437,7 +440,7 @@ fn failed_products_preserve_backend_errors_and_discard_partial_outputs() {
         }
     }
     for transpose in [false, true] {
-        let error = Workspace::new(1, 1)
+        let error = Workspace::<ClusteredLasso>::new(1, 1)
             .prepare(&mut Broken { transpose }, Gaussian::new(&[1.0]), 0)
             .unwrap_err();
         let FitError::Backend { operation, source } = error else {

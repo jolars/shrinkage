@@ -43,7 +43,7 @@ fn numerical<E>(operation: &'static str, iteration: usize) -> FitError<E> {
     }
 }
 
-fn curvature<E>(column: &[f64], iteration: usize) -> Result<f64, FitError<E>> {
+pub(super) fn curvature<E>(column: &[f64], iteration: usize) -> Result<f64, FitError<E>> {
     for &value in column {
         finite(value, "forming a cluster aggregate", iteration)?;
     }
@@ -59,6 +59,42 @@ fn curvature<E>(column: &[f64], iteration: usize) -> Result<f64, FitError<E>> {
         ));
     }
     Ok(q)
+}
+
+impl super::Partition<ClusteredLasso> for State {
+    fn new(n: usize, p: usize) -> Self {
+        Self::new(n, p)
+    }
+
+    fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
+        &mut self,
+        matrix: &LazyMatrix<M>,
+        coefficients: &[f64],
+        residual: &[f64],
+        _: &ClusteredLasso,
+        iteration: usize,
+    ) -> Result<(), FitError<M::Error>> {
+        self.rebuild(matrix, coefficients, residual, iteration)
+    }
+
+    fn sweep<E>(
+        &mut self,
+        coefficients: &mut [f64],
+        intercept: &mut f64,
+        fit_intercept: bool,
+        penalty: &ClusteredLasso,
+        iteration: usize,
+    ) -> Result<(), FitError<E>> {
+        self.sweep(coefficients, intercept, fit_intercept, penalty, iteration)
+    }
+
+    fn labels(&self) -> &[usize] {
+        &self.labels
+    }
+
+    fn values(&self) -> Vec<f64> {
+        self.blocks.iter().map(|block| block.value).collect()
+    }
 }
 
 /// Minimize the original scalar restriction, retaining median intervals.

@@ -1,6 +1,7 @@
-//! Gaussian PG transitions interleaved with exact signed-cluster sweeps.
+//! Gaussian PG transitions interleaved with exact cluster or segment sweeps.
 
 mod cluster;
+mod segment;
 #[cfg(test)]
 mod tests;
 
@@ -11,11 +12,44 @@ use lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, MatrixShape, RawC
 use crate::error::{finite, invalid, unsupported};
 use crate::solver::proximal::{NativeDesign, Solution as ProximalSolution};
 use crate::{
-    BackendError, ClusteredLasso, FitError, Gaussian, HybridFit, Penalty, Problem, ProximalDesign,
-    ProximalPenalty, ProximalVector, RuntimeProblem, Solver, StoppingCriterion, Termination,
+    BackendError, ChainFusedLasso, ClusteredLasso, FitError, Gaussian, HybridFit, Problem,
+    ProximalDesign, ProximalPenalty, ProximalVector, RuntimeProblem, Solver, StoppingCriterion,
+    Termination,
 };
 
-use cluster::State;
+trait HybridPenalty: ProximalPenalty + Sized {
+    type State: Partition<Self>;
+}
+
+trait Partition<P>: Sized {
+    fn new(n: usize, p: usize) -> Self;
+    fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
+        &mut self,
+        matrix: &lazymatrix::LazyMatrix<M>,
+        coefficients: &[f64],
+        residual: &[f64],
+        penalty: &P,
+        iteration: usize,
+    ) -> Result<(), FitError<M::Error>>;
+    fn sweep<E>(
+        &mut self,
+        coefficients: &mut [f64],
+        intercept: &mut f64,
+        fit_intercept: bool,
+        penalty: &P,
+        iteration: usize,
+    ) -> Result<(), FitError<E>>;
+    fn labels(&self) -> &[usize];
+    fn values(&self) -> Vec<f64>;
+}
+
+impl HybridPenalty for ClusteredLasso {
+    type State = cluster::State;
+}
+
+impl HybridPenalty for ChainFusedLasso {
+    type State = segment::State;
+}
 
 /// Curvature policy for [`Hybrid`]'s full proximal-gradient transitions.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -43,13 +77,14 @@ impl Default for HybridStep {
     }
 }
 
-/// Dense Gaussian hybrid for uniform signed clustered lasso.
+/// Dense Gaussian hybrid for signed clustered lasso and weighted chain fusion.
 ///
 /// Begin with a full PG transition, then alternate five complete cluster
 /// sweeps with one PG transition. PG can split zero and nonzero blocks; CD
 /// moves entire exact-equality blocks and merges exact ties. Only a fresh
 /// full-space PG mapping, including the intercept derivative, certifies
 /// convergence. Diagnostic calls never advance or alter the iteration.
+/// Chain blocks are contiguous segments, with zero-weight edges kept as cuts.
 ///
 /// `V` is the backend's native vector, as for [`crate::ProximalGradient`].
 /// Aggregates use dense storage: `O(n * K + p + n)` for `K` clusters, retaining
@@ -179,37 +214,65 @@ where
         &self,
         problem: &Problem<&M, Gaussian<'_>, ClusteredLasso>,
     ) -> Result<HybridFit, Self::Error> {
-        let threshold = self.validate()?;
-        problem.datafit().validate(problem.design().nrows())?;
-        problem
-            .penalty()
-            .validate_input(&[])
-            .map_err(|e| FitError::from_component(e, 0))?;
-        let prepared = problem.prepare(problem.datafit().fit_intercept)?;
-        let mut design = NativeDesign::<_, V>::new(prepared);
-        let mut work = Workspace::new(design.nrows(), design.ncols());
-        if problem.datafit().fit_intercept {
-            work.intercept = finite(
-                problem
-                    .datafit()
-                    .response
-                    .iter()
-                    .map(|y| y / design.nrows() as f64)
-                    .sum(),
-                "initializing the hybrid intercept",
-                0,
-            )?;
-        }
-        let solution = iterate(
-            &mut design,
-            *problem.datafit(),
-            problem.penalty(),
-            self,
-            threshold,
-            &mut work,
-        )?;
-        HybridFit::from_solution(solution, design.into_preprocessing())
+        solve(problem, self)
     }
+}
+
+impl<M, V> Solver<Problem<&M, Gaussian<'_>, ChainFusedLasso>> for Hybrid<V>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    V: ProximalVector,
+{
+    type Fit = HybridFit;
+    type Error = FitError<M::Error>;
+
+    fn solve(
+        &self,
+        problem: &Problem<&M, Gaussian<'_>, ChainFusedLasso>,
+    ) -> Result<HybridFit, Self::Error> {
+        solve(problem, self)
+    }
+}
+
+fn solve<M, V, P>(
+    problem: &Problem<&M, Gaussian<'_>, P>,
+    options: &Hybrid<V>,
+) -> Result<HybridFit, FitError<M::Error>>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    V: ProximalVector,
+    P: HybridPenalty,
+{
+    let threshold = options.validate()?;
+    problem.datafit().validate(problem.design().nrows())?;
+    let mut work = Workspace::<P>::new(problem.design().nrows(), problem.design().ncols());
+    problem
+        .penalty()
+        .validate_input(&work.coefficients)
+        .map_err(|e| FitError::from_component(e, 0))?;
+    let prepared = problem.prepare(problem.datafit().fit_intercept)?;
+    let mut design = NativeDesign::<_, V>::new(prepared);
+    if problem.datafit().fit_intercept {
+        work.intercept = finite(
+            problem
+                .datafit()
+                .response
+                .iter()
+                .map(|y| y / design.nrows() as f64)
+                .sum(),
+            "initializing the hybrid intercept",
+            0,
+        )?;
+    }
+    let solution = iterate(
+        &mut design,
+        *problem.datafit(),
+        problem.penalty(),
+        options,
+        threshold,
+        &mut work,
+    )?;
+    HybridFit::from_solution(solution, design.into_preprocessing())
 }
 
 impl<V> Solver<RuntimeProblem<'_>> for Hybrid<V> {
@@ -219,8 +282,8 @@ impl<V> Solver<RuntimeProblem<'_>> for Hybrid<V> {
     fn solve(&self, _: &RuntimeProblem<'_>) -> Result<HybridFit, Self::Error> {
         Err(unsupported(
             "Hybrid",
-            "erased proximal oracles do not expose signed cluster columns",
-            "use a typed Gaussian/ClusteredLasso problem or runtime ProximalGradient",
+            "erased proximal oracles do not expose cluster or segment columns",
+            "use a typed Gaussian problem with ClusteredLasso or ChainFusedLasso, or runtime ProximalGradient",
         ))
     }
 }
@@ -236,7 +299,7 @@ pub(crate) struct Solution {
     pub step_policy: HybridStep,
 }
 
-struct Workspace {
+struct Workspace<P: HybridPenalty = ClusteredLasso> {
     coefficients: Vec<f64>,
     intercept: f64,
     residual: Vec<f64>,
@@ -246,11 +309,11 @@ struct Workspace {
     candidate: Vec<f64>,
     direction: Vec<f64>,
     product: Vec<f64>,
-    state: State,
-    pending: State,
+    state: P::State,
+    pending: P::State,
 }
 
-impl Workspace {
+impl<P: HybridPenalty> Workspace<P> {
     fn new(n: usize, p: usize) -> Self {
         Self {
             coefficients: vec![0.0; p],
@@ -262,8 +325,8 @@ impl Workspace {
             candidate: vec![0.0; p],
             direction: vec![0.0; p],
             product: vec![0.0; n],
-            state: State::new(n, p),
-            pending: State::new(n, p),
+            state: P::State::new(n, p),
+            pending: P::State::new(n, p),
         }
     }
 
@@ -305,7 +368,7 @@ impl Workspace {
 
     fn trial<E>(
         &mut self,
-        penalty: &ClusteredLasso,
+        penalty: &P,
         curvature: f64,
         intercept_gradient: f64,
         iteration: usize,
@@ -385,7 +448,7 @@ impl Workspace {
         &mut self,
         design: &mut O,
         datafit: Gaussian<'_>,
-        penalty: &ClusteredLasso,
+        penalty: &P,
         curvature: f64,
         iteration: usize,
     ) -> Result<(f64, f64), FitError<O::Error>> {
@@ -451,17 +514,18 @@ fn initial_curvature<M: RawColumns<f64> + lazymatrix::MatrixErrorType, V: Proxim
     Ok(if value == 0.0 { 1.0 } else { value })
 }
 
-fn iterate<M, V, W>(
+fn iterate<M, V, W, P>(
     design: &mut NativeDesign<M, V>,
     datafit: Gaussian<'_>,
-    penalty: &ClusteredLasso,
+    penalty: &P,
     options: &Hybrid<W>,
     threshold: f64,
-    work: &mut Workspace,
+    work: &mut Workspace<P>,
 ) -> Result<Solution, FitError<M::Error>>
 where
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
+    P: HybridPenalty,
 {
     let mut curvature = initial_curvature(design, datafit.fit_intercept, options)?;
     let (mut pg_steps, mut coordinate_sweeps, mut diagnostic_checks, mut backtracks) = (0, 0, 0, 0);
@@ -478,6 +542,7 @@ where
                     design.matrix(),
                     &work.coefficients,
                     &work.residual,
+                    penalty,
                     iteration,
                 )?;
                 return Ok(Solution {
@@ -496,8 +561,8 @@ where
                         stopping_threshold: threshold,
                         step: 1.0 / curvature,
                     },
-                    labels: work.pending.labels.clone(),
-                    values: work.pending.blocks.iter().map(|b| b.value).collect(),
+                    labels: work.pending.labels().to_vec(),
+                    values: work.pending.values(),
                     pg_steps,
                     coordinate_sweeps,
                     diagnostic_checks,
@@ -562,8 +627,13 @@ where
                     iteration,
                 )?;
             }
-            work.pending
-                .rebuild(design.matrix(), &work.candidate, &work.product, iteration)?;
+            work.pending.rebuild(
+                design.matrix(),
+                &work.candidate,
+                &work.product,
+                penalty,
+                iteration,
+            )?;
             std::mem::swap(&mut work.coefficients, &mut work.candidate);
             std::mem::swap(&mut work.state, &mut work.pending);
             work.intercept = candidate_intercept;

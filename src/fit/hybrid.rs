@@ -5,6 +5,8 @@ use crate::{FitError, HybridStep, Preprocessing, ProximalFit, StoppingCriterion,
 /// Original-scale Gaussian parameters and full-space hybrid diagnostics.
 ///
 /// Cluster labels and values refer to signed optimization-scale coefficients.
+/// Clustered lasso orders blocks by value; chain fused lasso orders contiguous
+/// segments by feature and retains zero-weight edges as segment boundaries.
 /// Scaling can change equalities among the reported original-scale parameters.
 /// No duality gap is reported. A sweep that leaves all blocks unchanged does
 /// not certify convergence; check [`Self::termination`] and the full mapping.
@@ -87,9 +89,10 @@ impl HybridFit {
     pub fn cluster_labels(&self) -> &[usize] {
         &self.labels
     }
-    /// Strictly increasing signed optimization-scale cluster values.
-    /// Zeros are stored as positive zero. Equal original-scale values need
-    /// not share a label when training scales differ.
+    /// Signed optimization-scale values, with positive zeros.
+    /// Clustered lasso returns strictly increasing values. Chain fused lasso
+    /// returns segment values in feature order, which may repeat. Equal
+    /// original-scale values need not share a label when training scales differ.
     pub fn cluster_values(&self) -> &[f64] {
         &self.values
     }

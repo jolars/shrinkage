@@ -45,6 +45,55 @@ mod dense {
                 .is_empty()
         );
     }
+
+    pub fn verify_chain<M, V>(x: &M)
+    where
+        M: shrinkage::lazymatrix::RawColumns<f64>
+            + shrinkage::lazymatrix::ColumnStats<f64>
+            + shrinkage::lazymatrix::MatVecInto<V>
+            + shrinkage::lazymatrix::MatTransposeVecInto<V>,
+        V: shrinkage::ProximalVector,
+    {
+        use shrinkage::{ChainFusedLasso, Normalization, ProximalGradient};
+        for free_intercept in [false, true] {
+            for normalization in [
+                Normalization::None,
+                Normalization::Auto,
+                Normalization::Center,
+                Normalization::Standardize,
+                Normalization::MinMax,
+                Normalization::MaxAbs,
+                Normalization::L1,
+                Normalization::L2,
+            ] {
+                for weights in [vec![0.0, 2.0], vec![0.5, 2.0]] {
+                    let problem = Problem::new(
+                        x,
+                        Gaussian::new(&Y).fit_intercept(free_intercept),
+                        ChainFusedLasso::new(0.03, 0.02).with_weights(weights),
+                    )
+                    .normalize(normalization);
+                    let hybrid = problem
+                        .fit_with(&Hybrid::<V>::new().tolerance(1e-9))
+                        .unwrap();
+                    let pg = problem
+                        .fit_with(&ProximalGradient::<V>::new().tolerance(1e-9))
+                        .unwrap();
+                    assert_eq!(hybrid.termination(), Termination::Converged);
+                    assert_eq!(pg.termination(), Termination::Converged);
+                    assert!((hybrid.objective() - pg.objective()).abs() < 1e-9);
+                    for (&actual, expected) in hybrid
+                        .predict(x)
+                        .unwrap()
+                        .iter()
+                        .zip(pg.predict(x).unwrap())
+                    {
+                        assert!((actual - expected).abs() < 1e-7);
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[cfg(feature = "faer_v0_24")]
@@ -61,6 +110,7 @@ fn faer_dense() {
         .fit_with(&Hybrid::<faer::Col<f64>>::new().tolerance(1e-10))
         .unwrap(),
     );
+    dense::verify_chain::<_, faer::Col<f64>>(&x);
 }
 
 #[cfg(feature = "nalgebra_v0_34")]
@@ -77,6 +127,7 @@ fn nalgebra_dense() {
         .fit_with(&Hybrid::<nalgebra::DVector<f64>>::new().tolerance(1e-10))
         .unwrap(),
     );
+    dense::verify_chain::<_, nalgebra::DVector<f64>>(&x);
 }
 
 #[cfg(feature = "ndarray_v0_17")]
@@ -95,6 +146,7 @@ fn ndarray_strided_view() {
         .fit_with(&Hybrid::<ndarray::Array1<f64>>::new().tolerance(1e-10))
         .unwrap(),
     );
+    dense::verify_chain::<_, ndarray::Array1<f64>>(&x);
 }
 
 #[cfg(feature = "faer_v0_24")]

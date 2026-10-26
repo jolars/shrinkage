@@ -80,9 +80,9 @@ pub use path::{
     PathSolver, PenaltyMaximum, RegularizationPathSolver,
 };
 pub use penalty::{
-    AxisPenalty, ClusteredLasso, CoordinatePenalty, DisjointGroups, ElasticNet, GroupLasso, L1,
-    Masked, Penalty, PenaltyAxis, ProximalPenalty, RestrictedProximalPenalty, Ridge, Scaled, Slope,
-    UncoveredPolicy,
+    AxisPenalty, ChainFusedLasso, ClusteredLasso, CoordinatePenalty, DisjointGroups, ElasticNet,
+    GroupLasso, L1, Masked, Penalty, PenaltyAxis, ProximalPenalty, RestrictedProximalPenalty,
+    Ridge, Scaled, Slope, UncoveredPolicy,
 };
 pub use problem::{
     MatrixDesign, Problem, RuntimeDesign, RuntimeMultivariateProblem, RuntimePathProblem,

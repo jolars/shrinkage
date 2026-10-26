@@ -2,12 +2,13 @@
 
 Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
 and typed and runtime proximal gradient with Gaussian and binomial datafits,
-ridge, elastic net, SLOPE, disjoint Group LASSO, clustered lasso, and
-multivariate Gaussian fitting with explicit penalty axes, regularization paths,
-and lasso path screening are implemented. Dense Gaussian clustered lasso also
-has a hybrid of full proximal-gradient steps and exact signed-cluster coordinate
-sweeps. This document records commitments and an implementation sequence;
-illustrative API names are not frozen interfaces.
+ridge, elastic net, SLOPE, disjoint Group LASSO, clustered lasso, chain fused
+lasso, and multivariate Gaussian fitting with explicit penalty axes,
+regularization paths, and lasso path screening are implemented. Dense Gaussian
+clustered lasso also has a hybrid of full proximal-gradient steps and exact
+signed-cluster coordinate sweeps; weighted chain fused lasso shares its driver
+with contiguous segment sweeps. This document records commitments and an
+implementation sequence; illustrative API names are not frozen interfaces.
 
 The next goal is an MVP that the clustered-lasso paper can use and cite through
 a public Rust and Python release. The uniform clustered-lasso penalty and dense
@@ -597,6 +598,98 @@ matched accuracy on clustered and weakly fused data. `task bench:clustered:heap`
 checks warmed scratch reuse and measures both fused and nearly singleton
 aggregate storage. No timing or allocation claim excludes setup, rebuilds, or
 final checks unless explicitly labeled.
+
+### Weighted chain fused lasso and segment sweeps
+
+`ChainFusedLasso::new(l1, fusion)` defines
+
+$$
+  R(\theta) = \lambda_1\sum_j|\theta_j|
+              + \lambda_2\sum_{j=0}^{p-2}w_j|\theta_{j+1} - \theta_j|.
+$$
+
+Strengths are independent, finite, and nonnegative. Weights default to one;
+`.with_weights(Vec<f64>)` supplies exactly `p.saturating_sub(1)` finite,
+nonnegative weights. Validate dimensions and weights even at zero strength.
+Empty and single-feature chains have no edges. Each edge contributes once, in
+training-column order, without dividing by the edge count. The Gaussian
+objective is `||y - b - X_tilde theta||² / (2n) + R(theta)`. Intercepts are
+unpenalized. Penalties and segment labels use optimization-scale coefficients;
+back-transformation preserves predictions, but unequal column scales may change
+equalities among reported coefficients.
+
+**Complete exact prox.** Split at zero-weight edges and solve weighted total
+variation on each subchain with tube half-widths `step * fusion * weights[j]`.
+Use the classic taut-string method with reusable upper and lower hull deques,
+then soft-threshold by `step * l1`. The weighted construction follows Sections
+2.1 and 2.4 of [Barbero and Sra (2018)](https://arxiv.org/html/1411.0589v3).
+Every hull piece enters and leaves a deque once, giving `O(p)` time and `O(p)`
+scratch without an iterative tolerance. Compensated heights preserve small
+signal increments with large tube widths. Warmed calls at a fixed dimension and
+input allocate no new storage.
+
+To justify the composition, let `u` be the TV minimizer, with edge dual `q`, and
+let `z` be its uniform soft-thresholding. Nonzero differences in `z` retain
+their signs from `u`; differences collapsed to zero accept the same bounded
+dual. Thus `q` remains a TV subgradient at `z`, while `(u - z) / step` is an L1
+subgradient at `z`. Their sum certifies the complete proximal stationarity
+equation, including nonuniform and zero weights. This argument does not assert
+arbitrary composition of proximal maps. Reject nonfinite derived arithmetic and
+positive thresholds that underflow to zero; skip inactive terms.
+
+**Segment state and sweeps.** Segments contain contiguous, exactly equal signed
+coefficients. Normalize signed zeros, and never merge merely close values.
+Zero-weight edges always separate segments, including at zero fusion strength.
+Equal values on nonadjacent segments remain separate. Store feature ranges,
+stable identities, aggregate columns, averaged curvatures, boundary weights, and
+residuals. For segment `C`, with neighboring levels `c_L` and `c_R`, minimize
+
+$$
+  q_C z^2/2 - h_C z + \lambda_1|C||z| + \lambda_2 w_L|z - c_L|
+  + \lambda_2 w_R|z - c_R|, \qquad h_C = a_C^\top(r + a_C c_C)/n.
+$$
+
+Missing boundaries contribute nothing. Sort and combine the at most three knots,
+then use the shared exact scalar minimizer and its zero-curvature
+weighted-median rule. A sweep snapshots identities from left to right and visits
+each surviving identity once. Moves can cross neighboring levels without
+changing feature order. Merge adjacent exact ties across positive weights
+immediately, retain the moving identity, and retire absorbed identities. Add
+aggregate columns and recompute curvature, including cross terms. Update
+residuals for each move, and minimize an enabled intercept after the sweep.
+
+**Hybrid integration.** Typed Gaussian problems use `Hybrid<V>` with the same
+schedule, line search, stopping tolerance, and budget semantics as clustered
+lasso. Private partition adapters share the driver and preserve penalty-specific
+membership. Rebuild all segments and aggregates after accepted full PG steps so
+segments can split. A fresh full-space PG mapping, including the free-intercept
+derivative, certifies convergence at the returned point. Unchanged sweeps do
+not. The clustered-lasso descent and convergence argument applies because
+segment sweeps exactly minimize restrictions of this convex objective.
+
+`HybridFit::cluster_labels()` indexes segment values in feature order for this
+penalty. `cluster_values()` may repeat and is not sorted. Clustered lasso
+retains its strictly increasing value order. PG supports typed and runtime
+problems; runtime hybrid selection remains unsupported. There is no implemented
+chain duality gap.
+
+Each dense aggregate set uses `O(nK + p + n)` storage for `K` segments, with
+committed and staged sets retaining high-water capacities. Full PG transitions
+and rebuilds take `O(np + p)` on dense designs. Scalar restrictions use only
+boundary knots; merges can still require `O(pK + K²)` label and range
+bookkeeping over a sweep, in addition to `O(nK)` aggregate work.
+
+Independent epigraph-QP fixtures and their dual certificates verify proximal
+maps and Gaussian fits. Sweep tests rebuild each restriction independently and
+check reconstruction, residuals, curvature cross terms, objective descent, cuts,
+crossings, merges, and PG-required splits. The `chain_fused_lasso` example
+includes nonuniform weights, a cut, normalization, and a free intercept.
+`task bench:chain` compares proximal operations and complete solves at matched
+accuracy; bounded runs include setup, first PG, and subsequent rebuild work.
+`task bench:chain:heap` checks warmed scratch reuse and complete-solve storage
+for strongly fused and nearly singleton partitions. Hybrid paths, logistic IRLS,
+screening, Python exposure, and sparse-specific optimizations remain later
+milestones.
 
 ## 7. Specialized SLOPE support
 
