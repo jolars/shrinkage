@@ -1,0 +1,13 @@
+{
+  "research_revision": "293760ea4040351a654906add5d7ca855be1deb9",
+  "contracts_sha256": {
+    "docs/cluster-updates.md": "4d1e922a9e8654c5fe3da8386d6091dd9fab37b8f05df56cd7fb8237cc36c4fd",
+    "docs/pg-partition.md": "4ae4d7b74987bea9853638937d95464018bb84cc9feeb8f45a4c2708a07873a6",
+    "docs/convergence.md": "210da30d586e35181fa057326c6e7effb95d81045ab8683a9d45c606c8ffaa15",
+    "docs/line-search.md": "3d23ea9e8325f7c0e5a27b36850e93c025a0af79c2f99557018189e9fc690f9d"
+  },
+  "local_contract": "DESIGN.md: Uniform clustered lasso and the Gaussian hybrid",
+  "fixture_generator": "scripts/clustered_lasso_fixtures.py",
+  "fixture_data": "tests/clustered_lasso/reference.json",
+  "runtime_dependencies_on_research_checkout": false
+}

@@ -1,6 +1,7 @@
 //! Penalty values, complete proximal maps, and coefficient subproblems.
 
 mod axis;
+mod clustered_lasso;
 mod coordinate;
 mod group_lasso;
 mod groups;
@@ -8,6 +9,7 @@ mod masked;
 mod scaled;
 mod slope;
 pub use axis::{AxisPenalty, PenaltyAxis};
+pub use clustered_lasso::ClusteredLasso;
 pub use coordinate::CoordinatePenalty;
 pub use group_lasso::GroupLasso;
 pub use groups::{DisjointGroups, UncoveredPolicy};

@@ -1,7 +1,9 @@
 //! Owned fitted parameters, training transformations, and diagnostics.
 
+mod hybrid;
 mod irls;
 mod multivariate;
+pub use hybrid::HybridFit;
 pub use irls::IrlsFit;
 pub use multivariate::MultivariateFit;
 

@@ -1,7 +1,7 @@
 use std::cell::Cell;
 use std::convert::Infallible;
 
-use shrinkage::lazymatrix::{
+use lazymatrix::{
     ColumnStats, MatTransposeVecInto, MatVecInto, MatrixErrorType, MatrixShape, RawColumn,
     RawColumns,
 };

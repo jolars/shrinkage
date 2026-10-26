@@ -68,6 +68,10 @@ name = "group_lasso"
 required-features = ["faer_v0_24"]
 
 [[example]]
+name = "clustered_lasso"
+required-features = ["faer_v0_24"]
+
+[[example]]
 name = "regularization_path"
 required-features = ["faer_v0_24"]
 
@@ -132,3 +136,13 @@ harness = false
 [[bench]]
 name = "group_lasso"
 harness = false
+
+[[bench]]
+name = "clustered_lasso"
+harness = false
+required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "clustered_lasso_heap"
+harness = false
+required-features = ["faer_v0_24"]

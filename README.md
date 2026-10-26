@@ -79,8 +79,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```
 
 The [examples](examples) cover dense and sparse fitting, normalization,
-multivariate models, Group LASSO, and regularization paths. Run one from a
-checkout with:
+multivariate models, Group LASSO, clustered-lasso hybrids, and regularization
+paths. Run one from a checkout with:
 
 ```console
 cargo run --locked --example regularization_path --features faer
@@ -89,12 +89,16 @@ cargo run --locked --example regularization_path --features faer
 ## Models and solvers
 
 - **Losses:** Gaussian, binomial (logistic), and multivariate Gaussian.
-- **Penalties:** lasso, ridge, elastic net, SLOPE, and weighted disjoint Group
-  LASSO. Supported compositions include scaling, masking of unpenalized
-  coefficients, and explicit penalty axes for multivariate models.
+- **Penalties:** lasso, ridge, elastic net, SLOPE, weighted disjoint Group
+  LASSO, and uniform signed clustered lasso. Supported compositions include
+  scaling, masking of unpenalized coefficients, and explicit penalty axes for
+  multivariate models.
 - **Solvers:** coordinate descent for Gaussian lasso, coordinate-descent IRLS
   for Gaussian and binomial models with lasso, ridge, or elastic net, and
   proximal gradient for smooth convex losses with a complete proximal penalty.
+  Dense Gaussian clustered lasso also supports a hybrid of full PG transitions
+  and exact cluster-coordinate sweeps; see the [clustered-lasso
+  guide](https://shrinkage.cc/clustered-lasso/).
 - **Regularization paths:** explicit or automatic penalty sequences, warm
   starts, working sets for coordinate descent and IRLS, and screening for
   Gaussian lasso.

@@ -69,7 +69,9 @@ pub use datafit::{
 };
 pub use error::FitError as LassoError;
 pub use error::{BackendError, FitError};
-pub use fit::{IrlsFit, LassoFit, MultivariateFit, Preprocessing, ProximalFit, Termination};
+pub use fit::{
+    HybridFit, IrlsFit, LassoFit, MultivariateFit, Preprocessing, ProximalFit, Termination,
+};
 pub use lasso::Lasso;
 pub use layout::CoefficientLayout;
 pub use normalization::{Centering, Normalization, Scaling};
@@ -78,16 +80,17 @@ pub use path::{
     PathSolver, PenaltyMaximum, RegularizationPathSolver,
 };
 pub use penalty::{
-    AxisPenalty, CoordinatePenalty, DisjointGroups, ElasticNet, GroupLasso, L1, Masked, Penalty,
-    PenaltyAxis, ProximalPenalty, RestrictedProximalPenalty, Ridge, Scaled, Slope, UncoveredPolicy,
+    AxisPenalty, ClusteredLasso, CoordinatePenalty, DisjointGroups, ElasticNet, GroupLasso, L1,
+    Masked, Penalty, PenaltyAxis, ProximalPenalty, RestrictedProximalPenalty, Ridge, Scaled, Slope,
+    UncoveredPolicy,
 };
 pub use problem::{
     MatrixDesign, Problem, RuntimeDesign, RuntimeMultivariateProblem, RuntimePathProblem,
     RuntimeProblem,
 };
 pub use solver::{
-    CoordinateDescent, Irls, ProximalDesign, ProximalGradient, ProximalVector, Solver,
-    StoppingCriterion,
+    CoordinateDescent, Hybrid, HybridStep, Irls, ProximalDesign, ProximalGradient, ProximalVector,
+    Solver, StoppingCriterion,
 };
 
 /// Matrix capabilities, borrowed columns, and lazy normalization.

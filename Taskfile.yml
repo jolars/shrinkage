@@ -42,6 +42,7 @@ tasks:
       - cargo run --locked --example binomial --features faer_v0_24
       - cargo run --locked --example multivariate --features faer_v0_24
       - cargo run --locked --example group_lasso --features faer_v0_24
+      - cargo run --locked --example clustered_lasso --features faer_v0_24
       - cargo run --locked --example regularization_path --features faer_v0_24
       - cargo run --locked --example python_lasso_fixture --features ndarray_v0_17 -- --check
       - cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
@@ -87,6 +88,16 @@ tasks:
       - cargo bench --locked --no-default-features --bench group_lasso
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench proximal -- group_lasso
 
+  bench:clustered:
+    desc: Compare complete clustered-lasso hybrid and proximal fits
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench clustered_lasso
+
+  bench:clustered:heap:
+    desc: Measure clustered-lasso scratch reuse and dense aggregate storage
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench clustered_lasso_heap
+
   bench:scaled:
     desc: Compare scaled penalty values and proximal maps with built-in strengths
     cmds:
@@ -113,6 +124,7 @@ tasks:
       - task: bench:heap
       - task: bench:irls:heap
       - task: bench:proximal:heap
+      - task: bench:clustered:heap
       - RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
       - panache format --check .
       - panache lint .

@@ -1,10 +1,12 @@
 //! Solver capabilities, configuration, and stopping rules.
 
 pub(crate) mod coordinate;
+pub(crate) mod hybrid;
 pub(crate) mod irls;
 pub(crate) mod proximal;
 
 pub use crate::path::{PathSolver, RegularizationPathSolver};
+pub use hybrid::{Hybrid, HybridStep};
 pub use irls::Irls;
 pub use proximal::{ProximalDesign, ProximalGradient, ProximalVector};
 

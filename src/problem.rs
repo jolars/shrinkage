@@ -20,6 +20,8 @@ use lazymatrix::{ColumnStats, LazyMatrix, RawColumn, RawColumns};
 /// Both results retain original-scale parameters and training normalization.
 /// [`crate::Irls`] uses column access with [`crate::DiagonalHessianDatafit`] and
 /// [`crate::CoordinatePenalty`], returning [`crate::IrlsFit`] with full KKT checks.
+/// [`crate::Hybrid`] fits Gaussian [`crate::ClusteredLasso`] with dense signed
+/// aggregates, returning [`crate::HybridFit`] with full PG mapping checks.
 /// [`crate::MultivariateGaussian`] with [`crate::AxisPenalty`] uses the same
 /// proximal iteration and returns [`crate::MultivariateFit`]. Its coefficient
 /// feature and response dimensions and penalty axis are explicit.

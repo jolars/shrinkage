@@ -2,18 +2,18 @@
 
 Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
 and typed and runtime proximal gradient with Gaussian and binomial datafits,
-ridge, elastic net, SLOPE, disjoint Group LASSO, and multivariate Gaussian
-fitting with explicit penalty axes, regularization paths, and lasso path
-screening are implemented. This document records commitments and an
-implementation sequence; illustrative API names are not frozen interfaces.
+ridge, elastic net, SLOPE, disjoint Group LASSO, clustered lasso, and
+multivariate Gaussian fitting with explicit penalty axes, regularization paths,
+and lasso path screening are implemented. Dense Gaussian clustered lasso also
+has a hybrid of full proximal-gradient steps and exact signed-cluster coordinate
+sweeps. This document records commitments and an implementation sequence;
+illustrative API names are not frozen interfaces.
 
-The next milestone is a first public Rust and Python release that the
-clustered-lasso paper can use and cite. Its remaining new penalty is uniform
-clustered lasso, including the hybrid method developed in
-`~/research/clustlasso-cd`. The minimum Python surface covers dense,
-single-response Gaussian fits, paths, and prediction. Further SLOPE work and
-broader extensions follow publication. [TODO.md](TODO.md) tracks the release
-scope, acceptance checks, and deferred work.
+The next goal is an MVP that the clustered-lasso paper can use and cite through
+a public Rust and Python release. The uniform clustered-lasso penalty and dense
+Gaussian hybrid from `~/research/clustlasso-cd` are available in Rust.
+[TODO.md](TODO.md) tracks the remaining penalties, hybrid paths, logistic IRLS,
+screening, cross-validation, Python API, and release acceptance checks.
 
 ## 1. Purpose
 
@@ -450,6 +450,154 @@ available; a small objective change alone is not proof of stationarity or a
 global optimum. Nonconvex smooth TOS results must not be assumed to cover
 arbitrary nonconvex nonsmooth penalties.
 
+### Uniform clustered lasso and the Gaussian hybrid
+
+`ClusteredLasso::new(l1, fusion)` defines the complete convex penalty
+
+$$
+  R(\theta) = \lambda_1\sum_j|\theta_j|
+              + \lambda_2\sum_{i<j}|\theta_i - \theta_j|.
+$$
+
+Both strengths are finite and nonnegative. Each unordered pair contributes once,
+regardless of the signs of its coefficients. Empty vectors are valid. Intercepts
+are excluded. The fitted Gaussian objective is
+`||y - b - X_tilde theta||² / (2n) + R(theta)`. Strengths and cluster labels
+refer to optimization-scale coefficients. Back-transformation preserves
+predictions, but unequal column scales can turn a fused optimization block into
+unequal original-scale coefficients.
+
+The reference is research revision `293760ea4040351a654906add5d7ca855be1deb9`.
+The source contracts are `docs/cluster-updates.md`, `docs/pg-partition.md`,
+`docs/convergence.md`, and the backtracking addendum `docs/line-search.md`.
+Their SHA-256 hashes are recorded in `tests/clustered_lasso/provenance.json`.
+The contracts below and committed fixtures are self-contained; builds and tests
+never read that checkout.
+
+**Scaling the research objective.** With `Normalization::None` and no fitted
+intercept, divide both research strengths by `n`. Then
+`F_shrinkage = F_research / n` at every coefficient vector, and scalar
+minimizers are unchanged. Divide research curvatures and scalar linear terms by
+`n` as well. Corresponding PG curvatures obey `L_shrinkage = L_research / n`,
+giving identical proximal inputs and outputs and `G_shrinkage = G_research / n`.
+If research stopping uses `||G_research||_inf / s <= tolerance`, where
+`s = max(1, ||X' y||_inf)`, use Shrinkage's absolute mapping tolerance
+`tolerance * s / n`. Absolute objective differences scale by `1/n` too. A zero
+design admits any positive curvature; choose corresponding positive values
+explicitly when comparing maps rather than assuming identical fallback values.
+
+**Exact complete prox.** Sort signed input values in ascending order, with
+feature indices breaking ties. For zero-based rank `i`, shift the sorted value
+by `step * fusion * (p - 1 - 2i)`. Project these values onto nondecreasing
+sequences through PAVA, then soft-threshold each pooled level by `step * l1` and
+restore feature order. This composition is the exact prox for this specific
+complete penalty. Evaluate the fusion value through adjacent sorted gaps: gap
+`i` has multiplicity `i * (p - i)`. Skip zero-strength terms and zero gaps.
+Value and prox reuse `O(p)` scratch and take `O(p log p)` time. Positive scaled
+strengths that underflow to zero and nonfinite derived arithmetic return errors.
+
+**Signed state and exact sweeps.** Canonical blocks contain exactly equal signed
+values, sorted increasingly, with feature indices sorted inside a block.
+Normalize both signed zeros to positive zero. Opposite signs, merely close
+values, and adjacent unequal floats remain distinct. Each block stores its
+membership, aggregate `a_C = sum_{j in C} X_tilde[:,j]`, averaged curvature
+`q_C = ||a_C||²/n`, and a stable identity. The maintained residual is
+`r = y - b - X_tilde theta`.
+
+For a block of size `m` and value `c`, the exact scalar restriction is
+
+$$
+  \phi(z) = q_Cz^2/2 - h_Cz + \lambda_1m|z| + \lambda_2m\sum_{D \ne C}|D||z
+            - c_D|, \qquad h_C = a_C^\top(r + a_Cc)/n.
+$$
+
+Combine coincident knots and discard zero weights. For positive curvature, scan
+ordered knots using the interval root `(h_C + W - 2P)/q_C`, where `W` is total
+knot weight and `P` is weight strictly to the left. At a knot, its left and
+right derivatives bracket zero exactly when that knot minimizes the restriction.
+For exactly zero curvature, the aggregate column and linear term must be zero;
+project `c` onto the weighted-median interval, retaining `c` when there are no
+positive weights. Never round a small positive curvature to zero. Nonzero
+aggregates with underflowed zero curvature produce a numerical error.
+
+A sweep snapshots block identities in initial signed-value order. Each surviving
+identity is visited once. Moves may cross any number of blocks and may move a
+zero block. Update `r -= a_C * (z-c)`. Merge exact ties immediately, retain the
+moving identity, and retire absorbed identities so they cannot be visited later
+in that sweep. Add aggregate columns and recompute curvature, including cross
+terms. Minimize an enabled free intercept exactly after each sweep. Every exact
+scalar minimization is nonincreasing in the original complete objective.
+
+**PG transitions, bounds, and convergence.** `Hybrid<V>` starts with a full PG
+transition, then performs five complete sweeps between PG transitions by
+default. Every transition directly refreshes the residual before its full
+gradient and after its candidate. Rebuild membership and all aggregate columns
+from the candidate in original feature order. Stage this state before committing
+coefficients, intercept, and curvature together. The rebuild allows zero and
+nonzero blocks to split, even when block count is unchanged.
+
+`HybridStep::FixedBound` uses `||A||_F²/n` with a conservative rounding guard,
+where `A` augments the normalized design with a column of ones if an intercept
+is fitted. Use one for a zero bound. `HybridStep::Backtracking` defaults to the
+largest averaged column curvature, including intercept curvature one, and uses
+one when all curvatures vanish. A supplied positive curvature is a seed. Double
+it until `||A d||²/n <= L ||d||²` passes, then retain the accepted value. Scale
+nonzero displacements before applying the design, compare Euclidean norms with
+relative slack `64 * f64::EPSILON`, and avoid subtraction of nearly equal
+losses. Exhausted searches return `LineSearchFailure`. The fixed bound is
+mathematical; neither policy claims a floating-point proof of exact descent.
+
+In exact arithmetic, a full PG step with an adequate bound decreases the
+objective by at least `L * ||d||²/2`. Finite nonincreasing cluster sweeps
+between infinitely many such PG steps preserve objective convergence to the
+global minimum. Backtracking retains positive curvatures bounded above by the
+larger of its initial value and twice the augmented spectral curvature. These
+bounds give the same descent and limiting-stationarity argument. Rank deficiency
+is allowed: compactness is needed only modulo directions annihilated by both the
+design and penalty. Fitted values converge to the common optimal fit;
+coefficient convergence requires uniqueness or additional assumptions. This
+argument does not promise finite identification, a runtime advantage, or a rate.
+
+**Stopping, storage, and interfaces.** Convergence requires the infinity norm of
+the full PG mapping, maximized with the absolute free-intercept derivative, at
+the returned coefficients. Its default absolute tolerance is `1e-6`. Check
+initially, every ten iterations by default, and at the iteration budget. One
+iteration is one committed PG transition or complete sweep; the default budget
+is 10,000. Checks use freshly computed residuals in separate scratch and neither
+commit diagnostic candidates nor change the schedule, maintained CD residual, or
+accepted curvature. Unchanged sweeps never establish convergence.
+
+`HybridFit` reports the final objective, mapping and threshold, step policy,
+step size, termination reason, cluster labels and values, PG steps, coordinate
+sweeps, diagnostic checks, and backtracks. Finite budget exhaustion reports
+`IterationLimit`. There is no implemented clustered-lasso duality gap. Typed
+Gaussian problems use the dense hybrid; runtime proximal oracles support the
+penalty through PG and reject hybrid selection before preparation. Hybrid paths,
+logistic subproblems, screening, and sparse-specific extensions remain later
+milestones.
+
+Dense aggregate storage is `O(nK + p + n)` per state. Staging retains both
+committed and candidate aggregates, with buffers kept at their high-water
+cluster count. At `K=p`, each aggregate set costs approximately `8np` bytes,
+comparable to an additional dense design. Membership buffers are reused and
+retired large memberships are released to keep their storage linear in `p`. An
+ordered-knot sweep costs `O(nK + K²)` plus up to `O(pK)` for maintaining feature
+labels and merged memberships. Full PG transitions cost `O(np + p log p)`
+including complete rebuilds. Native product adapters retain their existing
+normalization allocation behavior.
+
+Independent subgradient certificates and exhaustive ordered partitions verify
+the prox. Committed explicit-pair CVXPY/Clarabel fixtures include rank-deficient
+designs, zero-strength limits, and free intercepts; their duals independently
+certify KKT conditions. Tests compare complete sweeps with rebuilding every
+scalar restriction, and cover required splits, signed zeros, crossings, merges,
+diagnostic independence, budgets, normalization, and native dense backends.
+`task bench:clustered` measures penalty operations and complete solves at
+matched accuracy on clustered and weakly fused data. `task bench:clustered:heap`
+checks warmed scratch reuse and measures both fused and nearly singleton
+aggregate storage. No timing or allocation claim excludes setup, rebuilds, or
+final checks unless explicitly labeled.
+
 ## 7. Specialized SLOPE support
 
 `Slope` implements the generic sorted L1 penalty with an exact proximal map. It
@@ -466,8 +614,8 @@ Independent exhaustive partition solutions and subgradient certificates test
 proximal optimality, including ties and zero weights. Typed and runtime Gaussian
 fits agree with an orthogonal solution. `task bench:slope` measures distinct and
 tied magnitudes, and `task bench:proximal:heap` checks value and prox
-allocations. The specialized hybrid coordinate/proximal solver is deferred until
-after the first public Rust and Python release.
+allocations. The specialized SLOPE hybrid follows the clustered-lasso foundation
+in the MVP milestones in [TODO.md](TODO.md).
 
 The specialized solver needs ordering, signs, equal-magnitude clusters, cluster
 updates/merges, and full proximal steps capable of splitting clusters. Put this

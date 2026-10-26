@@ -50,6 +50,10 @@ pub(crate) struct NativeDesign<M, V> {
 }
 
 impl<M: MatrixShape, V: ProximalVector> NativeDesign<M, V> {
+    pub(crate) fn matrix(&self) -> &lazymatrix::LazyMatrix<M> {
+        &self.prepared.matrix
+    }
+
     pub(crate) fn new(prepared: Prepared<M>) -> Self {
         let n = prepared.matrix.nrows();
         let p = prepared.matrix.ncols();

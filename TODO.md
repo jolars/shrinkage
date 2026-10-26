@@ -39,7 +39,7 @@ decision and concrete follow-up tasks.
 
 ### 1. Clustered lasso and the paper's hybrid method
 
-- [ ] **Clustered-lasso contract:** Specify uniform all-pairs fusion of signed
+- [x] **Clustered-lasso contract:** Specify uniform all-pairs fusion of signed
   optimization-scale coefficients, with separate nonnegative L1 and fusion
   strengths and each unordered pair counted once. Use Shrinkage's average
   squared loss. To reproduce the research objective, divide both research
@@ -49,33 +49,33 @@ decision and concrete follow-up tasks.
   revision and the contracts from that project's `docs/cluster-updates.md`,
   `docs/pg-partition.md`, and `docs/convergence.md` in this repository.
   Builds must be independent of the research checkout.
-- [ ] **Clustered-lasso penalty and prox:** Implement value evaluation and the
+- [x] **Clustered-lasso penalty and prox:** Implement value evaluation and the
   complete L1-plus-fusion prox using signed sorting, PAVA, and
   soft-thresholding, with reusable buffers and no explicit pairwise graph.
   Validate strengths and dimensions, and test ties, opposite signs, signed
   zero, each zero-strength limit, the unpenalized case, and independent
   proximal optimality fixtures.
-- [ ] **Gaussian clustered-lasso baseline:** Fit the complete penalty through
+- [x] **Gaussian clustered-lasso baseline:** Fit the complete penalty through
   typed and runtime proximal gradient on dense input. Establish a justified
   full-space proximal-gradient stopping check at the returned coefficients.
   Compare objectives, fitted values, and optimality residuals with
   independent small-problem fixtures, including rank-deficient and
   zero-design cases.
-- [ ] **Signed cluster state:** Represent exact signed-equality blocks, feature
+- [x] **Signed cluster state:** Represent exact signed-equality blocks, feature
   membership, aggregate columns, curvatures, and residual state for dense
   Gaussian fits. Normalize signed zero and preserve distinct opposite signs
   and adjacent unequal values. Check coefficient reconstruction, aggregate
   predictions, curvature cross terms, and residual refreshes. Document and
   measure aggregate storage as the cluster count approaches the feature
   count.
-- [ ] **Exact cluster sweeps:** Implement scalar cluster minimization and a
+- [x] **Exact cluster sweeps:** Implement scalar cluster minimization and a
   deterministic sweep visitation policy. Support crossings, exact-tie
   merges, moving zero blocks, and zero aggregate curvature through the
   weighted-median rule. Compare scalar subproblems with independent
   references and complete sweeps with a reference that rebuilds residuals
   and aggregates after each move. Verify objective descent and state
   invariants.
-- [ ] **Hybrid iteration:** Start with a full PG step, then interleave a
+- [x] **Hybrid iteration:** Start with a full PG step, then interleave a
   configurable finite number of cluster sweeps with full PG transitions,
   initially matching the research setting of five sweeps. Use a justified
   curvature bound for the averaged loss. Refresh residuals and rebuild all
@@ -85,7 +85,7 @@ decision and concrete follow-up tasks.
   cases, unchanged sweeps, iteration limits, and agreement with the proximal
   baseline at matched accuracy. Benchmark complete solves, including
   rebuilds and diagnostics, on clustered and weakly fused cases.
-- [ ] **Hybrid normalization and intercepts:** Integrate the dense hybrid with
+- [x] **Hybrid normalization and intercepts:** Integrate the dense hybrid with
   fitted lazy normalization and unpenalized intercepts. Verify agreement
   between explicit and lazy normalization and prediction-preserving
   back-transformation. Document that cluster labels describe

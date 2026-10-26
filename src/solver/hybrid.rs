@@ -1,0 +1,586 @@
+//! Gaussian PG transitions interleaved with exact signed-cluster sweeps.
+
+mod cluster;
+#[cfg(test)]
+mod tests;
+
+use std::marker::PhantomData;
+
+use lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, MatrixShape, RawColumns};
+
+use crate::error::{finite, invalid, unsupported};
+use crate::solver::proximal::{NativeDesign, Solution as ProximalSolution};
+use crate::{
+    BackendError, ClusteredLasso, FitError, Gaussian, HybridFit, Penalty, Problem, ProximalDesign,
+    ProximalPenalty, ProximalVector, RuntimeProblem, Solver, StoppingCriterion, Termination,
+};
+
+use cluster::State;
+
+/// Curvature policy for [`Hybrid`]'s full proximal-gradient transitions.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum HybridStep {
+    /// Validate each transition against the averaged Gaussian quadratic model.
+    /// Accepted curvatures are retained and can only increase.
+    Backtracking {
+        /// Positive curvature seed, or the largest averaged column curvature.
+        /// Include curvature one for an enabled intercept; use one at zero.
+        initial_curvature: Option<f64>,
+        /// Maximum number of curvature doublings after the first trial.
+        max_backtracks: usize,
+    },
+    /// Use a computed Frobenius upper bound, including the intercept column.
+    /// The bound is conservative and requires no spectral estimate or Gram.
+    FixedBound,
+}
+
+impl Default for HybridStep {
+    fn default() -> Self {
+        Self::Backtracking {
+            initial_curvature: None,
+            max_backtracks: 100,
+        }
+    }
+}
+
+/// Dense Gaussian hybrid for uniform signed clustered lasso.
+///
+/// Begin with a full PG transition, then alternate five complete cluster
+/// sweeps with one PG transition. PG can split zero and nonzero blocks; CD
+/// moves entire exact-equality blocks and merges exact ties. Only a fresh
+/// full-space PG mapping, including the intercept derivative, certifies
+/// convergence. Diagnostic calls never advance or alter the iteration.
+///
+/// `V` is the backend's native vector, as for [`crate::ProximalGradient`].
+/// Aggregates use dense storage: `O(n * K + p + n)` for `K` clusters, retaining
+/// buffers at their high-water capacities. Staging a PG rebuild retains both
+/// old and candidate aggregates. No normalized design or Gram is formed.
+///
+/// ```
+/// # #[cfg(feature = "faer_v0_24")] {
+/// use faer::{Col, Mat};
+/// use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem};
+/// let x = Mat::from_fn(4, 2, |i, j| ((i + 2 * j) % 3) as f64);
+/// let fit = Problem::new(&x, Gaussian::new(&[1.0, 2.0, 0.0, 3.0]),
+///     ClusteredLasso::new(0.1, 0.2))
+///     .fit_with(&Hybrid::<Col<f64>>::new())?;
+/// let predictions = fit.predict(&x)?;
+/// # }
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[derive(Clone, Copy, Debug)]
+pub struct Hybrid<V = Vec<f64>> {
+    criterion: StoppingCriterion,
+    max_iterations: usize,
+    cluster_sweeps: usize,
+    check_every: usize,
+    step: HybridStep,
+    vector: PhantomData<V>,
+}
+
+impl<V> Hybrid<V> {
+    /// Use mapping tolerance `1e-6`, 10,000 iterations, five sweeps per PG,
+    /// checks every ten iterations, and backtracking.
+    pub fn new() -> Self {
+        Self {
+            criterion: StoppingCriterion::proximal_gradient_mapping(1e-6),
+            max_iterations: 10_000,
+            cluster_sweeps: 5,
+            check_every: 10,
+            step: HybridStep::default(),
+            vector: PhantomData,
+        }
+    }
+
+    /// Set the absolute infinity-norm full PG mapping tolerance.
+    pub fn tolerance(mut self, absolute: f64) -> Self {
+        self.criterion = StoppingCriterion::proximal_gradient_mapping(absolute);
+        self
+    }
+
+    /// Select a stopping rule. Only absolute PG mapping is supported.
+    pub fn terminate_on(mut self, criterion: StoppingCriterion) -> Self {
+        self.criterion = criterion;
+        self
+    }
+
+    /// Limit the total number of committed PG transitions and complete sweeps.
+    pub fn max_iterations(mut self, count: usize) -> Self {
+        self.max_iterations = count;
+        self
+    }
+
+    /// Set the positive number of complete sweeps between PG transitions.
+    pub fn cluster_sweeps(mut self, count: usize) -> Self {
+        self.cluster_sweeps = count;
+        self
+    }
+
+    /// Check every positive number of iterations, also initially and at budget.
+    pub fn check_every(mut self, count: usize) -> Self {
+        self.check_every = count;
+        self
+    }
+
+    /// Select backtracking or a computed fixed curvature upper bound.
+    pub fn step_policy(mut self, step: HybridStep) -> Self {
+        self.step = step;
+        self
+    }
+
+    fn validate<E>(&self) -> Result<f64, FitError<E>> {
+        let StoppingCriterion::ProximalGradientMapping { absolute } = self.criterion else {
+            return Err(unsupported(
+                "Hybrid",
+                "only full proximal-gradient mapping stopping is implemented",
+                "select StoppingCriterion::proximal_gradient_mapping or Hybrid::tolerance",
+            ));
+        };
+        if !absolute.is_finite() || absolute <= 0.0 {
+            return Err(invalid(
+                "proximal-gradient mapping tolerance must be finite and strictly positive",
+            ));
+        }
+        if self.max_iterations == 0 || self.cluster_sweeps == 0 || self.check_every == 0 {
+            return Err(invalid(
+                "hybrid iteration limit, cluster sweeps, and check interval must be positive",
+            ));
+        }
+        if let HybridStep::Backtracking {
+            initial_curvature: Some(value),
+            ..
+        } = self.step
+        {
+            if !value.is_finite() || value <= 0.0 || !(1.0 / value).is_finite() {
+                return Err(invalid(
+                    "initial curvature and its reciprocal must be finite and positive",
+                ));
+            }
+        }
+        Ok(absolute)
+    }
+}
+
+impl<V> Default for Hybrid<V> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<M, V> Solver<Problem<&M, Gaussian<'_>, ClusteredLasso>> for Hybrid<V>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    V: ProximalVector,
+{
+    type Fit = HybridFit;
+    type Error = FitError<M::Error>;
+
+    fn solve(
+        &self,
+        problem: &Problem<&M, Gaussian<'_>, ClusteredLasso>,
+    ) -> Result<HybridFit, Self::Error> {
+        let threshold = self.validate()?;
+        problem.datafit().validate(problem.design().nrows())?;
+        problem
+            .penalty()
+            .validate_input(&[])
+            .map_err(|e| FitError::from_component(e, 0))?;
+        let prepared = problem.prepare(problem.datafit().fit_intercept)?;
+        let mut design = NativeDesign::<_, V>::new(prepared);
+        let mut work = Workspace::new(design.nrows(), design.ncols());
+        if problem.datafit().fit_intercept {
+            work.intercept = finite(
+                problem
+                    .datafit()
+                    .response
+                    .iter()
+                    .map(|y| y / design.nrows() as f64)
+                    .sum(),
+                "initializing the hybrid intercept",
+                0,
+            )?;
+        }
+        let solution = iterate(
+            &mut design,
+            *problem.datafit(),
+            problem.penalty(),
+            self,
+            threshold,
+            &mut work,
+        )?;
+        HybridFit::from_solution(solution, design.into_preprocessing())
+    }
+}
+
+impl<V> Solver<RuntimeProblem<'_>> for Hybrid<V> {
+    type Fit = HybridFit;
+    type Error = FitError<BackendError>;
+
+    fn solve(&self, _: &RuntimeProblem<'_>) -> Result<HybridFit, Self::Error> {
+        Err(unsupported(
+            "Hybrid",
+            "erased proximal oracles do not expose signed cluster columns",
+            "use a typed Gaussian/ClusteredLasso problem or runtime ProximalGradient",
+        ))
+    }
+}
+
+pub(crate) struct Solution {
+    pub proximal: ProximalSolution,
+    pub labels: Vec<usize>,
+    pub values: Vec<f64>,
+    pub pg_steps: usize,
+    pub coordinate_sweeps: usize,
+    pub diagnostic_checks: usize,
+    pub backtracks: usize,
+    pub step_policy: HybridStep,
+}
+
+struct Workspace {
+    coefficients: Vec<f64>,
+    intercept: f64,
+    residual: Vec<f64>,
+    derivative: Vec<f64>,
+    gradient: Vec<f64>,
+    input: Vec<f64>,
+    candidate: Vec<f64>,
+    direction: Vec<f64>,
+    product: Vec<f64>,
+    state: State,
+    pending: State,
+}
+
+impl Workspace {
+    fn new(n: usize, p: usize) -> Self {
+        Self {
+            coefficients: vec![0.0; p],
+            intercept: 0.0,
+            residual: vec![0.0; n],
+            derivative: vec![0.0; n],
+            gradient: vec![0.0; p],
+            input: vec![0.0; p],
+            candidate: vec![0.0; p],
+            direction: vec![0.0; p],
+            product: vec![0.0; n],
+            state: State::new(n, p),
+            pending: State::new(n, p),
+        }
+    }
+
+    fn prepare<O: ProximalDesign>(
+        &mut self,
+        design: &mut O,
+        datafit: Gaussian<'_>,
+        iteration: usize,
+    ) -> Result<f64, FitError<O::Error>> {
+        design.forward(&self.coefficients, &mut self.residual)?;
+        let n = self.residual.len() as f64;
+        for ((r, d), &y) in self
+            .residual
+            .iter_mut()
+            .zip(&mut self.derivative)
+            .zip(datafit.response)
+        {
+            *r = finite(
+                y - *r - self.intercept,
+                "refreshing hybrid residuals",
+                iteration,
+            )?;
+            *d = -*r / n;
+        }
+        design.transpose(&self.derivative, &mut self.gradient)?;
+        for &g in &self.gradient {
+            finite(g, "computing the full hybrid gradient", iteration)?;
+        }
+        if datafit.fit_intercept {
+            Ok(finite(
+                self.derivative.iter().sum(),
+                "computing the hybrid intercept gradient",
+                iteration,
+            )?)
+        } else {
+            Ok(0.0)
+        }
+    }
+
+    fn trial<E>(
+        &mut self,
+        penalty: &ClusteredLasso,
+        curvature: f64,
+        intercept_gradient: f64,
+        iteration: usize,
+    ) -> Result<f64, FitError<E>> {
+        let step = finite(
+            1.0 / curvature,
+            "computing a hybrid PG step size",
+            iteration,
+        )?;
+        for ((input, &coefficient), &g) in self
+            .input
+            .iter_mut()
+            .zip(&self.coefficients)
+            .zip(&self.gradient)
+        {
+            *input = finite(
+                coefficient - step * g,
+                "taking a full hybrid gradient step",
+                iteration,
+            )?;
+        }
+        penalty
+            .prox(&self.input, step, &mut self.candidate)
+            .map_err(|e| FitError::from_component(e, iteration))?;
+        Ok(finite(
+            self.intercept - step * intercept_gradient,
+            "taking a hybrid intercept step",
+            iteration,
+        )?)
+    }
+
+    fn accepts<O: ProximalDesign>(
+        &mut self,
+        design: &mut O,
+        curvature: f64,
+        candidate_intercept: f64,
+        iteration: usize,
+    ) -> Result<bool, FitError<O::Error>> {
+        let intercept_delta = finite(
+            candidate_intercept - self.intercept,
+            "forming a hybrid displacement",
+            iteration,
+        )?;
+        let mut scale = intercept_delta.abs();
+        for ((d, &next), &current) in self
+            .direction
+            .iter_mut()
+            .zip(&self.candidate)
+            .zip(&self.coefficients)
+        {
+            *d = finite(next - current, "forming a hybrid displacement", iteration)?;
+            scale = scale.max(d.abs());
+        }
+        if scale == 0.0 {
+            return Ok(true);
+        }
+        let intercept = intercept_delta / scale;
+        let mut norm = intercept.abs();
+        for d in &mut self.direction {
+            *d /= scale;
+            norm = norm.hypot(*d);
+        }
+        design.forward(&self.direction, &mut self.product)?;
+        let mut image_norm: f64 = 0.0;
+        for &value in &self.product {
+            image_norm = image_norm.hypot(finite(
+                value + intercept,
+                "checking the hybrid quadratic model",
+                iteration,
+            )?);
+        }
+        Ok(image_norm / (self.product.len() as f64).sqrt()
+            <= curvature.sqrt() * norm * (1.0 + 64.0 * f64::EPSILON))
+    }
+
+    fn diagnostics<O: ProximalDesign>(
+        &mut self,
+        design: &mut O,
+        datafit: Gaussian<'_>,
+        penalty: &ClusteredLasso,
+        curvature: f64,
+        iteration: usize,
+    ) -> Result<(f64, f64), FitError<O::Error>> {
+        let intercept_gradient = self.prepare(design, datafit, iteration)?;
+        self.trial::<O::Error>(penalty, curvature, intercept_gradient, iteration)?;
+        let mut mapping = intercept_gradient.abs();
+        for (&current, &candidate) in self.coefficients.iter().zip(&self.candidate) {
+            mapping = mapping.max(
+                finite(
+                    (current - candidate) * curvature,
+                    "computing the full hybrid mapping",
+                    iteration,
+                )?
+                .abs(),
+            );
+        }
+        let loss = self
+            .residual
+            .iter()
+            .map(|r| r * r / (2.0 * self.residual.len() as f64))
+            .sum::<f64>();
+        let objective = finite(
+            loss + penalty
+                .value(&self.coefficients)
+                .map_err(|e| FitError::from_component(e, iteration))?,
+            "computing the hybrid objective",
+            iteration,
+        )?;
+        Ok((objective, mapping))
+    }
+}
+
+fn initial_curvature<M: RawColumns<f64> + lazymatrix::MatrixErrorType, V: ProximalVector, W>(
+    design: &NativeDesign<M, V>,
+    fit_intercept: bool,
+    options: &Hybrid<W>,
+) -> Result<f64, FitError<M::Error>> {
+    let mut maximum = if fit_intercept { 1.0_f64 } else { 0.0 };
+    let mut trace = maximum;
+    for j in 0..design.matrix().ncols() {
+        let q = finite(
+            design.matrix().column(j).norm_squared() / design.matrix().nrows() as f64,
+            "computing hybrid column curvatures",
+            0,
+        )?;
+        maximum = maximum.max(q);
+        trace = finite(trace + q, "computing a hybrid Frobenius bound", 0)?;
+    }
+    let value = match options.step {
+        HybridStep::FixedBound => {
+            // The trace bounds the largest eigenvalue of the augmented
+            // averaged Hessian; a rounding guard keeps the computed bound conservative.
+            let guard = 1.0
+                + 16.0
+                    * f64::EPSILON
+                    * (design.matrix().nrows() as f64 + design.matrix().ncols() as f64 + 1.0);
+            finite(trace * guard, "rounding the hybrid curvature bound", 0)?
+        }
+        HybridStep::Backtracking {
+            initial_curvature, ..
+        } => initial_curvature.unwrap_or(maximum),
+    };
+    Ok(if value == 0.0 { 1.0 } else { value })
+}
+
+fn iterate<M, V, W>(
+    design: &mut NativeDesign<M, V>,
+    datafit: Gaussian<'_>,
+    penalty: &ClusteredLasso,
+    options: &Hybrid<W>,
+    threshold: f64,
+    work: &mut Workspace,
+) -> Result<Solution, FitError<M::Error>>
+where
+    M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    V: ProximalVector,
+{
+    let mut curvature = initial_curvature(design, datafit.fit_intercept, options)?;
+    let (mut pg_steps, mut coordinate_sweeps, mut diagnostic_checks, mut backtracks) = (0, 0, 0, 0);
+    let mut since_pg = options.cluster_sweeps;
+    for iteration in 0..=options.max_iterations {
+        if iteration % options.check_every == 0 || iteration == options.max_iterations {
+            let (objective, mapping) =
+                work.diagnostics(design, datafit, penalty, curvature, iteration)?;
+            diagnostic_checks += 1;
+            if mapping <= threshold || iteration == options.max_iterations {
+                // A final canonical scan also covers an initially optimal
+                // start and records signed values before back-transformation.
+                work.pending.rebuild(
+                    design.matrix(),
+                    &work.coefficients,
+                    &work.residual,
+                    iteration,
+                )?;
+                return Ok(Solution {
+                    proximal: ProximalSolution {
+                        coefficients: work.coefficients.clone(),
+                        intercept: work.intercept,
+                        termination: if mapping <= threshold {
+                            Termination::Converged
+                        } else {
+                            Termination::IterationLimit
+                        },
+                        iterations: iteration,
+                        objective,
+                        stopping_criterion: options.criterion,
+                        stopping_value: mapping,
+                        stopping_threshold: threshold,
+                        step: 1.0 / curvature,
+                    },
+                    labels: work.pending.labels.clone(),
+                    values: work.pending.blocks.iter().map(|b| b.value).collect(),
+                    pg_steps,
+                    coordinate_sweeps,
+                    diagnostic_checks,
+                    backtracks,
+                    step_policy: options.step,
+                });
+            }
+        }
+        if since_pg == options.cluster_sweeps {
+            let intercept_gradient = work.prepare(design, datafit, iteration)?;
+            let max_backtracks = match options.step {
+                HybridStep::Backtracking { max_backtracks, .. } => max_backtracks,
+                HybridStep::FixedBound => 0,
+            };
+            let mut trial_curvature = curvature;
+            let mut accepted = None;
+            for attempt in 0..=max_backtracks {
+                let trial =
+                    work.trial::<M::Error>(penalty, trial_curvature, intercept_gradient, iteration);
+                match trial {
+                    Ok(candidate_intercept) => {
+                        if matches!(options.step, HybridStep::FixedBound)
+                            || work.accepts(
+                                design,
+                                trial_curvature,
+                                candidate_intercept,
+                                iteration,
+                            )?
+                        {
+                            accepted = Some(candidate_intercept);
+                            break;
+                        }
+                    }
+                    Err(error) => {
+                        if !matches!(error, FitError::NumericalFailure { .. })
+                            || attempt == max_backtracks
+                        {
+                            return Err(error);
+                        }
+                    }
+                }
+                if attempt < max_backtracks {
+                    trial_curvature = finite(
+                        trial_curvature * 2.0,
+                        "increasing hybrid PG curvature",
+                        iteration,
+                    )?;
+                    backtracks += 1;
+                }
+            }
+            let Some(candidate_intercept) = accepted else {
+                return Err(FitError::LineSearchFailure {
+                    iteration,
+                    step: 1.0 / trial_curvature,
+                });
+            };
+            design.forward(&work.candidate, &mut work.product)?;
+            for (r, &y) in work.product.iter_mut().zip(datafit.response) {
+                *r = finite(
+                    y - *r - candidate_intercept,
+                    "refreshing accepted hybrid residuals",
+                    iteration,
+                )?;
+            }
+            work.pending
+                .rebuild(design.matrix(), &work.candidate, &work.product, iteration)?;
+            std::mem::swap(&mut work.coefficients, &mut work.candidate);
+            std::mem::swap(&mut work.state, &mut work.pending);
+            work.intercept = candidate_intercept;
+            curvature = trial_curvature;
+            pg_steps += 1;
+            since_pg = 0;
+        } else {
+            work.state.sweep(
+                &mut work.coefficients,
+                &mut work.intercept,
+                datafit.fit_intercept,
+                penalty,
+                iteration,
+            )?;
+            coordinate_sweeps += 1;
+            since_pg += 1;
+        }
+    }
+    unreachable!("the iteration budget always triggers a final full check")
+}
