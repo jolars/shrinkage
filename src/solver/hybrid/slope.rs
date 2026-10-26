@@ -6,7 +6,8 @@ mod tests;
 use lazymatrix::{LazyMatrix, RawColumns};
 
 use super::Partition;
-use super::cluster::{Sum, curvature, update_intercept};
+use super::cluster::Sum;
+use super::quadratic::Weights;
 use crate::error::finite;
 use crate::{FitError, Slope};
 
@@ -24,6 +25,7 @@ pub(super) struct State {
     labels: Vec<usize>,
     signs: Vec<f64>,
     residual: Vec<f64>,
+    weights: Weights,
     positions: Vec<usize>,
     order: Vec<usize>,
     sweep_order: Vec<usize>,
@@ -99,12 +101,17 @@ impl Partition<Slope> for State {
             labels: vec![usize::MAX; p],
             signs: vec![0.0; p],
             residual: vec![0.0; n],
+            weights: Weights::default(),
             positions: vec![usize::MAX; p],
             order: Vec::with_capacity(p),
             sweep_order: Vec::with_capacity(p),
             others: Vec::with_capacity(p),
             spare: Vec::new(),
         }
+    }
+
+    fn set_weights(&mut self, weights: &[f64]) {
+        self.weights.set(weights);
     }
 
     fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
@@ -154,7 +161,7 @@ impl Partition<Slope> for State {
             }
         }
         for block in &mut self.blocks {
-            block.curvature = curvature(&block.column, iteration)?;
+            block.curvature = self.weights.curvature(&block.column, iteration)?;
         }
         for block in &mut self.spare {
             block.members.clear();
@@ -185,17 +192,9 @@ impl Partition<Slope> for State {
                 continue;
             }
             let block = &self.blocks[index];
-            let n = self.residual.len() as f64;
-            let linear = finite(
-                block
-                    .column
-                    .iter()
-                    .zip(&self.residual)
-                    .map(|(&a, &r)| a * (r + a * block.value) / n)
-                    .sum(),
-                "forming a SLOPE cluster linear term",
-                iteration,
-            )?;
+            let linear =
+                self.weights
+                    .linear(&block.column, &self.residual, block.value, iteration)?;
             self.others.clear();
             self.others.extend(
                 self.blocks
@@ -218,9 +217,8 @@ impl Partition<Slope> for State {
             if delta == 0.0 {
                 continue;
             }
-            for (&a, r) in block.column.iter().zip(&mut self.residual) {
-                *r = finite(*r - a * delta, "updating SLOPE residuals", iteration)?;
-            }
+            self.weights
+                .subtract(&block.column, &mut self.residual, delta, iteration)?;
             for &j in &block.members {
                 coefficients[j] = if value == 0.0 {
                     0.0
@@ -231,7 +229,8 @@ impl Partition<Slope> for State {
             self.move_block(index, value, iteration)?;
         }
         if fit_intercept {
-            update_intercept(&mut self.residual, intercept, iteration)?;
+            self.weights
+                .update_intercept(&mut self.residual, intercept, iteration)?;
         }
         Ok(())
     }
@@ -286,7 +285,7 @@ impl State {
             for (a, b) in moved.column.iter_mut().zip(&other.column) {
                 *a += b;
             }
-            moved.curvature = curvature(&moved.column, iteration)?;
+            moved.curvature = self.weights.curvature(&moved.column, iteration)?;
             other.members.clear();
             other.members.shrink_to(8);
             self.spare.push(other);

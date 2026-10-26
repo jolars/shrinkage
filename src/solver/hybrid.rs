@@ -1,6 +1,8 @@
-//! Gaussian PG transitions interleaved with exact cluster or segment sweeps.
+//! Quadratic PG transitions interleaved with exact cluster or segment sweeps.
 
 mod cluster;
+mod irls;
+mod quadratic;
 mod segment;
 mod slope;
 #[cfg(test)]
@@ -8,13 +10,15 @@ mod tests;
 
 use std::marker::PhantomData;
 
+use quadratic::{Model, Weights};
+
 use lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, MatrixShape, RawColumns};
 
 use crate::error::{finite, invalid, unsupported};
 use crate::solver::proximal::{NativeDesign, Solution as ProximalSolution};
 use crate::{
     BackendError, ChainFusedLasso, ClusteredLasso, FitError, Gaussian, HybridFit, Problem,
-    ProximalDesign, ProximalPenalty, ProximalVector, RuntimeProblem, Slope, Solver,
+    ProximalDesign, ProximalPenalty, ProximalVector, RuntimeProblem, Slope, SmoothDatafit, Solver,
     StoppingCriterion, Termination,
 };
 
@@ -24,6 +28,7 @@ trait HybridPenalty: ProximalPenalty + Sized {
 
 trait Partition<P>: Sized {
     fn new(n: usize, p: usize) -> Self;
+    fn set_weights(&mut self, weights: &[f64]);
     fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
         &mut self,
         matrix: &lazymatrix::LazyMatrix<M>,
@@ -59,11 +64,11 @@ impl HybridPenalty for Slope {
 /// Curvature policy for [`Hybrid`]'s full proximal-gradient transitions.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum HybridStep {
-    /// Validate each transition against the averaged Gaussian quadratic model.
-    /// Accepted curvatures are retained and can only increase.
+    /// Validate each transition against the current quadratic model.
+    /// Accepted curvatures can only increase within a quadratic solve.
     Backtracking {
         /// Positive curvature seed, or the largest averaged column curvature.
-        /// Include curvature one for an enabled intercept; use one at zero.
+        /// Include the intercept curvature when enabled; use one at zero.
         initial_curvature: Option<f64>,
         /// Maximum number of curvature doublings after the first trial.
         max_backtracks: usize,
@@ -82,7 +87,8 @@ impl Default for HybridStep {
     }
 }
 
-/// Dense Gaussian hybrid for clustered lasso, chain fused lasso, and SLOPE.
+/// Dense Gaussian and logistic hybrid for clustered lasso, chain fused lasso,
+/// and SLOPE.
 ///
 /// Begin with a full PG transition, then alternate five complete cluster
 /// sweeps with one PG transition. PG can split zero and nonzero blocks; CD
@@ -92,6 +98,9 @@ impl Default for HybridStep {
 /// Chain blocks are contiguous segments, with zero-weight edges kept as cuts.
 /// SLOPE blocks group exact magnitudes while retaining individual signs. Its
 /// zero block stays fixed during sweeps and can reactivate through full PG.
+/// Binomial problems use IRLS with weighted hybrid inner solves and Armijo
+/// backtracking on the original objective. Only the original-loss mapping
+/// certifies logistic convergence. Predictions remain linear predictors.
 ///
 /// `V` is the backend's native vector, as for [`crate::ProximalGradient`].
 /// Aggregates use dense storage: `O(n * K + p + n)` for `K` clusters, retaining
@@ -114,6 +123,9 @@ impl Default for HybridStep {
 pub struct Hybrid<V = Vec<f64>> {
     criterion: StoppingCriterion,
     max_iterations: usize,
+    max_outer_iterations: usize,
+    max_inner_iterations: usize,
+    max_outer_backtracks: usize,
     cluster_sweeps: usize,
     check_every: usize,
     step: HybridStep,
@@ -122,11 +134,15 @@ pub struct Hybrid<V = Vec<f64>> {
 
 impl<V> Hybrid<V> {
     /// Use mapping tolerance `1e-6`, 10,000 iterations, five sweeps per PG,
-    /// checks every ten iterations, and backtracking.
+    /// checks every ten iterations, and backtracking. Logistic fits allow 100
+    /// outer steps, 1,000 inner iterations per model, and 100 step halvings.
     pub fn new() -> Self {
         Self {
             criterion: StoppingCriterion::proximal_gradient_mapping(1e-6),
             max_iterations: 10_000,
+            max_outer_iterations: 100,
+            max_inner_iterations: 1_000,
+            max_outer_backtracks: 100,
             cluster_sweeps: 5,
             check_every: 10,
             step: HybridStep::default(),
@@ -147,8 +163,30 @@ impl<V> Hybrid<V> {
     }
 
     /// Limit the total number of committed PG transitions and complete sweeps.
+    /// Logistic fits share this budget across all quadratic subproblems.
     pub fn max_iterations(mut self, count: usize) -> Self {
         self.max_iterations = count;
+        self
+    }
+
+    /// Limit accepted logistic IRLS steps (default 100). Gaussian fits ignore it.
+    pub fn max_outer_iterations(mut self, count: usize) -> Self {
+        self.max_outer_iterations = count;
+        self
+    }
+
+    /// Limit PG transitions plus sweeps per logistic quadratic model (default
+    /// 1,000). Inexact models can still provide accepted descent directions.
+    /// Gaussian fits ignore this limit. The total `max_iterations` also applies.
+    pub fn max_inner_iterations(mut self, count: usize) -> Self {
+        self.max_inner_iterations = count;
+        self
+    }
+
+    /// Limit logistic step halvings after the full trial (default 100).
+    /// This differs from curvature backtracking in [`HybridStep`].
+    pub fn max_outer_backtracks(mut self, count: usize) -> Self {
+        self.max_outer_backtracks = count;
         self
     }
 
@@ -303,7 +341,7 @@ impl<V> Solver<RuntimeProblem<'_>> for Hybrid<V> {
         Err(unsupported(
             "Hybrid",
             "erased proximal oracles do not expose cluster or segment columns",
-            "use a typed Gaussian problem with ClusteredLasso, ChainFusedLasso, or Slope, or runtime ProximalGradient",
+            "use a typed Gaussian or Binomial problem with ClusteredLasso, ChainFusedLasso, or Slope, or runtime ProximalGradient",
         ))
     }
 }
@@ -317,6 +355,8 @@ pub(crate) struct Solution {
     pub diagnostic_checks: usize,
     pub backtracks: usize,
     pub step_policy: HybridStep,
+    pub outer_iterations: usize,
+    pub outer_backtracks: usize,
 }
 
 struct Workspace<P: HybridPenalty = ClusteredLasso> {
@@ -331,6 +371,9 @@ struct Workspace<P: HybridPenalty = ClusteredLasso> {
     product: Vec<f64>,
     state: P::State,
     pending: P::State,
+    weights: Weights,
+    loss: f64,
+    reference_curvature: Option<f64>,
 }
 
 impl<P: HybridPenalty> Workspace<P> {
@@ -347,35 +390,31 @@ impl<P: HybridPenalty> Workspace<P> {
             product: vec![0.0; n],
             state: P::State::new(n, p),
             pending: P::State::new(n, p),
+            weights: Weights::default(),
+            loss: 0.0,
+            reference_curvature: None,
         }
     }
 
-    fn prepare<O: ProximalDesign>(
+    fn prepare<'a, O: ProximalDesign>(
         &mut self,
         design: &mut O,
-        datafit: Gaussian<'_>,
+        datafit: impl Into<Model<'a>>,
         iteration: usize,
     ) -> Result<f64, FitError<O::Error>> {
         design.forward(&self.coefficients, &mut self.residual)?;
-        let n = self.residual.len() as f64;
-        for ((r, d), &y) in self
-            .residual
-            .iter_mut()
-            .zip(&mut self.derivative)
-            .zip(datafit.response)
-        {
-            *r = finite(
-                y - *r - self.intercept,
-                "refreshing hybrid residuals",
-                iteration,
-            )?;
-            *d = -*r / n;
-        }
+        let datafit = datafit.into();
+        self.loss = datafit.refresh(
+            &mut self.residual,
+            self.intercept,
+            &mut self.derivative,
+            iteration,
+        )?;
         design.transpose(&self.derivative, &mut self.gradient)?;
         for &g in &self.gradient {
             finite(g, "computing the full hybrid gradient", iteration)?;
         }
-        if datafit.fit_intercept {
+        if datafit.fits_intercept() {
             Ok(finite(
                 self.derivative.iter().sum(),
                 "computing the hybrid intercept gradient",
@@ -452,26 +491,21 @@ impl<P: HybridPenalty> Workspace<P> {
             norm = norm.hypot(*d);
         }
         design.forward(&self.direction, &mut self.product)?;
-        let mut image_norm: f64 = 0.0;
-        for &value in &self.product {
-            image_norm = image_norm.hypot(finite(
-                value + intercept,
-                "checking the hybrid quadratic model",
-                iteration,
-            )?);
-        }
-        Ok(image_norm / (self.product.len() as f64).sqrt()
-            <= curvature.sqrt() * norm * (1.0 + 64.0 * f64::EPSILON))
+        let image_norm = self
+            .weights
+            .image_norm(&self.product, intercept, iteration)?;
+        Ok(image_norm <= curvature.sqrt() * norm * (1.0 + 64.0 * f64::EPSILON))
     }
 
-    fn diagnostics<O: ProximalDesign>(
+    fn diagnostics<'a, O: ProximalDesign>(
         &mut self,
         design: &mut O,
-        datafit: Gaussian<'_>,
+        datafit: impl Into<Model<'a>>,
         penalty: &P,
         curvature: f64,
         iteration: usize,
     ) -> Result<(f64, f64), FitError<O::Error>> {
+        let curvature = self.reference_curvature.unwrap_or(curvature);
         let intercept_gradient = self.prepare(design, datafit, iteration)?;
         self.trial::<O::Error>(penalty, curvature, intercept_gradient, iteration)?;
         let mut mapping = intercept_gradient.abs();
@@ -485,15 +519,11 @@ impl<P: HybridPenalty> Workspace<P> {
                 .abs(),
             );
         }
-        let loss = self
-            .residual
-            .iter()
-            .map(|r| r * r / (2.0 * self.residual.len() as f64))
-            .sum::<f64>();
         let objective = finite(
-            loss + penalty
-                .value(&self.coefficients)
-                .map_err(|e| FitError::from_component(e, iteration))?,
+            self.loss
+                + penalty
+                    .value(&self.coefficients)
+                    .map_err(|e| FitError::from_component(e, iteration))?,
             "computing the hybrid objective",
             iteration,
         )?;
@@ -504,13 +534,18 @@ impl<P: HybridPenalty> Workspace<P> {
 fn initial_curvature<M: RawColumns<f64> + lazymatrix::MatrixErrorType, V: ProximalVector, W>(
     design: &NativeDesign<M, V>,
     fit_intercept: bool,
+    weights: &Weights,
     options: &Hybrid<W>,
 ) -> Result<f64, FitError<M::Error>> {
-    let mut maximum = if fit_intercept { 1.0_f64 } else { 0.0 };
+    let mut maximum = if fit_intercept {
+        weights.intercept_curvature(design.matrix().nrows())
+    } else {
+        0.0
+    };
     let mut trace = maximum;
     for j in 0..design.matrix().ncols() {
         let q = finite(
-            design.matrix().column(j).norm_squared() / design.matrix().nrows() as f64,
+            weights.column_curvature(design.matrix().column(j)),
             "computing hybrid column curvatures",
             0,
         )?;
@@ -534,20 +569,27 @@ fn initial_curvature<M: RawColumns<f64> + lazymatrix::MatrixErrorType, V: Proxim
     Ok(if value == 0.0 { 1.0 } else { value })
 }
 
-fn iterate<M, V, W, P>(
+fn iterate_quadratic<'a, M, V, W, P>(
     design: &mut NativeDesign<M, V>,
-    datafit: Gaussian<'_>,
+    datafit: Model<'a>,
     penalty: &P,
     options: &Hybrid<W>,
     threshold: f64,
     work: &mut Workspace<P>,
-) -> Result<Solution, FitError<M::Error>>
+) -> Result<Progress, FitError<M::Error>>
 where
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
     P: HybridPenalty,
 {
-    let mut curvature = initial_curvature(design, datafit.fit_intercept, options)?;
+    datafit
+        .validate(design.nrows())
+        .map_err(|e| FitError::from_component(e, 0))?;
+    work.weights.set(datafit.weights());
+    work.state.set_weights(datafit.weights());
+    work.pending.set_weights(datafit.weights());
+    let mut curvature =
+        initial_curvature(design, datafit.fits_intercept(), &work.weights, options)?;
     let (mut pg_steps, mut coordinate_sweeps, mut diagnostic_checks, mut backtracks) = (0, 0, 0, 0);
     let mut since_pg = options.cluster_sweeps;
     for iteration in 0..=options.max_iterations {
@@ -565,29 +607,20 @@ where
                     penalty,
                     iteration,
                 )?;
-                return Ok(Solution {
-                    proximal: ProximalSolution {
-                        coefficients: work.coefficients.clone(),
-                        intercept: work.intercept,
-                        termination: if mapping <= threshold {
-                            Termination::Converged
-                        } else {
-                            Termination::IterationLimit
-                        },
-                        iterations: iteration,
-                        objective,
-                        stopping_criterion: options.criterion,
-                        stopping_value: mapping,
-                        stopping_threshold: threshold,
-                        step: 1.0 / curvature,
+                return Ok(Progress {
+                    iterations: iteration,
+                    objective,
+                    mapping,
+                    curvature,
+                    termination: if mapping <= threshold {
+                        Termination::Converged
+                    } else {
+                        Termination::IterationLimit
                     },
-                    labels: work.pending.labels().to_vec(),
-                    values: work.pending.values(),
                     pg_steps,
                     coordinate_sweeps,
                     diagnostic_checks,
                     backtracks,
-                    step_policy: options.step,
                 });
             }
         }
@@ -640,13 +673,12 @@ where
                 });
             };
             design.forward(&work.candidate, &mut work.product)?;
-            for (r, &y) in work.product.iter_mut().zip(datafit.response) {
-                *r = finite(
-                    y - *r - candidate_intercept,
-                    "refreshing accepted hybrid residuals",
-                    iteration,
-                )?;
-            }
+            datafit.refresh(
+                &mut work.product,
+                candidate_intercept,
+                &mut work.derivative,
+                iteration,
+            )?;
             work.pending.rebuild(
                 design.matrix(),
                 &work.candidate,
@@ -664,7 +696,7 @@ where
             work.state.sweep(
                 &mut work.coefficients,
                 &mut work.intercept,
-                datafit.fit_intercept,
+                datafit.fits_intercept(),
                 penalty,
                 iteration,
             )?;
@@ -673,4 +705,67 @@ where
         }
     }
     unreachable!("the iteration budget always triggers a final full check")
+}
+
+struct Progress {
+    iterations: usize,
+    objective: f64,
+    mapping: f64,
+    curvature: f64,
+    termination: Termination,
+    pg_steps: usize,
+    coordinate_sweeps: usize,
+    diagnostic_checks: usize,
+    backtracks: usize,
+}
+
+impl Progress {
+    fn finish<P: HybridPenalty, V>(
+        self,
+        work: &Workspace<P>,
+        options: &Hybrid<V>,
+        threshold: f64,
+    ) -> Solution {
+        Solution {
+            proximal: ProximalSolution {
+                coefficients: work.coefficients.clone(),
+                intercept: work.intercept,
+                termination: self.termination,
+                iterations: self.iterations,
+                objective: self.objective,
+                stopping_criterion: options.criterion,
+                stopping_value: self.mapping,
+                stopping_threshold: threshold,
+                step: 1.0 / self.curvature,
+            },
+            labels: work.pending.labels().to_vec(),
+            values: work.pending.values(),
+            pg_steps: self.pg_steps,
+            coordinate_sweeps: self.coordinate_sweeps,
+            diagnostic_checks: self.diagnostic_checks,
+            backtracks: self.backtracks,
+            step_policy: options.step,
+            outer_iterations: 0,
+            outer_backtracks: 0,
+        }
+    }
+}
+
+fn iterate<M, V, W, P>(
+    design: &mut NativeDesign<M, V>,
+    datafit: Gaussian<'_>,
+    penalty: &P,
+    options: &Hybrid<W>,
+    threshold: f64,
+    work: &mut Workspace<P>,
+) -> Result<Solution, FitError<M::Error>>
+where
+    M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    V: ProximalVector,
+    P: HybridPenalty,
+{
+    Ok(
+        iterate_quadratic(design, datafit.into(), penalty, options, threshold, work)?
+            .finish(work, options, threshold),
+    )
 }

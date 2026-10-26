@@ -34,9 +34,9 @@ registries.
 The Rust API supports regularization paths and penalties including lasso, ridge,
 elastic net, [SLOPE](slope.md), disjoint Group LASSO, [clustered
 lasso](clustered-lasso.md), and [chain fused lasso](chain-fused-lasso.md). SLOPE
-and both fusion penalties have dense Gaussian hybrid solvers. See the [Rust API
-reference](https://shrinkage.cc/packages/rust/) for supported combinations and
-the [statistical
+and both fusion penalties have dense Gaussian and logistic hybrid solvers. See
+the [Rust API reference](https://shrinkage.cc/packages/rust/) for supported
+combinations and the [statistical
 conventions](https://github.com/jolars/shrinkage/blob/main/DESIGN.md) for loss
 normalization, penalty scales, and intercept handling.
 

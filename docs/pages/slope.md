@@ -128,7 +128,12 @@ These measurements include solver workspaces and returned results, excluding the
 previously constructed inputs. The warmed proximal checks allocated no
 additional blocks.
 
-Typed Gaussian fits support the hybrid through compatible matrix adapters.
+Typed Gaussian and binomial fits support the hybrid through compatible matrix
+adapters. Replace `Gaussian::new(&y)` with `Binomial::new(&y)` for logistic
+regression through hybrid IRLS. See the [logistic fitting
+controls](clustered-lasso.md) for budgets, diagnostics, and benchmarks.
+Predictions remain logits.
+
 Runtime problems support SLOPE through proximal gradient. Python exposure,
-hybrid paths, logistic IRLS, screening, and sparse-specific optimization follow
-later roadmap milestones.
+hybrid paths, screening, and sparse-specific optimization follow later roadmap
+milestones.

@@ -2,6 +2,7 @@
 
 use lazymatrix::{LazyMatrix, RawColumns};
 
+use super::quadratic::Weights;
 use crate::error::finite;
 use crate::{ClusteredLasso, FitError};
 
@@ -36,27 +37,6 @@ impl Sum {
     }
 }
 
-pub(super) fn update_intercept<E>(
-    residual: &mut [f64],
-    intercept: &mut f64,
-    iteration: usize,
-) -> Result<(), FitError<E>> {
-    let delta = finite(
-        residual.iter().map(|r| r / residual.len() as f64).sum(),
-        "minimizing the hybrid intercept",
-        iteration,
-    )?;
-    *intercept = finite(
-        *intercept + delta,
-        "updating the hybrid intercept",
-        iteration,
-    )?;
-    for r in residual {
-        *r = finite(*r - delta, "updating intercept residuals", iteration)?;
-    }
-    Ok(())
-}
-
 fn numerical<E>(operation: &'static str, iteration: usize) -> FitError<E> {
     FitError::NumericalFailure {
         operation,
@@ -64,27 +44,13 @@ fn numerical<E>(operation: &'static str, iteration: usize) -> FitError<E> {
     }
 }
 
-pub(super) fn curvature<E>(column: &[f64], iteration: usize) -> Result<f64, FitError<E>> {
-    for &value in column {
-        finite(value, "forming a cluster aggregate", iteration)?;
-    }
-    let q = finite(
-        column.iter().map(|x| x * x / column.len() as f64).sum(),
-        "computing averaged cluster curvature",
-        iteration,
-    )?;
-    if q == 0.0 && column.iter().any(|&x| x != 0.0) {
-        return Err(numerical(
-            "computing cluster curvature without underflow",
-            iteration,
-        ));
-    }
-    Ok(q)
-}
-
 impl super::Partition<ClusteredLasso> for State {
     fn new(n: usize, p: usize) -> Self {
         Self::new(n, p)
+    }
+
+    fn set_weights(&mut self, weights: &[f64]) {
+        self.weights.set(weights);
     }
 
     fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
@@ -200,6 +166,7 @@ pub(super) struct State {
     pub(super) blocks: Vec<Block>,
     pub(super) labels: Vec<usize>,
     pub(super) residual: Vec<f64>,
+    weights: Weights,
     positions: Vec<usize>,
     order: Vec<usize>,
     sweep_order: Vec<usize>,
@@ -213,6 +180,7 @@ impl State {
             blocks: Vec::new(),
             labels: vec![usize::MAX; p],
             residual: vec![0.0; n],
+            weights: Weights::default(),
             positions: vec![usize::MAX; p],
             order: Vec::with_capacity(p),
             sweep_order: Vec::with_capacity(p),
@@ -273,7 +241,7 @@ impl State {
                 .scaled_add_to(1.0, &mut self.blocks[self.labels[j]].column);
         }
         for block in &mut self.blocks {
-            block.curvature = curvature(&block.column, iteration)?;
+            block.curvature = self.weights.curvature(&block.column, iteration)?;
         }
         for block in &mut self.spare {
             block.members.clear();
@@ -302,17 +270,9 @@ impl State {
                 continue;
             }
             let block = &self.blocks[index];
-            let n = self.residual.len() as f64;
-            let b = finite(
-                block
-                    .column
-                    .iter()
-                    .zip(&self.residual)
-                    .map(|(&a, &r)| a * (r + a * block.value) / n)
-                    .sum(),
-                "forming a cluster linear term",
-                iteration,
-            )?;
+            let b = self
+                .weights
+                .linear(&block.column, &self.residual, block.value, iteration)?;
             self.knots.clear();
             let mass = block.members.len() as f64;
             let mut inserted_zero = false;
@@ -343,16 +303,16 @@ impl State {
             if delta == 0.0 {
                 continue;
             }
-            for (&a, r) in block.column.iter().zip(&mut self.residual) {
-                *r = finite(*r - a * delta, "updating cluster residuals", iteration)?;
-            }
+            self.weights
+                .subtract(&block.column, &mut self.residual, delta, iteration)?;
             for &j in &block.members {
                 coefficients[j] = value;
             }
             self.move_block(index, value, iteration)?;
         }
         if fit_intercept {
-            update_intercept(&mut self.residual, intercept, iteration)?;
+            self.weights
+                .update_intercept(&mut self.residual, intercept, iteration)?;
         }
         Ok(())
     }
@@ -381,7 +341,7 @@ impl State {
             for (a, b) in moved.column.iter_mut().zip(&other.column) {
                 *a += b;
             }
-            moved.curvature = curvature(&moved.column, iteration)?;
+            moved.curvature = self.weights.curvature(&moved.column, iteration)?;
             other.members.clear();
             other.members.shrink_to(8);
             self.spare.push(other);

@@ -6,7 +6,8 @@ mod tests;
 use lazymatrix::{LazyMatrix, RawColumns};
 
 use super::Partition;
-use super::cluster::{curvature, scalar_minimum, update_intercept};
+use super::cluster::scalar_minimum;
+use super::quadratic::Weights;
 use crate::error::finite;
 use crate::{ChainFusedLasso, FitError};
 
@@ -26,6 +27,7 @@ pub(super) struct State {
     segments: Vec<Segment>,
     labels: Vec<usize>,
     residual: Vec<f64>,
+    weights: Weights,
     positions: Vec<usize>,
     sweep_order: Vec<usize>,
     knots: Vec<(f64, f64)>,
@@ -38,11 +40,16 @@ impl Partition<ChainFusedLasso> for State {
             segments: Vec::new(),
             labels: vec![usize::MAX; p],
             residual: vec![0.0; n],
+            weights: Weights::default(),
             positions: vec![usize::MAX; p],
             sweep_order: Vec::with_capacity(p),
             knots: Vec::with_capacity(3),
             spare: Vec::new(),
         }
+    }
+
+    fn set_weights(&mut self, weights: &[f64]) {
+        self.weights.set(weights);
     }
 
     fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
@@ -88,7 +95,7 @@ impl Partition<ChainFusedLasso> for State {
             matrix.column(j).scaled_add_to(1.0, &mut segment.column);
         }
         for segment in &mut self.segments {
-            segment.curvature = curvature(&segment.column, iteration)?;
+            segment.curvature = self.weights.curvature(&segment.column, iteration)?;
         }
         self.residual.copy_from_slice(residual);
         Ok(())
@@ -111,17 +118,9 @@ impl Partition<ChainFusedLasso> for State {
                 continue;
             }
             let segment = &self.segments[index];
-            let n = self.residual.len() as f64;
-            let linear = finite(
-                segment
-                    .column
-                    .iter()
-                    .zip(&self.residual)
-                    .map(|(&a, &r)| a * (r + a * segment.value) / n)
-                    .sum(),
-                "forming a segment linear term",
-                iteration,
-            )?;
+            let linear =
+                self.weights
+                    .linear(&segment.column, &self.residual, segment.value, iteration)?;
             self.knots.clear();
             self.knots
                 .push((0.0, penalty.l1() * (segment.end - segment.start) as f64));
@@ -151,14 +150,14 @@ impl Partition<ChainFusedLasso> for State {
             if delta == 0.0 {
                 continue;
             }
-            for (&a, r) in segment.column.iter().zip(&mut self.residual) {
-                *r = finite(*r - a * delta, "updating segment residuals", iteration)?;
-            }
+            self.weights
+                .subtract(&segment.column, &mut self.residual, delta, iteration)?;
             coefficients[segment.start..segment.end].fill(value);
             self.move_segment(index, value, iteration)?;
         }
         if fit_intercept {
-            update_intercept(&mut self.residual, intercept, iteration)?;
+            self.weights
+                .update_intercept(&mut self.residual, intercept, iteration)?;
         }
         Ok(())
     }
@@ -204,7 +203,7 @@ impl State {
             moved.right_weight = other.right_weight;
             self.absorb(&mut moved, other);
         }
-        moved.curvature = curvature(&moved.column, iteration)?;
+        moved.curvature = self.weights.curvature(&moved.column, iteration)?;
         self.segments.insert(index, moved);
         for (label, segment) in self.segments.iter().enumerate().skip(index) {
             self.positions[segment.id] = label;

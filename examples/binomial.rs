@@ -1,7 +1,10 @@
 //! Binomial lasso fitting, probability predictions, and automatic paths.
 
 use faer::Mat;
-use shrinkage::{Binomial, Irls, L1, PathOptions, Problem, Termination};
+use shrinkage::{
+    Binomial, ChainFusedLasso, ClusteredLasso, Hybrid, Irls, L1, PathOptions, Problem, Slope,
+    Termination,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(8, 2, |i, j| {
@@ -44,6 +47,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (&lambda, fit) in path.lambdas().unwrap().iter().zip(path.fits()) {
         assert_eq!(fit.termination(), Termination::Converged);
         println!("lambda={lambda:.5}: {:?}", fit.coefficients());
+    }
+    let hybrid = Hybrid::<faer::Col<f64>>::new().tolerance(1e-9);
+    for fit in [
+        Problem::new(&x, Binomial::new(&y), ClusteredLasso::new(0.02, 0.03)).fit_with(&hybrid)?,
+        Problem::new(&x, Binomial::new(&y), ChainFusedLasso::new(0.02, 0.03)).fit_with(&hybrid)?,
+        Problem::new(&x, Binomial::new(&y), Slope::new(vec![0.04, 0.02])).fit_with(&hybrid)?,
+    ] {
+        assert_eq!(fit.termination(), Termination::Converged);
+        println!(
+            "Hybrid: outer={}, PG={}, sweeps={}, logistic mapping={}",
+            fit.outer_iterations(),
+            fit.pg_steps(),
+            fit.coordinate_sweeps(),
+            fit.stopping_value()
+        );
     }
     Ok(())
 }

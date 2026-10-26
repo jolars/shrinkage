@@ -2,7 +2,7 @@ use lazymatrix::RawColumns;
 
 use crate::{FitError, HybridStep, Preprocessing, ProximalFit, StoppingCriterion, Termination};
 
-/// Original-scale Gaussian parameters and full-space hybrid diagnostics.
+/// Original-scale parameters and full-space hybrid diagnostics.
 ///
 /// Cluster labels and values refer to optimization-scale coefficients.
 /// Clustered lasso orders blocks by value; chain fused lasso orders contiguous
@@ -24,6 +24,8 @@ pub struct HybridFit {
     diagnostic_checks: usize,
     backtracks: usize,
     step_policy: HybridStep,
+    outer_iterations: usize,
+    outer_backtracks: usize,
 }
 
 impl HybridFit {
@@ -47,7 +49,7 @@ impl HybridFit {
     pub fn iterations(&self) -> usize {
         self.fit.iterations()
     }
-    /// Averaged squared loss plus the complete optimization-scale penalty.
+    /// Original averaged loss plus the complete optimization-scale penalty.
     pub fn objective(&self) -> f64 {
         self.fit.objective()
     }
@@ -56,7 +58,8 @@ impl HybridFit {
         self.fit.stopping_criterion()
     }
     /// Full mapping infinity norm, including the free-intercept derivative,
-    /// evaluated at the returned parameters using [`Self::step_size`].
+    /// evaluated for the original loss at the returned parameters using
+    /// [`Self::step_size`]. Logistic surrogate checks never certify convergence.
     pub fn stopping_value(&self) -> f64 {
         self.fit.stopping_value()
     }
@@ -64,7 +67,8 @@ impl HybridFit {
     pub fn stopping_threshold(&self) -> f64 {
         self.fit.stopping_threshold()
     }
-    /// Reciprocal of the final curvature, also used by final diagnostics.
+    /// Step used by final full-space diagnostics. Gaussian fits use the final
+    /// PG curvature; logistic fits use a fixed global logistic curvature bound.
     pub fn step_size(&self) -> f64 {
         self.fit.step_size()
     }
@@ -80,13 +84,23 @@ impl HybridFit {
     pub fn coordinate_sweeps(&self) -> usize {
         self.coordinate_sweeps
     }
-    /// Number of independently refreshed full-space diagnostic checks.
+    /// Number of independently refreshed full-space inner diagnostic checks.
+    /// Logistic fits count quadratic checks here; original-loss checks also run
+    /// initially and after every accepted outer step.
     pub fn diagnostic_checks(&self) -> usize {
         self.diagnostic_checks
     }
     /// Number of rejected trials followed by a curvature doubling.
     pub fn backtracks(&self) -> usize {
         self.backtracks
+    }
+    /// Accepted logistic IRLS steps. Zero for Gaussian fits.
+    pub fn outer_iterations(&self) -> usize {
+        self.outer_iterations
+    }
+    /// Rejected logistic trials followed by a step halving. Zero for Gaussian.
+    pub fn outer_backtracks(&self) -> usize {
+        self.outer_backtracks
     }
     /// Cluster label of each feature, indexing [`Self::cluster_values`].
     pub fn cluster_labels(&self) -> &[usize] {
@@ -110,7 +124,8 @@ impl HybridFit {
         &self.signs
     }
 
-    /// Predict with original-scale parameters without fitting preprocessing.
+    /// Predict linear predictors with original-scale parameters without fitting
+    /// preprocessing. Binomial predictions are logits.
     ///
     /// # Errors
     /// Reject mismatched dimensions, invalid entries, or nonfinite arithmetic.
@@ -138,6 +153,8 @@ impl HybridFit {
             diagnostic_checks: solution.diagnostic_checks,
             backtracks: solution.backtracks,
             step_policy: solution.step_policy,
+            outer_iterations: solution.outer_iterations,
+            outer_backtracks: solution.outer_backtracks,
         })
     }
 }

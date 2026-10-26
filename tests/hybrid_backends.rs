@@ -159,6 +159,57 @@ mod dense {
             }
         }
     }
+
+    pub fn verify_logistic<M, V>(x: &M)
+    where
+        M: shrinkage::lazymatrix::RawColumns<f64>
+            + shrinkage::lazymatrix::ColumnStats<f64>
+            + shrinkage::lazymatrix::MatVecInto<V>
+            + shrinkage::lazymatrix::MatTransposeVecInto<V>,
+        V: shrinkage::ProximalVector,
+    {
+        use shrinkage::{Binomial, ChainFusedLasso, Normalization, ProximalGradient, Slope};
+        let y = [0.0, 0.8, 1.0, 0.2, 0.9];
+        for intercept in [false, true] {
+            for normalization in [
+                Normalization::None,
+                Normalization::Standardize,
+                Normalization::MinMax,
+            ] {
+                macro_rules! compare {
+                    ($penalty:expr) => {{
+                        let problem =
+                            Problem::new(x, Binomial::new(&y).fit_intercept(intercept), $penalty)
+                                .normalize(normalization);
+                        let fit = problem
+                            .fit_with(&Hybrid::<V>::new().tolerance(1e-9))
+                            .unwrap();
+                        let reference = problem
+                            .fit_with(
+                                &ProximalGradient::<V>::new()
+                                    .tolerance(1e-10)
+                                    .max_iterations(100_000),
+                            )
+                            .unwrap();
+                        assert_eq!(fit.termination(), Termination::Converged);
+                        assert_eq!(reference.termination(), Termination::Converged);
+                        assert!((fit.objective() - reference.objective()).abs() < 1e-9);
+                        for (a, b) in fit
+                            .predict(x)
+                            .unwrap()
+                            .into_iter()
+                            .zip(reference.predict(x).unwrap())
+                        {
+                            assert!((a - b).abs() < 2e-6);
+                        }
+                    }};
+                }
+                compare!(ClusteredLasso::new(0.03, 0.02));
+                compare!(ChainFusedLasso::new(0.03, 0.02).with_weights(vec![0.0, 2.0]));
+                compare!(Slope::new(vec![0.04, 0.03, 0.0]));
+            }
+        }
+    }
 }
 
 #[cfg(feature = "faer_v0_24")]
@@ -177,6 +228,7 @@ fn faer_dense() {
     );
     dense::verify_chain::<_, faer::Col<f64>>(&x);
     dense::verify_slope::<_, faer::Col<f64>>(&x);
+    dense::verify_logistic::<_, faer::Col<f64>>(&x);
 }
 
 #[cfg(feature = "nalgebra_v0_34")]
@@ -195,6 +247,7 @@ fn nalgebra_dense() {
     );
     dense::verify_chain::<_, nalgebra::DVector<f64>>(&x);
     dense::verify_slope::<_, nalgebra::DVector<f64>>(&x);
+    dense::verify_logistic::<_, nalgebra::DVector<f64>>(&x);
 }
 
 #[cfg(feature = "ndarray_v0_17")]
@@ -215,6 +268,7 @@ fn ndarray_strided_view() {
     );
     dense::verify_chain::<_, ndarray::Array1<f64>>(&x);
     dense::verify_slope::<_, ndarray::Array1<f64>>(&x);
+    dense::verify_logistic::<_, ndarray::Array1<f64>>(&x);
 }
 
 #[cfg(feature = "faer_v0_24")]

@@ -192,6 +192,8 @@ fn typed_runtime_and_hybrid_fits_match_independent_qp_fixtures() {
             );
             assert!(fit.stopping_value() <= fit.stopping_threshold());
             assert_eq!(fit.iterations(), fit.pg_steps() + fit.coordinate_sweeps());
+            assert_eq!(fit.outer_iterations(), 0);
+            assert_eq!(fit.outer_backtracks(), 0);
             for (actual, &expected) in fit.predict(&x).unwrap().iter().zip(&expected) {
                 close(*actual, expected, 5e-6);
             }

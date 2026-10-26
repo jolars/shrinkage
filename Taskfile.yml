@@ -69,6 +69,16 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench irls_heap
 
+  bench:hybrid:irls:
+    desc: Compare complete logistic hybrid IRLS and proximal fits
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench hybrid_irls
+
+  bench:hybrid:irls:heap:
+    desc: Check logistic weighted aggregate storage across quadratic models
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench hybrid_irls_heap
+
   bench:proximal:
     desc: Benchmark proximal vector and multivariate fits with dense and CSC input
     cmds:
@@ -145,6 +155,7 @@ tasks:
       - task: example
       - task: bench:heap
       - task: bench:irls:heap
+      - task: bench:hybrid:irls:heap
       - task: bench:proximal:heap
       - task: bench:clustered:heap
       - task: bench:chain:heap

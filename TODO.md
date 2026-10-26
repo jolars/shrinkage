@@ -144,13 +144,13 @@ decision and concrete follow-up tasks.
 
 ### 4. Logistic regression through IRLS
 
-- [ ] **Hybrid quadratic subproblems:** Extend the existing curvature and IRLS
+- [x] **Hybrid quadratic subproblems:** Extend the existing curvature and IRLS
   capabilities to weighted Gaussian subproblems for clustered lasso, chain
   fused lasso, and SLOPE. Provide compatible proximal and hybrid inner
   solvers with reusable weighted summaries, aggregates, and residual
   storage. Test weighted scalar updates, zero weights and curvatures, and
   agreement with independently solved quadratic subproblems.
-- [ ] **Logistic hybrid IRLS:** Integrate the three penalties with stable
+- [x] **Logistic hybrid IRLS:** Integrate the three penalties with stable
   binomial weights, an unpenalized intercept, controlled inner accuracy, and
   globalization against the original penalized logistic objective. Rebuild
   curvature-dependent state as weights change, and certify convergence using

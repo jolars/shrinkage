@@ -7,15 +7,16 @@ lasso, and multivariate Gaussian fitting with explicit penalty axes,
 regularization paths, and lasso path screening are implemented. Dense Gaussian
 clustered lasso also has a hybrid of full proximal-gradient steps and exact
 signed-cluster coordinate sweeps; weighted chain fused lasso and SLOPE share its
-driver with contiguous segment and signed magnitude-cluster sweeps. This
-document records commitments and an implementation sequence; illustrative API
-names are not frozen interfaces.
+driver with contiguous segment and signed magnitude-cluster sweeps. This hybrid
+also fits binomial models through weighted IRLS subproblems. This document
+records commitments and an implementation sequence; illustrative API names are
+not frozen interfaces.
 
 The next goal is an MVP that the clustered-lasso paper can use and cite through
 a public Rust and Python release. The uniform clustered-lasso penalty and dense
 Gaussian hybrid from `~/research/clustlasso-cd` are available in Rust.
-[TODO.md](TODO.md) tracks hybrid paths, logistic IRLS, screening,
-cross-validation, Python API, and release acceptance checks.
+[TODO.md](TODO.md) tracks hybrid paths, screening, cross-validation, Python API,
+and release acceptance checks.
 
 ## 1. Purpose
 
@@ -575,8 +576,7 @@ sweeps, diagnostic checks, and backtracks. Finite budget exhaustion reports
 `IterationLimit`. There is no implemented clustered-lasso duality gap. Typed
 Gaussian problems use the dense hybrid; runtime proximal oracles support the
 penalty through PG and reject hybrid selection before preparation. Hybrid paths,
-logistic subproblems, screening, and sparse-specific extensions remain later
-milestones.
+screening, and sparse-specific extensions remain later milestones.
 
 Dense aggregate storage is `O(nK + p + n)` per state. Staging retains both
 committed and candidate aggregates, with buffers kept at their high-water
@@ -688,9 +688,8 @@ includes nonuniform weights, a cut, normalization, and a free intercept.
 `task bench:chain` compares proximal operations and complete solves at matched
 accuracy; bounded runs include setup, first PG, and subsequent rebuild work.
 `task bench:chain:heap` checks warmed scratch reuse and complete-solve storage
-for strongly fused and nearly singleton partitions. Hybrid paths, logistic IRLS,
-screening, Python exposure, and sparse-specific optimizations remain later
-milestones.
+for strongly fused and nearly singleton partitions. Hybrid paths, screening,
+Python exposure, and sparse-specific optimizations remain later milestones.
 
 ## 7. Specialized SLOPE support
 
@@ -809,8 +808,66 @@ complete PG and hybrid solves on constructed distinct, tied, and highly
 clustered optima at matched accuracy. Bounded runs include setup, the first PG,
 and a subsequent rebuild. `task bench:slope:heap` measures warmed proximal
 allocations and complete-solve peak storage at low, high, and changing block
-counts. Hybrid paths, weighted IRLS subproblems, screening, Python exposure, and
-sparse-specific optimization remain later milestones.
+counts. Hybrid paths, screening, Python exposure, and sparse-specific
+optimization remain later milestones.
+
+### Logistic hybrid IRLS
+
+Typed `Binomial` problems support the same `Hybrid<V>` and `HybridFit` as
+Gaussian problems for all three coupled penalties. The original objective is the
+averaged binomial negative log likelihood plus the complete penalty on
+optimization-scale coefficients. The intercept remains unpenalized, and
+predictions remain logits. Preprocessing is fitted once and reused throughout.
+
+At each accepted outer point, the binomial gradient `g` and diagonal predictor
+Hessian `H` define the quadratic model
+`g' d_eta + d_eta' H d_eta / 2 + R(theta + d_theta)`. Stable binomial tails and
+the model-only floor `1e-12 / nobs` match coordinate IRLS. Internally, weights
+are `w_i = nobs * H_i` and residuals are `r_i = -nobs * (g_i + H_i * d_eta_i)`.
+This representation never divides by a row weight. For an aggregate `a` at level
+`c`, its scalar curvature is `sum(w_i * a_i²) / nobs`, and its linear term is
+`sum(a_i * (r_i + w_i * a_i * c)) / nobs`. A move by `delta` subtracts
+`w_i * a_i * delta` from each residual. The free-intercept update is
+`sum(r_i) / sum(w_i)`. Zero-curvature restrictions retain their penalty-only
+minimizers; an all-zero weighted intercept with zero gradient remains fixed.
+
+The private quadratic datafit also supports proximal gradient. Hybrid inner
+solves reuse summaries, residuals, and dense aggregate buffers and start with a
+full PG transition. Every weight change refreshes curvatures, weighted column
+summaries, and the PG curvature policy. Merges recompute curvature from the
+combined aggregate, including cross terms. Gaussian kernels retain their
+unweighted arithmetic. Storage remains `O(nK + p + n)`, with committed and
+staged aggregates retaining their high-water capacities.
+
+The original-loss diagnostic step is fixed at the reciprocal of a guarded
+Frobenius bound for `X_aug' X_aug / (4n)`, including the intercept column when
+enabled. Both outer and inner mappings use this step, so inner accuracy has a
+consistent scale. Each inner target is `0.1 * max(outer_mapping, tolerance)`. An
+inner iteration limit can supply a direction, but that direction must decrease
+the complete quadratic model. Original-objective Armijo backtracking uses the
+coordinate IRLS convention: constant `1e-4`, step halvings, and the directional
+upper bound `-d_eta' H d_eta / 2`. Numerical and line-search failures are
+errors. Damped steps can change ties, signs, and ordering, so the next inner
+solve and final diagnostics rebuild partitions from the accepted coefficients.
+
+`max_iterations` retains its 10,000-step default and counts PG transitions plus
+complete sweeps across all subproblems. Logistic controls add 100 accepted outer
+steps, 1,000 inner iterations per model, and 100 outer step halvings by default.
+`HybridFit::outer_iterations()` and `outer_backtracks()` report outer work; the
+existing iteration, PG, sweep, curvature-backtrack, and diagnostic counters
+report inner work. Gaussian fits report zero outer work. Original-loss checks
+run initially, after each accepted outer step, and before every returned limit
+result. Only their full mapping, including the intercept derivative, certifies
+convergence. For separated data, a finite tolerance certifies approximate
+stationarity rather than existence of a finite exact optimum.
+
+Independent weighted row-scaling references validate the quadratic models,
+including zero weights and free intercepts. Logistic tests compare all three
+penalties with original-loss PG and independently recompute final objectives and
+mappings. They also cover damping, limits, normalization, and separated data.
+`task bench:hybrid:irls` measures complete solves and bounded setup/rebuild
+work; `task bench:hybrid:irls:heap` checks allocation and peak-storage behavior
+across repeated quadratic models. Logistic hybrid paths remain a later step.
 
 ## 8. Statistical semantics
 

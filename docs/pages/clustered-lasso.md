@@ -77,7 +77,7 @@ The supplied curvature is a positive seed, and accepted curvature can increase.
 
 Use `ProximalGradient::<Col<f64>>::new()` with the same problem for the proximal
 baseline. The penalty also composes with runtime PG through `RuntimeProblem`.
-The hybrid currently uses typed Gaussian problems and dense aggregate storage.
+The hybrid uses typed Gaussian or binomial problems and dense aggregate storage.
 Its result reports `pg_steps()`, `coordinate_sweeps()`, `diagnostic_checks()`,
 `backtracks()`, and the final objective, step, and mapping. Inspect termination:
 an iteration limit returns finite parameters without certifying convergence.
@@ -127,5 +127,38 @@ devenv shell -- task bench:clustered
 devenv shell -- task bench:clustered:heap
 ```
 
-Python exposure, hybrid paths, logistic IRLS, screening, and sparse-specific
-extensions follow in later roadmap milestones.
+## Logistic regression
+
+Use `Binomial::new(&y)` with the same `Hybrid<V>` solver to fit logistic
+regression. Clustered lasso, chain fused lasso, and SLOPE all use weighted
+hybrid subproblems inside IRLS. For example:
+
+```rust
+use faer::{Col, Mat};
+use shrinkage::{Binomial, ClusteredLasso, Hybrid, Problem, Termination};
+
+# fn main() -> Result<(), Box<dyn std::error::Error>> {
+let x = Mat::from_fn(8, 2, |i, j| ((i + j) % 3) as f64);
+let y = [0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0];
+let fit = Problem::new(&x, Binomial::new(&y), ClusteredLasso::new(0.02, 0.03))
+    .fit_with(&Hybrid::<Col<f64>>::new())?;
+assert_eq!(fit.termination(), Termination::Converged);
+let logits = fit.predict(&x)?;
+# Ok(())
+# }
+```
+
+The default limits are 100 accepted IRLS steps, 1,000 inner PG transitions or
+sweeps per quadratic model, and 10,000 inner iterations across the whole fit.
+Configure them with `max_outer_iterations`, `max_inner_iterations`, and
+`max_iterations`. `max_outer_backtracks` limits logistic step halvings, while
+`HybridStep` controls quadratic PG curvature. The final objective and mapping
+use the original logistic loss. Check `termination()` before interpreting a fit
+as converged. `outer_iterations()` and `outer_backtracks()` report outer work;
+the existing PG and sweep counters report inner work. Predictions are logits.
+
+Run `task bench:hybrid:irls` for complete-fit comparisons with PG and
+`task bench:hybrid:irls:heap` for weighted workspace storage checks.
+
+Python exposure, hybrid paths, screening, and sparse-specific extensions follow
+in later roadmap milestones.

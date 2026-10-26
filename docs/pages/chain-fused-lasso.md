@@ -74,10 +74,10 @@ convergence. No chain-specific duality gap is implemented.
 Use `ProximalGradient::<Col<f64>>::new()` on the same problem for the reference
 solver. The complete prox applies weighted taut strings followed by uniform L1
 soft-thresholding in `O(p)` time with reusable `O(p)` scratch. Runtime problems
-support PG; hybrid fits use typed Gaussian problems and dense segment
-aggregates. Each retained aggregate set costs approximately `8 * n * K` bytes
-for `K` segments, and PG transitions stage a second set. Buffers retain their
-high-water capacities.
+support PG; hybrid fits use typed Gaussian or binomial problems and dense
+segment aggregates. Each retained aggregate set costs approximately `8 * n * K`
+bytes for `K` segments, and PG transitions stage a second set. Buffers retain
+their high-water capacities.
 
 ## Reproduce validation
 
@@ -96,6 +96,10 @@ Timing benchmarks include complete solves at matched accuracy and bounded runs
 covering setup, the first PG step, and a subsequent rebuild after five sweeps.
 Those bounded timings include preprocessing and final diagnostics. Heap checks
 measure warmed proximal allocations and complete-solve storage with few segments
-and nearly one segment per feature. Python exposure, hybrid paths, logistic
-IRLS, screening, and sparse-specific optimizations follow later roadmap
-milestones.
+and nearly one segment per feature. Replace `Gaussian::new(&y)` with
+`Binomial::new(&y)` to fit logistic regression through hybrid IRLS. See the
+[logistic fitting controls](clustered-lasso.md) for budgets, diagnostics, and
+benchmarks. Predictions remain logits.
+
+Python exposure, hybrid paths, screening, and sparse-specific optimizations
+follow later roadmap milestones.
