@@ -44,6 +44,7 @@ tasks:
       - cargo run --locked --example group_lasso --features faer_v0_24
       - cargo run --locked --example clustered_lasso --features faer_v0_24
       - cargo run --locked --example chain_fused_lasso --features faer_v0_24
+      - cargo run --locked --example slope --features faer_v0_24
       - cargo run --locked --example regularization_path --features faer_v0_24
       - cargo run --locked --example python_lasso_fixture --features ndarray_v0_17 -- --check
       - cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
@@ -82,6 +83,16 @@ tasks:
     desc: Benchmark exact SLOPE proximal maps with distinct and tied magnitudes
     cmds:
       - cargo bench --locked --no-default-features --bench slope
+
+  bench:slope:hybrid:
+    desc: Compare complete SLOPE hybrid and proximal fits at matched accuracy
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench slope_hybrid
+
+  bench:slope:heap:
+    desc: Check SLOPE proximal scratch reuse and dense magnitude-cluster storage
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench slope_hybrid_heap
 
   bench:groups:
     desc: Benchmark weighted Group LASSO values, proximal maps, and Gaussian fits
@@ -137,6 +148,7 @@ tasks:
       - task: bench:proximal:heap
       - task: bench:clustered:heap
       - task: bench:chain:heap
+      - task: bench:slope:heap
       - RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
       - panache format --check .
       - panache lint .

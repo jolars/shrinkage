@@ -15,13 +15,13 @@ pub(super) struct Block {
 }
 
 #[derive(Default)]
-struct Sum {
+pub(super) struct Sum {
     sum: f64,
     correction: f64,
 }
 
 impl Sum {
-    fn add(&mut self, value: f64) {
+    pub(super) fn add(&mut self, value: f64) {
         let next = self.sum + value;
         self.correction += if self.sum.abs() >= value.abs() {
             (self.sum - next) + value
@@ -31,9 +31,30 @@ impl Sum {
         self.sum = next;
     }
 
-    fn total(&self) -> f64 {
+    pub(super) fn total(&self) -> f64 {
         self.sum + self.correction
     }
+}
+
+pub(super) fn update_intercept<E>(
+    residual: &mut [f64],
+    intercept: &mut f64,
+    iteration: usize,
+) -> Result<(), FitError<E>> {
+    let delta = finite(
+        residual.iter().map(|r| r / residual.len() as f64).sum(),
+        "minimizing the hybrid intercept",
+        iteration,
+    )?;
+    *intercept = finite(
+        *intercept + delta,
+        "updating the hybrid intercept",
+        iteration,
+    )?;
+    for r in residual {
+        *r = finite(*r - delta, "updating intercept residuals", iteration)?;
+    }
+    Ok(())
 }
 
 fn numerical<E>(operation: &'static str, iteration: usize) -> FitError<E> {
@@ -331,22 +352,7 @@ impl State {
             self.move_block(index, value, iteration)?;
         }
         if fit_intercept {
-            let delta = finite(
-                self.residual
-                    .iter()
-                    .map(|r| r / self.residual.len() as f64)
-                    .sum(),
-                "minimizing the hybrid intercept",
-                iteration,
-            )?;
-            *intercept = finite(
-                *intercept + delta,
-                "updating the hybrid intercept",
-                iteration,
-            )?;
-            for r in &mut self.residual {
-                *r = finite(*r - delta, "updating intercept residuals", iteration)?;
-            }
+            update_intercept(&mut self.residual, intercept, iteration)?;
         }
         Ok(())
     }

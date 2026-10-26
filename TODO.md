@@ -120,23 +120,23 @@ decision and concrete follow-up tasks.
 
 ### 3. SLOPE
 
-- [ ] **SLOPE cluster state:** Build on the exact prox to represent coefficient
+- [x] **SLOPE cluster state:** Build on the exact prox to represent coefficient
   ordering, signs, and equal-magnitude clusters, including the zero block.
   Use signed aggregate columns and retain individual coefficient signs. Test
   ties, opposite signs, permutations, repeated and zero weights, and
   coefficient and prediction reconstruction.
-- [ ] **SLOPE cluster updates:** Implement exact Gaussian cluster-coordinate
+- [x] **SLOPE cluster updates:** Implement exact Gaussian cluster-coordinate
   sweeps with residual updates, rank-dependent weight sums, crossings, sign
   changes, merges, and zero-curvature handling. Hold the zero block fixed
   during restricted sweeps and allow full PG steps to reactivate its
   coordinates. Verify scalar updates against independent subproblems and
   check objective descent and state invariants.
-- [ ] **SLOPE hybrid iteration:** Alternate cluster sweeps with full PG steps
+- [x] **SLOPE hybrid iteration:** Alternate cluster sweeps with full PG steps
   that rebuild ordering, signs, and clusters and allow splitting. Reuse
   workspaces and common controls while preserving SLOPE's cluster semantics.
   Require full optimality checks, and test merges, splits, iteration limits,
   and agreement with the proximal-gradient baseline.
-- [ ] **SLOPE normalization and solver comparison:** Integrate dense lazy
+- [x] **SLOPE normalization and solver comparison:** Integrate dense lazy
   normalization and unpenalized intercepts. Check explicit/lazy agreement
   and prediction-preserving back-transformation, and document the scale on
   which clusters are defined. Benchmark complete hybrid and proximal fits on

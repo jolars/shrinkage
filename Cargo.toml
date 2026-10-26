@@ -76,6 +76,10 @@ name = "chain_fused_lasso"
 required-features = ["faer_v0_24"]
 
 [[example]]
+name = "slope"
+required-features = ["faer_v0_24"]
+
+[[example]]
 name = "regularization_path"
 required-features = ["faer_v0_24"]
 
@@ -124,6 +128,16 @@ required-features = ["faer_v0_24"]
 [[bench]]
 name = "slope"
 harness = false
+
+[[bench]]
+name = "slope_hybrid"
+harness = false
+required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "slope_hybrid_heap"
+harness = false
+required-features = ["faer_v0_24"]
 
 [[bench]]
 name = "scaled"

@@ -6,15 +6,16 @@ ridge, elastic net, SLOPE, disjoint Group LASSO, clustered lasso, chain fused
 lasso, and multivariate Gaussian fitting with explicit penalty axes,
 regularization paths, and lasso path screening are implemented. Dense Gaussian
 clustered lasso also has a hybrid of full proximal-gradient steps and exact
-signed-cluster coordinate sweeps; weighted chain fused lasso shares its driver
-with contiguous segment sweeps. This document records commitments and an
-implementation sequence; illustrative API names are not frozen interfaces.
+signed-cluster coordinate sweeps; weighted chain fused lasso and SLOPE share its
+driver with contiguous segment and signed magnitude-cluster sweeps. This
+document records commitments and an implementation sequence; illustrative API
+names are not frozen interfaces.
 
 The next goal is an MVP that the clustered-lasso paper can use and cite through
 a public Rust and Python release. The uniform clustered-lasso penalty and dense
 Gaussian hybrid from `~/research/clustlasso-cd` are available in Rust.
-[TODO.md](TODO.md) tracks the remaining penalties, hybrid paths, logistic IRLS,
-screening, cross-validation, Python API, and release acceptance checks.
+[TODO.md](TODO.md) tracks hybrid paths, logistic IRLS, screening,
+cross-validation, Python API, and release acceptance checks.
 
 ## 1. Purpose
 
@@ -707,15 +708,109 @@ Independent exhaustive partition solutions and subgradient certificates test
 proximal optimality, including ties and zero weights. Typed and runtime Gaussian
 fits agree with an orthogonal solution. `task bench:slope` measures distinct and
 tied magnitudes, and `task bench:proximal:heap` checks value and prox
-allocations. The specialized SLOPE hybrid follows the clustered-lasso foundation
-in the MVP milestones in [TODO.md](TODO.md).
+allocations.
 
-The specialized solver needs ordering, signs, equal-magnitude clusters, cluster
-updates/merges, and full proximal steps capable of splitting clusters. Put this
-machinery behind a SLOPE-specific interface; do not force it into every penalty.
-Use generic proximal methods as independent correctness references and
-fallbacks. Solver selection should prefer specialized methods only where
-compatibility and benchmarks justify it.
+**Gaussian hybrid and state.** Typed Gaussian problems also support `Hybrid<V>`.
+Its driver, controls, line search, full-space stopping checks, and diagnostic
+accounting are shared with the fusion penalties. SLOPE has a private partition
+implementation following [Coordinate Descent for
+SLOPE](https://proceedings.mlr.press/v206/larsson23a.html). The complete
+objective is
+`||y - b - X_tilde theta||² / (2n) + sum_j weights[j] * |theta|_(j)`, with an
+unpenalized intercept. No additional strength or observation-count factor
+multiplies the supplied weights.
+
+Canonical blocks group exactly equal magnitudes in strictly decreasing order,
+with feature indices sorted inside each block. Opposite signs can share a block;
+adjacent unequal floating-point magnitudes remain distinct. Both signed zeros
+belong to one zero block, with magnitude and individual signs zero. For each
+nonzero block `C`, retain signs `s_j` and the signed aggregate
+`a_C = sum_{j in C} s_j X_tilde[:, j]`, together with its averaged curvature
+`q_C = ||a_C||²/n`. Prediction is `b + sum_C a_C c_C`. The zero block has a zero
+aggregate and stays fixed throughout restricted sweeps.
+
+**Exact scalar restriction.** Updating a nonzero block of size `m` replaces
+`theta_j` by `s_j z` for all its members, while other coefficients stay fixed.
+With current magnitude `c`, maintained residual `r`, and
+`h = a_C' (r + a_C c)/n`, minimize
+
+$$
+  \tfrac12 q_C z^2 - h z + R(\theta(z)).
+$$
+
+The penalty restriction is even in `z`. For positive curvature, solve for
+`u = |z| >= 0` using linear target `|h|`, then restore the sign of `h`. Within
+an interval between other positive block magnitudes, let `r_u` count other
+features with magnitude above `u`. The penalty derivative is
+`W(r_u) = sum(weights[r_u..r_u+m])`. At zero, return zero if `|h| <= W(r_0)`.
+Otherwise scan increasing positive magnitudes, using `( |h| - W ) / q_C` inside
+each interval and the one-sided derivatives at each knot. A derivative jump
+containing zero selects the exact knot, allowing a merge. Crossings may pass any
+number of blocks; the minimizer is not restricted to adjacent ranks.
+
+Compute the initial rank-window sum with compensated summation. When crossing a
+block of size `d`, update it through the nonnegative increments
+`sum_{j=r_u-d}^{r_u-1} (weights[j] - weights[j+m])`. This avoids cancellation
+from subtracting large prefix sums when trailing weights are small. Repeated and
+zero weights remain valid. With exactly zero aggregate curvature, the linear
+term must be zero. Project the current magnitude onto the penalty's minimizing
+interval: zero if the initial derivative is positive, otherwise the interval
+from zero to the first knot with a positive derivative jump, or the whole
+nonnegative line when every derivative vanishes. Never round a small positive
+curvature to zero; nonzero aggregates with underflowed curvature and nonfinite
+derived arithmetic return numerical errors.
+
+**Sweeps and PG transitions.** Snapshot nonzero block identities in descending
+magnitude order, visiting each surviving identity once. Update residuals with
+`r -= a_C (z-c)` before changing the block's orientation. A negative scalar
+flips every member sign and negates its aggregate. A zero scalar clears its
+signs and aggregate. Merge exact magnitude ties immediately, preserving the
+moving identity and retiring the absorbed identity. Sum the oriented aggregate
+columns and recompute curvature with all cross terms. Minimize the enabled
+intercept after each sweep. These are exact restrictions of the complete convex
+objective, so the common hybrid descent and convergence argument applies,
+including repeated and zero weights.
+
+Begin with a full PG transition, then perform five sweeps per PG by default.
+Rebuild ordering, signs, memberships, and aggregates after every accepted PG
+transition. PG can split nonzero blocks and reactivate individual zero
+coordinates, including after unchanged restricted sweeps. Only a fresh
+full-space PG mapping, including the free-intercept derivative, establishes
+convergence. Checks do not alter the maintained partition, residuals, curvature,
+or schedule. `HybridFit` retains the common budget and diagnostic semantics.
+Runtime hybrid dispatch remains unsupported; runtime PG remains available.
+
+**Normalization and results.** Lazy normalization and supplied preprocessing use
+the same prepared design as PG. Back-transformation preserves predictions.
+SLOPE's `HybridFit::cluster_values()` contains nonnegative optimization-scale
+magnitudes in strictly decreasing order, with zero last when present.
+`cluster_labels()` indexes those values; `coefficient_signs()` contains
+optimization-scale signs in feature order, recorded before back-transformation.
+Reconstruct `theta_j` as `signs[j] * values[labels[j]]`. Clustered lasso and
+chain fused lasso continue to return signed block values. Unequal feature scales
+can change equalities and ordering among original-scale coefficient magnitudes.
+
+**Storage and validation.** Each partition retains `O(nK_max + p + n)` storage,
+where `K_max` is its high-water block count. Staging a PG rebuild retains both
+committed and candidate states. At `K_max=p`, each aggregate set uses roughly
+`8np` bytes. Membership and sorting buffers are reused; retired large membership
+buffers are released. A scalar restriction scans at most `O(p)` weights and
+`O(K)` knots. A sweep spends `O(nK)` on residual updates and `O(pK)` on scalar
+scans, with additional membership sorting, label maintenance, and curvature
+recomputation when blocks merge. Full PG rebuilds take `O(np + p log p)` time.
+
+Tests compare scalar updates with independent signed-interval enumeration and
+complete sweeps with rebuilding each restricted problem. Committed top-k
+magnitude epigraph-QP fixtures and dual prefix/support certificates verify
+complete Gaussian fits, including rank deficiency, zero designs, intercepts, and
+zero-weight limits. Backend tests check normalization, strided views, and
+prediction-preserving back-transformation. `task bench:slope:hybrid` compares
+complete PG and hybrid solves on constructed distinct, tied, and highly
+clustered optima at matched accuracy. Bounded runs include setup, the first PG,
+and a subsequent rebuild. `task bench:slope:heap` measures warmed proximal
+allocations and complete-solve peak storage at low, high, and changing block
+counts. Hybrid paths, weighted IRLS subproblems, screening, Python exposure, and
+sparse-specific optimization remain later milestones.
 
 ## 8. Statistical semantics
 
@@ -1166,10 +1261,10 @@ benefit; test mathematical correctness before optimizing.
    and publish versioned packages and citation metadata. Pin the published
    implementation in the paper's reproduction instructions.
 
-After the first release, resume specialized SLOPE work and consider broader
-penalties and solvers, additional outcomes, out-of-core execution, R bindings,
-cross-validation, broader Python coverage, automatic selection, and optional
-accelerators. The backlog in [TODO.md](TODO.md) retains their scoped tasks.
+After the first release, consider broader penalties and solvers, additional
+outcomes, out-of-core execution, R bindings, cross-validation, broader Python
+coverage, automatic selection, and optional accelerators. The backlog in
+[TODO.md](TODO.md) retains their scoped tasks.
 
 Each milestone must leave a usable, tested subset. Broad advertised capability
 must not get ahead of implemented and verified combinations.

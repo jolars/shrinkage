@@ -17,6 +17,8 @@ use crate::{FitError, Penalty, ProximalPenalty};
 /// onto nonincreasing, nonnegative sequences by pooling adjacent violations,
 /// and restores the original signs and order. Sorting costs `O(p log p)` and
 /// pooling costs `O(p)`. Owned CPU scratch storage is reused across calls.
+/// Typed Gaussian problems also support [`crate::Hybrid`], combining full PG
+/// transitions with exact signed magnitude-cluster sweeps.
 ///
 /// ```
 /// use shrinkage::{Penalty, ProximalPenalty, Slope};

@@ -4,9 +4,11 @@ use crate::{FitError, HybridStep, Preprocessing, ProximalFit, StoppingCriterion,
 
 /// Original-scale Gaussian parameters and full-space hybrid diagnostics.
 ///
-/// Cluster labels and values refer to signed optimization-scale coefficients.
+/// Cluster labels and values refer to optimization-scale coefficients.
 /// Clustered lasso orders blocks by value; chain fused lasso orders contiguous
 /// segments by feature and retains zero-weight edges as segment boundaries.
+/// SLOPE orders equal-magnitude blocks decreasingly and retains individual
+/// signs in [`Self::coefficient_signs`].
 /// Scaling can change equalities among the reported original-scale parameters.
 /// No duality gap is reported. A sweep that leaves all blocks unchanged does
 /// not certify convergence; check [`Self::termination`] and the full mapping.
@@ -16,6 +18,7 @@ pub struct HybridFit {
     fit: ProximalFit,
     labels: Vec<usize>,
     values: Vec<f64>,
+    signs: Vec<f64>,
     pg_steps: usize,
     coordinate_sweeps: usize,
     diagnostic_checks: usize,
@@ -89,12 +92,22 @@ impl HybridFit {
     pub fn cluster_labels(&self) -> &[usize] {
         &self.labels
     }
-    /// Signed optimization-scale values, with positive zeros.
+    /// Optimization-scale block values, with positive zeros.
     /// Clustered lasso returns strictly increasing values. Chain fused lasso
-    /// returns segment values in feature order, which may repeat. Equal
+    /// returns signed segment values in feature order, which may repeat. SLOPE
+    /// returns strictly decreasing nonnegative magnitudes, with zero last when
+    /// present. For SLOPE, coefficient `j` on the optimization scale equals
+    /// `coefficient_signs()[j] * cluster_values()[cluster_labels()[j]]`. Equal
     /// original-scale values need not share a label when training scales differ.
     pub fn cluster_values(&self) -> &[f64] {
         &self.values
+    }
+
+    /// Optimization-scale coefficient signs in feature order: -1, 0, or 1.
+    /// Both signed zeros have sign zero. Signs are recorded before coefficient
+    /// back-transformation; SLOPE clusters may contain both nonzero signs.
+    pub fn coefficient_signs(&self) -> &[f64] {
+        &self.signs
     }
 
     /// Predict with original-scale parameters without fitting preprocessing.
@@ -109,10 +122,17 @@ impl HybridFit {
         solution: crate::solver::hybrid::Solution,
         preprocessing: Preprocessing,
     ) -> Result<Self, FitError<E>> {
+        let signs = solution
+            .proximal
+            .coefficients
+            .iter()
+            .map(|&value| if value == 0.0 { 0.0 } else { value.signum() })
+            .collect();
         Ok(Self {
             fit: ProximalFit::from_solution(solution.proximal, preprocessing)?,
             labels: solution.labels,
             values: solution.values,
+            signs,
             pg_steps: solution.pg_steps,
             coordinate_sweeps: solution.coordinate_sweeps,
             diagnostic_checks: solution.diagnostic_checks,

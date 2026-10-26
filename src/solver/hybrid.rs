@@ -2,6 +2,7 @@
 
 mod cluster;
 mod segment;
+mod slope;
 #[cfg(test)]
 mod tests;
 
@@ -13,8 +14,8 @@ use crate::error::{finite, invalid, unsupported};
 use crate::solver::proximal::{NativeDesign, Solution as ProximalSolution};
 use crate::{
     BackendError, ChainFusedLasso, ClusteredLasso, FitError, Gaussian, HybridFit, Problem,
-    ProximalDesign, ProximalPenalty, ProximalVector, RuntimeProblem, Solver, StoppingCriterion,
-    Termination,
+    ProximalDesign, ProximalPenalty, ProximalVector, RuntimeProblem, Slope, Solver,
+    StoppingCriterion, Termination,
 };
 
 trait HybridPenalty: ProximalPenalty + Sized {
@@ -51,6 +52,10 @@ impl HybridPenalty for ChainFusedLasso {
     type State = segment::State;
 }
 
+impl HybridPenalty for Slope {
+    type State = slope::State;
+}
+
 /// Curvature policy for [`Hybrid`]'s full proximal-gradient transitions.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum HybridStep {
@@ -77,7 +82,7 @@ impl Default for HybridStep {
     }
 }
 
-/// Dense Gaussian hybrid for signed clustered lasso and weighted chain fusion.
+/// Dense Gaussian hybrid for clustered lasso, chain fused lasso, and SLOPE.
 ///
 /// Begin with a full PG transition, then alternate five complete cluster
 /// sweeps with one PG transition. PG can split zero and nonzero blocks; CD
@@ -85,6 +90,8 @@ impl Default for HybridStep {
 /// full-space PG mapping, including the intercept derivative, certifies
 /// convergence. Diagnostic calls never advance or alter the iteration.
 /// Chain blocks are contiguous segments, with zero-weight edges kept as cuts.
+/// SLOPE blocks group exact magnitudes while retaining individual signs. Its
+/// zero block stays fixed during sweeps and can reactivate through full PG.
 ///
 /// `V` is the backend's native vector, as for [`crate::ProximalGradient`].
 /// Aggregates use dense storage: `O(n * K + p + n)` for `K` clusters, retaining
@@ -234,6 +241,19 @@ where
     }
 }
 
+impl<M, V> Solver<Problem<&M, Gaussian<'_>, Slope>> for Hybrid<V>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    V: ProximalVector,
+{
+    type Fit = HybridFit;
+    type Error = FitError<M::Error>;
+
+    fn solve(&self, problem: &Problem<&M, Gaussian<'_>, Slope>) -> Result<HybridFit, Self::Error> {
+        solve(problem, self)
+    }
+}
+
 fn solve<M, V, P>(
     problem: &Problem<&M, Gaussian<'_>, P>,
     options: &Hybrid<V>,
@@ -283,7 +303,7 @@ impl<V> Solver<RuntimeProblem<'_>> for Hybrid<V> {
         Err(unsupported(
             "Hybrid",
             "erased proximal oracles do not expose cluster or segment columns",
-            "use a typed Gaussian problem with ClusteredLasso or ChainFusedLasso, or runtime ProximalGradient",
+            "use a typed Gaussian problem with ClusteredLasso, ChainFusedLasso, or Slope, or runtime ProximalGradient",
         ))
     }
 }

@@ -6,7 +6,7 @@ mod tests;
 use lazymatrix::{LazyMatrix, RawColumns};
 
 use super::Partition;
-use super::cluster::{curvature, scalar_minimum};
+use super::cluster::{curvature, scalar_minimum, update_intercept};
 use crate::error::finite;
 use crate::{ChainFusedLasso, FitError};
 
@@ -158,22 +158,7 @@ impl Partition<ChainFusedLasso> for State {
             self.move_segment(index, value, iteration)?;
         }
         if fit_intercept {
-            let delta = finite(
-                self.residual
-                    .iter()
-                    .map(|r| r / self.residual.len() as f64)
-                    .sum(),
-                "minimizing the hybrid intercept",
-                iteration,
-            )?;
-            *intercept = finite(
-                *intercept + delta,
-                "updating the hybrid intercept",
-                iteration,
-            )?;
-            for r in &mut self.residual {
-                *r = finite(*r - delta, "updating intercept residuals", iteration)?;
-            }
+            update_intercept(&mut self.residual, intercept, iteration)?;
         }
         Ok(())
     }

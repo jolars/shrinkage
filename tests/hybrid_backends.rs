@@ -94,6 +94,71 @@ mod dense {
             }
         }
     }
+
+    pub fn verify_slope<M, V>(x: &M)
+    where
+        M: shrinkage::lazymatrix::RawColumns<f64>
+            + shrinkage::lazymatrix::ColumnStats<f64>
+            + shrinkage::lazymatrix::MatVecInto<V>
+            + shrinkage::lazymatrix::MatTransposeVecInto<V>,
+        V: shrinkage::ProximalVector,
+    {
+        use shrinkage::{Centering, Normalization, ProximalGradient, Scaling, Slope};
+        for free_intercept in [false, true] {
+            for normalization in [
+                Normalization::None,
+                Normalization::Auto,
+                Normalization::Center,
+                Normalization::Standardize,
+                Normalization::MinMax,
+                Normalization::MaxAbs,
+                Normalization::L1,
+                Normalization::L2,
+                Normalization::Custom {
+                    center: Centering::Mean,
+                    scale: Scaling::L2,
+                },
+            ] {
+                for weights in [vec![0.03, 0.01, 0.0], vec![0.02; 3], vec![0.0; 3]] {
+                    let problem = Problem::new(
+                        x,
+                        Gaussian::new(&Y).fit_intercept(free_intercept),
+                        Slope::new(weights),
+                    )
+                    .normalize(normalization);
+                    let hybrid = problem
+                        .fit_with(&Hybrid::<V>::new().tolerance(1e-9))
+                        .unwrap();
+                    let pg = problem
+                        .fit_with(&ProximalGradient::<V>::new().tolerance(1e-9))
+                        .unwrap();
+                    assert_eq!(hybrid.termination(), Termination::Converged);
+                    assert_eq!(pg.termination(), Termination::Converged);
+                    assert!((hybrid.objective() - pg.objective()).abs() < 1e-9);
+                    for (&actual, expected) in hybrid
+                        .predict(x)
+                        .unwrap()
+                        .iter()
+                        .zip(pg.predict(x).unwrap())
+                    {
+                        assert!((actual - expected).abs() < 1e-7);
+                    }
+                    for (j, &label) in hybrid.cluster_labels().iter().enumerate() {
+                        let scale = hybrid
+                            .preprocessing()
+                            .scales()
+                            .map_or(1.0, |scales| scales[j]);
+                        assert!(
+                            (hybrid.coefficients()[j] * scale
+                                - hybrid.coefficient_signs()[j] * hybrid.cluster_values()[label])
+                                .abs()
+                                < 1e-12
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[cfg(feature = "faer_v0_24")]
@@ -111,6 +176,7 @@ fn faer_dense() {
         .unwrap(),
     );
     dense::verify_chain::<_, faer::Col<f64>>(&x);
+    dense::verify_slope::<_, faer::Col<f64>>(&x);
 }
 
 #[cfg(feature = "nalgebra_v0_34")]
@@ -128,6 +194,7 @@ fn nalgebra_dense() {
         .unwrap(),
     );
     dense::verify_chain::<_, nalgebra::DVector<f64>>(&x);
+    dense::verify_slope::<_, nalgebra::DVector<f64>>(&x);
 }
 
 #[cfg(feature = "ndarray_v0_17")]
@@ -147,6 +214,7 @@ fn ndarray_strided_view() {
         .unwrap(),
     );
     dense::verify_chain::<_, ndarray::Array1<f64>>(&x);
+    dense::verify_slope::<_, ndarray::Array1<f64>>(&x);
 }
 
 #[cfg(feature = "faer_v0_24")]
