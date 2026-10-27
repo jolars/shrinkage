@@ -29,16 +29,10 @@ jobs:
             .
             packages/python
           key: documentation
-      - name: Install patched Diplodocus
-        run: |
-          revision=$(python -c 'from pathlib import Path; import re; print(re.search(r"github:jolars/diplodocus/([0-9a-f]{40})", Path("devenv.yaml").read_text())[1])')
-          source="$RUNNER_TEMP/diplodocus-source"
-          mkdir -p "$source"
-          curl --fail --location --retry 3 "https://github.com/jolars/diplodocus/archive/$revision.tar.gz" | tar -xz --strip-components=1 -C "$source"
-          patch -d "$source" -p1 < docs/diplodocus-generated-inputs.patch
-          patch -d "$source" -p1 < docs/diplodocus-math.patch
-          cargo +nightly-2026-09-28 install --locked --path "$source" --root "$RUNNER_TEMP/diplodocus"
-          echo "$RUNNER_TEMP/diplodocus/bin" >> "$GITHUB_PATH"
+      - name: Install Diplodocus
+        uses: jolars/setup-diplodocus@v1
+        with:
+          version: "0.9.0"
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           enable-cache: true

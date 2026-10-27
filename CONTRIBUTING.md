@@ -5,12 +5,11 @@ library and Python extension support Rust 1.85. Some optional backends and
 development dependencies require newer Rust, so use the pinned toolchain for
 tests and benchmarks. CI checks the MSRV separately by building the compatible
 library features and Python extension without development dependencies.
-Documentation uses `docs/diplodocus.yaml`, a separately pinned Diplodocus 0.6.0
-build, and its `nightly-2026-09-28` extraction toolchain. The pinned Diplodocus
-build includes compatibility patches for generated input exclusions and native
-GFM math. The math patch also lives in the sibling Diplodocus checkout for
-upstream release. Devenv and CI apply both patches to the same pinned 0.6.0
-source revision. CI keeps its Python environment outside the checkout.
+Documentation uses `docs/diplodocus.yaml` and the `nightly-2026-09-28`
+extraction toolchain. Devenv pins Diplodocus 0.6.0 with compatibility patches
+for generated input exclusions and native GFM math. CI installs the prebuilt
+Diplodocus 0.9.0 release through `jolars/setup-diplodocus@v1`, which includes
+native GFM math, and keeps its Python environment outside the checkout.
 
 ## Python package
 
