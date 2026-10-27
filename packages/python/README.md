@@ -15,9 +15,10 @@ uv run --locked --project packages/python python -c "import shrinkage; print(shr
 ```
 
 The compatibility target is CPython 3.11–3.15 on Linux x86_64, Windows x86_64,
-and macOS arm64 and x86_64. CI builds and imports an interpreter-specific wheel
-for each combination. Free-threaded Python and other interpreters are outside
-the initial support matrix. Wheels are not published yet.
+and macOS arm64 and x86_64. CI tests Python 3.11 and 3.15 on each platform,
+including building and importing an interpreter-specific wheel. Free-threaded
+Python and other interpreters are outside the initial support matrix. Wheels are
+not published yet.
 
 ## Gaussian lasso
 
