@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.0](https://github.com/jolars/shrinkage/compare/v0.2.0...v0.3.0) (2026-10-27)
+
+### Features
+
+- add logistic IRLS to hybrid solvers ([`fc40420`](https://github.com/jolars/shrinkage/commit/fc40420e1544a26bc26809bc45a6b35623b910ae))
+- add SLOPE hybrid fitter ([`9e6d8ec`](https://github.com/jolars/shrinkage/commit/9e6d8ec3c66e9e9fe3b2a0d6456207c17798c77d))
+- add chain fused lasso and hybrid solver ([`df1f5a5`](https://github.com/jolars/shrinkage/commit/df1f5a51bfe69cde7b04dbef67d79a551e6c54de))
+- add clustered lasso and hybrid solver ([`a8c5007`](https://github.com/jolars/shrinkage/commit/a8c5007e0959cc8bc6656330e98e337739a2451d))
+
 ## [0.2.0](https://github.com/jolars/shrinkage/compare/v0.1.0...v0.2.0) (2026-10-23)
 
 ### Features
