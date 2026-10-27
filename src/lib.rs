@@ -56,8 +56,8 @@ pub mod error;
 #[cfg(feature = "experimental-block-reader")]
 pub mod experimental;
 pub mod fit;
-pub mod lasso;
 pub mod layout;
+pub mod model;
 pub mod normalization;
 pub mod path;
 pub mod penalty;
@@ -72,8 +72,8 @@ pub use error::{BackendError, FitError};
 pub use fit::{
     HybridFit, IrlsFit, LassoFit, MultivariateFit, Preprocessing, ProximalFit, Termination,
 };
-pub use lasso::Lasso;
 pub use layout::CoefficientLayout;
+pub use model::{Lasso, lasso};
 pub use normalization::{Centering, Normalization, Scaling};
 pub use path::{
     ErasedPathPenalty, NullModelDatafit, PathDatafit, PathFit, PathOptions, PathPenalty,

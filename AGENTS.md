@@ -3,14 +3,16 @@
 ## Scope and structure
 
 Shrinkage is a Rust 2024 library for regularized statistical models. `Lasso`
-provides the convenience API in `src/lasso.rs`; `src/solver/coordinate.rs` owns
-Gaussian coordinate descent and its residual state. Typed composition, datafits,
-penalties, and fitted results live in their respective modules. Model fitting
-follows `DESIGN.md`. The `normalization` and `lasso` examples exercise dense and
-sparse CSC input through LazyMatrix 0.5.0. Optional `faer_v0_24`,
-`nalgebra_v0_34`, `ndarray_v0_17`, and `sprs_v0_11` features expose its matrix
-integrations. The short names `faer`, `nalgebra`, `ndarray`, and `sprs` are
-aliases. sprs input uses LazyMatrix's checked `SprsCsc` wrapper.
+provides the convenience API in `src/model/lasso.rs`; `src/solver/coordinate.rs`
+owns Gaussian coordinate descent and its residual state. Named convenience
+wrappers live in `src/model/`. Typed composition, datafits, penalties, and
+fitted results live in their respective modules. Keep individual datafits in
+`src/datafit/` and fitted result types in `src/fit/`. Model fitting follows
+`DESIGN.md`. The `normalization` and `lasso` examples exercise dense and sparse
+CSC input through LazyMatrix 0.5.0. Optional `faer_v0_24`, `nalgebra_v0_34`,
+`ndarray_v0_17`, and `sprs_v0_11` features expose its matrix integrations. The
+short names `faer`, `nalgebra`, `ndarray`, and `sprs` are aliases. sprs input
+uses LazyMatrix's checked `SprsCsc` wrapper.
 
 `experimental-block-reader` enables a provisional buffered proximal consumer in
 `src/experimental.rs`. `zarrs_v0_22` and its `zarrs` alias support the
