@@ -42,9 +42,10 @@ Unchanged block sweeps are insufficient. Backtracking is the default curvature
 policy; `HybridStep::FixedBound` uses a conservative computed bound.
 
 Logistic fitting has separate outer and inner budgets. The [logistic
-controls](../../clustered-lasso.md#logistic-regression) explain their meanings
-and the returned diagnostics. The [SLOPE](../../slope.md) and [chain fused
-lasso](../../chain-fused-lasso.md) guides cover their block semantics.
+controls](../models/clustered-lasso.md#logistic-regression) explain their
+meanings and the returned diagnostics. The [SLOPE](../models/slope.md) and
+[chain fused lasso](../models/chain-fused-lasso.md) guides cover their block
+semantics.
 
 Typed Gaussian and binomial problems are supported; runtime hybrid fits and
 hybrid paths are unavailable. Dense aggregates require $O(nK + p + n)$ storage

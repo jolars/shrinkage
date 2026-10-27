@@ -41,7 +41,7 @@ fusion recovers lasso. A two-feature chain has one pair, so its unit-weight
 constraint region coincides with clustered lasso; larger chains only fuse
 neighbors. Gaussian and binomial fits support [proximal
 gradient](../solvers/proximal-gradient.md) and [hybrid](../solvers/hybrid.md).
-See the [chain fused lasso guide](../../chain-fused-lasso.md) for segment
+See the [chain fused lasso guide](../models/chain-fused-lasso.md) for segment
 interpretation and detailed fitting controls.
 
 API:

@@ -4,7 +4,7 @@ Chain fused lasso encourages sparse coefficients and equal effects on adjacent
 features. The Rust API provides an exact weighted proximal map, Gaussian
 proximal-gradient fits, and a hybrid of full PG steps and exact segment sweeps.
 
-See the [penalty reference](reference/penalties/chain-fused-lasso.md) for its
+See the [penalty reference](../penalties/chain-fused-lasso.md) for its
 definition and constraint geometry.
 
 ## Fit a Gaussian model

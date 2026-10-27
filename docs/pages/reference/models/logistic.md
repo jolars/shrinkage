@@ -49,5 +49,5 @@ choose a classification threshold.
 gradient](../solvers/proximal-gradient.md) also supports the coupled penalties,
 while [hybrid](../solvers/hybrid.md) uses weighted subproblems for SLOPE and the
 two fusion penalties. The [clustered lasso
-guide](../../clustered-lasso.md#logistic-regression) explains hybrid logistic
-budgets and diagnostics.
+guide](clustered-lasso.md#logistic-regression) explains hybrid logistic budgets
+and diagnostics.

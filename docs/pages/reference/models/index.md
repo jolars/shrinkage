@@ -4,12 +4,15 @@ A statistical model combines a datafit and penalty. A solver supplies the
 numerical method; it is selected explicitly rather than inferred from the
 model's name.
 
-  | Model                                      | Construction                          | Prediction                        |
-  | ------------------------------------------ | ------------------------------------- | --------------------------------- |
-  | [Linear regression](linear.md)             | Gaussian with a compatible penalty    | Response mean                     |
-  | [Logistic regression](logistic.md)         | Binomial with a compatible penalty    | Logit; transform to a probability |
-  | [Multivariate regression](multivariate.md) | MultivariateGaussian with AxisPenalty | Response-major means              |
-  | [Lasso convenience API](lasso.md)          | Named Gaussian L1 configuration       | Response mean                     |
+  | Model                                      | Construction                              | Prediction                        |
+  | ------------------------------------------ | ----------------------------------------- | --------------------------------- |
+  | [Linear regression](linear.md)             | Gaussian with a compatible penalty        | Response mean                     |
+  | [Logistic regression](logistic.md)         | Binomial with a compatible penalty        | Logit; transform to a probability |
+  | [Multivariate regression](multivariate.md) | MultivariateGaussian with AxisPenalty     | Response-major means              |
+  | [Lasso convenience API](lasso.md)          | Named Gaussian L1 configuration           | Response mean                     |
+  | [SLOPE](slope.md)                          | Gaussian or binomial with Slope           | Response mean or logit            |
+  | [Clustered lasso](clustered-lasso.md)      | Gaussian or binomial with ClusteredLasso  | Response mean or logit            |
+  | [Chain fused lasso](chain-fused-lasso.md)  | Gaussian or binomial with ChainFusedLasso | Response mean or logit            |
 
 Use `Problem::new(&x, datafit, penalty).fit_with(&solver)` for typed
 composition. The type system checks supported combinations. Runtime problems

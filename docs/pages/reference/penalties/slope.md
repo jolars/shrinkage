@@ -41,7 +41,7 @@ Equal weights recover lasso. Repeated weights and trailing zeros are valid;
 all-zero weights give no penalty. Use [proximal
 gradient](../solvers/proximal-gradient.md) or the [hybrid
 solver](../solvers/hybrid.md) with Gaussian or binomial datafits. The [SLOPE
-fitting guide](../../slope.md) explains magnitude clusters and advanced
+fitting guide](../models/slope.md) explains magnitude clusters and advanced
 controls.
 
 API:

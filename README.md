@@ -102,9 +102,9 @@ cargo run --locked --example regularization_path --features faer
   Dense clustered lasso, chain fused lasso, and SLOPE also support a hybrid of
   full PG transitions and exact cluster or segment sweeps, with IRLS for
   logistic regression; see the [clustered-lasso
-  guide](https://shrinkage.cc/clustered-lasso/), [chain fused-lasso
-  guide](https://shrinkage.cc/chain-fused-lasso/), and [SLOPE
-  guide](https://shrinkage.cc/slope/).
+  guide](https://shrinkage.cc/reference/models/clustered-lasso/), [chain
+  fused-lasso guide](https://shrinkage.cc/reference/models/chain-fused-lasso/),
+  and [SLOPE guide](https://shrinkage.cc/reference/models/slope/).
 - **Regularization paths:** explicit or automatic penalty sequences, warm
   starts, working sets for coordinate descent and IRLS, and screening for
   Gaussian lasso.

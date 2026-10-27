@@ -42,8 +42,8 @@ along the equality direction. In two dimensions, its geometry equals that of
 unit-weight chain fused lasso. With more features, all-pairs and adjacent fusion
 differ. Gaussian and binomial fits support [proximal
 gradient](../solvers/proximal-gradient.md) and [hybrid](../solvers/hybrid.md).
-See the [clustered lasso guide](../../clustered-lasso.md) for cluster labels and
-logistic fitting controls.
+See the [clustered lasso guide](../models/clustered-lasso.md) for cluster labels
+and logistic fitting controls.
 
 API:
 [`shrinkage::ClusteredLasso`](https://shrinkage.cc/packages/rust/reference/22d366ee2ce4c0fc6b3806b8d650b550a59a050150c6e013fd744f04d3754924).
