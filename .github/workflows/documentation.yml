@@ -48,6 +48,7 @@ jobs:
         run: echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/shrinkage-docs-venv" >> "$GITHUB_ENV"
       - name: Prepare package dependencies
         run: |
+          cp CONTRIBUTING.md docs/pages/contribution.md
           uv sync --locked --project packages/python
           cargo fetch --locked
       - name: Check documentation

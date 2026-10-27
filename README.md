@@ -12,6 +12,8 @@ compose a model from its parts.
 See the [documentation](https://shrinkage.cc/) for installation, the Rust API
 reference, and contributor guides.
 
+To contribute, read the [contribution guide](CONTRIBUTING.md).
+
 ## Installation
 
 Shrinkage is under development and has not yet been published to crates.io. Add

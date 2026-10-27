@@ -48,5 +48,4 @@ lasso, prediction, fitted preprocessing, and convergence diagnostics. Both
 packages share numerical implementations and statistical conventions, with
 independent versions and release schedules.
 
-To contribute, read the [development guide](development.md) and [release
-conventions](releases.md).
+To contribute, read the [contribution guide](contribution.md).

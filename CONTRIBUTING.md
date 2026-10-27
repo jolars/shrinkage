@@ -1,4 +1,4 @@
-# Development
+# Contributing
 
 Use `devenv shell` to enter the environment pinned to Rust 1.89.0. The core Rust
 library and Python extension support Rust 1.85. Some optional backends and
@@ -40,6 +40,9 @@ complete Rust and Python checks. The Python package does not install or build as
 part of a plain root `cargo build`.
 
 ## Documentation
+
+Edit this guide in the root `CONTRIBUTING.md`. Documentation tasks and CI copy
+it to `docs/pages/contribution.md` before building the site.
 
 ```console
 task docs:serve

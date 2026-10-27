@@ -9,6 +9,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 /dist/
+/docs/pages/contribution.md
 /docs/.diplodocus/
 /docs/site/
 /docs/node_modules/
