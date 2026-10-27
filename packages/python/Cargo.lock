@@ -16,9 +16,9 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "lazymatrix"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba7105a3bacf3ce5f54591074cfb884d472669d3e41e9cc6dedc272b717bec11"
+checksum = "da9ca1e144b2b95b98f2ec407e641923da093fff7ca41fad43343c485e0ad551"
 dependencies = [
  "ndarray",
  "num-traits",
