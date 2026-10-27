@@ -1,0 +1,93 @@
+diff --git a/src/documents.rs b/src/documents.rs
+index ca11cf6..db88091 100644
+--- a/src/documents.rs
++++ b/src/documents.rs
+@@ -249,13 +249,30 @@ impl AdapterContext {
+             BlockNode::YamlMetadata(_)
+             | BlockNode::ReferenceDefinition(_)
+             | BlockNode::Trivia(_) => None,
+-            BlockNode::Paragraph(paragraph) => Some(Block::Paragraph {
+-                inlines: paragraph
+-                    .inline_nodes()
+-                    .map(|inline| self.inline(inline))
+-                    .collect(),
+-                span: span(paragraph.syntax().text_range()),
+-            }),
++            BlockNode::Paragraph(paragraph) => {
++                // Panache retains GFM dollar display equations inside paragraphs.
++                if self.format == AuthoredFormat::Gfm
++                    && let Some(math) = paragraph
++                        .syntax()
++                        .children()
++                        .find_map(panache_parser::syntax::DisplayMath::cast)
++                    && paragraph.syntax().text().to_string().trim()
++                        == math.syntax().text().to_string().trim()
++                {
++                    return Some(Block::DisplayMath {
++                        latex: math.content(),
++                        fallback: None,
++                        span: span(math.syntax().text_range()),
++                    });
++                }
++                Some(Block::Paragraph {
++                    inlines: paragraph
++                        .inline_nodes()
++                        .map(|inline| self.inline(inline))
++                        .collect(),
++                    span: span(paragraph.syntax().text_range()),
++                })
++            }
+             BlockNode::Plain(plain) => Some(Block::Paragraph {
+                 inlines: plain
+                     .inline_nodes()
+@@ -442,7 +459,9 @@ impl AdapterContext {
+             BlockNode::LineBlock(node) => Some(self.unsupported_syntax(node.syntax())),
+             BlockNode::FootnoteDefinition(_) if self.format == AuthoredFormat::Rmd => None,
+             BlockNode::FootnoteDefinition(node) => Some(self.unsupported_syntax(node.syntax())),
+-            BlockNode::DisplayMath(node) if self.format == AuthoredFormat::Rmd => {
++            BlockNode::DisplayMath(node)
++                if matches!(self.format, AuthoredFormat::Gfm | AuthoredFormat::Rmd) =>
++            {
+                 Some(Block::DisplayMath {
+                     latex: node.content(),
+                     fallback: None,
+@@ -765,11 +784,15 @@ impl AdapterContext {
+                 container.syntax().text().to_string(),
+                 container.syntax().text_range(),
+             ),
+-            InlineNode::Math(math) if self.format == AuthoredFormat::Rmd => Inline::Math {
+-                latex: math.content(),
+-                fallback: None,
+-                span: span(math.syntax().text_range()),
+-            },
++            InlineNode::Math(math)
++                if matches!(self.format, AuthoredFormat::Gfm | AuthoredFormat::Rmd) =>
++            {
++                Inline::Math {
++                    latex: math.content(),
++                    fallback: None,
++                    span: span(math.syntax().text_range()),
++                }
++            }
+             InlineNode::Executable(code) if self.format == AuthoredFormat::Rmd => Inline::Code {
+                 value: code.syntax().text().to_string(),
+                 span: span(code.syntax().text_range()),
+@@ -780,6 +803,18 @@ impl AdapterContext {
+                 math.syntax().text_range(),
+             ),
+             InlineNode::Unknown(node) => {
++                if self.format == AuthoredFormat::Gfm
++                    && let Some(math) = node
++                        .syntax_element()
++                        .as_node()
++                        .and_then(|node| panache_parser::syntax::DisplayMath::cast(node.clone()))
++                {
++                    return Inline::Math {
++                        latex: math.content(),
++                        fallback: None,
++                        span: span(math.syntax().text_range()),
++                    };
++                }
+                 if self.format == AuthoredFormat::Rmd
+                     && let Some(inline) = self.rmd_unknown(&node)
+                 {

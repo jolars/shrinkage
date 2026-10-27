@@ -31,6 +31,9 @@ registries.
 
 ## Explore further
 
+Browse the [Reference](reference/index.md) for mathematical definitions,
+constraint plots, model examples, and solver compatibility.
+
 The Rust API supports regularization paths and penalties including lasso, ridge,
 elastic net, [SLOPE](slope.md), disjoint Group LASSO, [clustered
 lasso](clustered-lasso.md), and [chain fused lasso](chain-fused-lasso.md). SLOPE

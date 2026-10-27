@@ -26,7 +26,7 @@ From a checkout, run the existing fitting example:
 devenv shell -- cargo run --locked --example lasso --features faer_v0_24
 ```
 
-## Python
+## Python {#python}
 
 The distribution and import names are both `shrinkage`. The package currently
 fits dense, single-response Gaussian lasso and provides prediction, fitted

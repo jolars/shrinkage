@@ -4,6 +4,9 @@ SLOPE assigns larger penalties to larger coefficient magnitudes. Shrinkage
 provides its exact proximal map, Gaussian proximal-gradient fits, and a hybrid
 of full PG steps and exact magnitude-cluster sweeps.
 
+See the [penalty reference](reference/penalties/slope.md) for its definition and
+constraint geometry.
+
 ## Fit a Gaussian model
 
 Enable your matrix integration, such as `faer_v0_24`, and supply one finite,
@@ -31,15 +34,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 The complete objective is
 
-```text
-||y - b - X_tilde theta||² / (2n) + sum_j weights[j] * |theta|_(j)
-```
+$$
+  \frac{\|y - b\mathbf{1} - \widetilde X\theta\|_2^2}{2n}
+  + \sum_{j=1}^p w_j|\theta|_{(j)}.
+$$
 
-Here `|theta|_(j)` is the jth largest magnitude on the optimization scale. The
-supplied weights include the strength, with no additional factor of `n`. Equal
-weights give lasso; all zero weights give an unpenalized fit. Repeated weights
-and trailing zeros are valid. Empty feature vectors require empty weights.
-Intercepts are unpenalized.
+Here $|\theta|_{(j)}$ is the $j$th largest magnitude on the optimization scale.
+The supplied weights include the strength, with no additional factor of `n`.
+Equal weights give lasso; all zero weights give an unpenalized fit. Repeated
+weights and trailing zeros are valid. Empty feature vectors require empty
+weights. Intercepts are unpenalized.
 
 ## Interpret magnitude clusters
 

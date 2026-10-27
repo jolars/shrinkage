@@ -14,6 +14,8 @@ def main() -> None:
     head = (documentation / "head.html").read_text()
     for page in pages:
         html = page.read_text()
+        if 'class="math math-fallback' in html:
+            raise RuntimeError(f"KaTeX could not render an equation in {page}")
         if head not in html:
             if "</head>" not in html:
                 raise RuntimeError(f"Missing closing head tag in {page}")

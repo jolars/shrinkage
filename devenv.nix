@@ -23,7 +23,10 @@ in
     pkgs.nodejs
     pkgs.ruff
     (inputs.diplodocus.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
-      patches = (old.patches or [ ]) ++ [ ./docs/diplodocus-generated-inputs.patch ];
+      patches = (old.patches or [ ]) ++ [
+        ./docs/diplodocus-generated-inputs.patch
+        ./docs/diplodocus-math.patch
+      ];
     }))
   ];
 

@@ -2,6 +2,9 @@ project:
   name: "Shrinkage"
 
 presentation:
+  sections:
+    - label: "Reference"
+      path: "reference/index.html"
   site-url: "https://shrinkage.cc/"
   canonical-url-style: "clean"
   description: "Regularized statistical models in Rust and Python."

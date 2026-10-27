@@ -18,10 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Diplodocus
-        uses: jolars/setup-diplodocus@64b563e71cc221942ade4571023b64bb29d1b152 # v1.2.0
-        with:
-          version: "0.6.0"
       - name: Install Rust toolchains
         run: |
           rustup toolchain install 1.89.0 --profile minimal
@@ -33,6 +29,16 @@ jobs:
             .
             packages/python
           key: documentation
+      - name: Install patched Diplodocus
+        run: |
+          revision=$(python -c 'from pathlib import Path; import re; print(re.search(r"github:jolars/diplodocus/([0-9a-f]{40})", Path("devenv.yaml").read_text())[1])')
+          source="$RUNNER_TEMP/diplodocus-source"
+          mkdir -p "$source"
+          curl --fail --location --retry 3 "https://github.com/jolars/diplodocus/archive/$revision.tar.gz" | tar -xz --strip-components=1 -C "$source"
+          patch -d "$source" -p1 < docs/diplodocus-generated-inputs.patch
+          patch -d "$source" -p1 < docs/diplodocus-math.patch
+          cargo +nightly-2026-09-28 install --locked --path "$source" --root "$RUNNER_TEMP/diplodocus"
+          echo "$RUNNER_TEMP/diplodocus/bin" >> "$GITHUB_PATH"
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           enable-cache: true
@@ -46,6 +52,8 @@ jobs:
           cargo fetch --locked
       - name: Check documentation
         run: uv run --no-sync --project packages/python diplodocus check --config docs/diplodocus.yaml
+      - name: Check penalty figures
+        run: uv run --script scripts/penalty_regions.py --check
       - name: Build documentation
         run: uv run --no-sync --project packages/python diplodocus build --config docs/diplodocus.yaml --output docs/site
       - name: Install public assets and shared head markup

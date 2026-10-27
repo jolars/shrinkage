@@ -4,6 +4,9 @@ Clustered lasso encourages sparse coefficients and equal signed effects. The
 Rust API provides its exact proximal map, Gaussian proximal-gradient fits, and a
 hybrid solver that interleaves PG steps with exact cluster-coordinate sweeps.
 
+See the [penalty reference](reference/penalties/clustered-lasso.md) for its
+definition and constraint geometry.
+
 ## Fit a Gaussian model
 
 Enable the matrix integration you use, such as `faer_v0_24`, then compose the
@@ -127,7 +130,7 @@ devenv shell -- task bench:clustered
 devenv shell -- task bench:clustered:heap
 ```
 
-## Logistic regression
+## Logistic regression {#logistic-regression}
 
 Use `Binomial::new(&y)` with the same `Hybrid<V>` solver to fit logistic
 regression. Clustered lasso, chain fused lasso, and SLOPE all use weighted

@@ -211,6 +211,16 @@ tasks:
     cmds:
       - uv run --locked --project packages/python diplodocus serve --config docs/diplodocus.yaml --output docs/site
 
+  docs:figures:
+    desc: Regenerate the penalty constraint figures
+    cmds:
+      - uv run --script scripts/penalty_regions.py
+
+  docs:figures:check:
+    desc: Verify penalty geometry and committed constraint figures
+    cmds:
+      - uv run --script scripts/penalty_regions.py --check
+
   docs:build:
     desc: Validate and build the shared documentation site
     deps: [docs:prepare]
@@ -222,6 +232,7 @@ tasks:
   docs:check:
     desc: Build documentation and verify its Cloudflare Worker package
     cmds:
+      - task: docs:figures:check
       - task: docs:build
       - npm --prefix docs ci --ignore-scripts
       - npm --prefix docs run check

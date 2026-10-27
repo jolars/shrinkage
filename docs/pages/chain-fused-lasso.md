@@ -4,6 +4,9 @@ Chain fused lasso encourages sparse coefficients and equal effects on adjacent
 features. The Rust API provides an exact weighted proximal map, Gaussian
 proximal-gradient fits, and a hybrid of full PG steps and exact segment sweeps.
 
+See the [penalty reference](reference/penalties/chain-fused-lasso.md) for its
+definition and constraint geometry.
+
 ## Fit a Gaussian model
 
 Enable your matrix integration, such as `faer_v0_24`, and compose the design,
@@ -30,11 +33,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 The objective is
 
-```text
-||y - b - X_tilde theta||² / (2n)
-  + l1 * sum_j |theta[j]|
-  + fusion * sum_j weights[j] * |theta[j+1] - theta[j]|
-```
+$$
+  \frac{\|y - b\mathbf{1} - \widetilde X\theta\|_2^2}{2n}
+  + \lambda_1\sum_{j=1}^p|\theta_j|
+  + \lambda_2\sum_{j=1}^{p-1}w_j|\theta_{j+1} - \theta_j|.
+$$
 
 Both strengths are finite and nonnegative. Unit weights are implicit unless
 `.with_weights(...)` supplies one finite, nonnegative weight per adjacent edge.
