@@ -9,19 +9,21 @@ updates:
         patterns:
           - "*"
   - package-ecosystem: "cargo"
-    directory: "/"
+    directories:
+      - "/"
+      - "/packages/python"
     schedule:
       interval: "weekly"
+    groups:
+      rust:
+        patterns:
+          - "*"
     # Keep these versions aligned with LazyMatrix's nalgebra_v0_34 adapters.
     ignore:
       - dependency-name: "nalgebra"
         versions: [">=0.35.0"]
       - dependency-name: "nalgebra-sparse"
         versions: [">=0.12.0"]
-  - package-ecosystem: "cargo"
-    directory: "/packages/python"
-    schedule:
-      interval: "weekly"
   - package-ecosystem: "uv"
     directory: "/packages/python"
     schedule:
