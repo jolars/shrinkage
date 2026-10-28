@@ -4,23 +4,22 @@
 [![crates.io](https://img.shields.io/crates/v/shrinkage.svg)](https://crates.io/crates/shrinkage)
 [![docs.rs](https://img.shields.io/docsrs/shrinkage)](https://docs.rs/shrinkage)
 
-Shrinkage is a Rust library for regularized statistical models. It combines loss
-functions, penalties, and solvers, with support for dense and sparse matrices,
-regularization paths, and custom components. Use the `Lasso` convenience API, or
-compose a model from its parts.
+Shrinkage is a Rust library for fitting regression models with penalties that
+shrink coefficients, select features, or encourage structure. It supports linear
+and logistic regression, dense and sparse matrices, and fitting across a range
+of penalty strengths. Start with `Lasso` for linear regression with feature
+selection, or combine losses, penalties, and solvers to build other models.
 
 See the [documentation](https://shrinkage.cc/) for installation, the Rust API
 reference, and contributor guides.
 
-To contribute, read the [contribution guide](CONTRIBUTING.md).
-
 ## Installation
 
-Shrinkage is under development and has not yet been published to crates.io. Add
-it from GitHub and enable the feature for your matrix library:
+Add [shrinkage](https://crates.io/crates/shrinkage) from crates.io and enable
+the feature for your matrix library. For example, to use faer:
 
 ```console
-cargo add --git https://github.com/jolars/shrinkage --features faer
+cargo add shrinkage --features faer
 cargo add faer@0.24
 ```
 
@@ -55,11 +54,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-By default, `Lasso` fits an unpenalized intercept and standardizes features
-using training data. The penalty acts on standardized coefficients; returned
-coefficients and intercepts use the original input scale. Prediction reuses the
-fitted preprocessing. Check `termination()` to distinguish convergence from an
-iteration limit.
+By default, `Lasso` standardizes features and fits an intercept without
+penalizing it. The penalty applies to standardized coefficients, while the
+returned coefficients and intercept use the original input scale. Prediction
+uses the preprocessing learned during fitting. Check `termination()` to see
+whether the solver converged or reached its iteration limit.
 
 Compose a loss, a penalty, and a compatible solver for other models. For
 Gaussian elastic net:
@@ -80,63 +79,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The [examples](examples) cover dense and sparse fitting, normalization,
-multivariate models, Group LASSO, and regularization paths. They also include
-hybrids for clustered lasso, chain fused lasso, and SLOPE. Run one from a
-checkout with:
+The [examples](examples) cover more models, sparse input, and regularization
+paths. Run one from a checkout with:
 
 ```console
 cargo run --locked --example regularization_path --features faer
 ```
 
-## Models and solvers
+## Supported models
 
-- **Losses:** Gaussian, binomial (logistic), and multivariate Gaussian.
-- **Penalties:** lasso, ridge, elastic net, SLOPE, weighted disjoint Group
-  LASSO, uniform signed clustered lasso, and weighted chain fused lasso.
-  Supported compositions include scaling, masking of unpenalized coefficients,
-  and explicit penalty axes for multivariate models.
-- **Solvers:** coordinate descent for Gaussian lasso, coordinate-descent IRLS
-  for Gaussian and binomial models with lasso, ridge, or elastic net, and
-  proximal gradient for smooth convex losses with a complete proximal penalty.
-  Dense clustered lasso, chain fused lasso, and SLOPE also support a hybrid of
-  full PG transitions and exact cluster or segment sweeps, with IRLS for
-  logistic regression; see the [clustered-lasso
-  guide](https://shrinkage.cc/models/clustered-lasso/), [chain fused-lasso
-  guide](https://shrinkage.cc/models/chain-fused-lasso/), and [SLOPE
-  guide](https://shrinkage.cc/models/slope/).
-- **Regularization paths:** explicit or automatic penalty sequences, warm
-  starts, working sets for coordinate descent and IRLS, and screening for
-  Gaussian lasso.
+- **Linear and logistic regression**, plus multivariate linear regression for
+  multiple responses.
+- **Lasso, ridge, and elastic net** for feature selection and coefficient
+  shrinkage.
+- **Structured penalties:** [Group LASSO](examples/group_lasso.rs) selects
+  groups of features, [SLOPE](https://shrinkage.cc/models/slope/) applies ranked
+  penalties, [clustered lasso](https://shrinkage.cc/models/clustered-lasso/)
+  encourages equal coefficient magnitudes, and [chain fused
+  lasso](https://shrinkage.cc/models/chain-fused-lasso/) encourages neighboring
+  coefficients to be equal.
+- **Regularization paths** fit a sequence of penalty strengths, reusing previous
+  fits to speed up computation.
 
-The typed and runtime APIs also accept custom datafits and penalties. See the
-[Rust API reference](https://shrinkage.cc/packages/rust/) for component
-interfaces and supported combinations.
-
-Fit binomial lasso through the typed Rust API:
-
-```rust
-use shrinkage::{Binomial, Irls, L1, Problem};
-
-let fit = Problem::new(&x, Binomial::new(&y), L1::new(0.1))
-    .fit_with(&Irls::new())?;
-let logits = fit.predict(&x)?;
-```
-
-`Irls` uses weighted coordinate sweeps, backtracking against the original
-penalized objective, and full KKT checks. Its intercept is unpenalized, and
-binomial predictions are logits. It supports explicit and automatic paths
-through the same `Problem` methods as other solvers. `DiagonalHessianDatafit`
-and `CoordinatePenalty` allow external losses and separable penalties to opt in.
-See the `binomial` example for probability predictions and a regularization
-path. Run `task bench:irls` for timing comparisons with proximal gradient and
-`task bench:irls:heap` for workspace checks.
-
-`GroupLasso::new(lambda, groups)` accepts validated `DisjointGroups` with one
-explicit weight per group and an explicit policy for uncovered coefficients. It
-fits through `Problem` and `RuntimeProblem` with `ProximalGradient`. The penalty
-acts on optimization-scale group norms, and intercepts remain free. See the
-[Group LASSO example](examples/group_lasso.rs) for fitting and prediction.
+Solvers include coordinate descent, proximal gradient, and iteratively
+reweighted least squares (IRLS). Supported combinations vary by loss and
+penalty. The [Rust API reference](https://shrinkage.cc/packages/rust/) covers
+these combinations and how to add custom losses and penalties. See the [binomial
+example](examples/binomial.rs) for logistic regression.
 
 ## Matrix backends
 
@@ -166,9 +135,9 @@ experimental file-backed input through Zarr.
 
 ## Contributing
 
-See the [development guide](https://shrinkage.cc/development/) for setup and
-focused checks. Enter the pinned development environment and run the complete
-check with:
+Read the [contribution guide](CONTRIBUTING.md) and the [development
+guide](https://shrinkage.cc/development/) for setup and focused checks. Enter
+the pinned development environment and run the complete check with:
 
 ```console
 devenv shell
