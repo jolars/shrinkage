@@ -48,9 +48,8 @@ also minimizes
 
 $$
   \operatorname{prox}_{sP}(v)
-  = \mathop{\arg\min}_{z}\left\{ \frac{\|z - v\|_2^2}{2s} + P(z) \right\},
-  \qquad
-  s > 0.
+  = \mathop{\arg\min}_{z}\left\{ \frac{\|z - v\|_2^2}{2s} + P(z) \right\}, \qquad s
+                              > 0.
 $$
 
 All seven base penalties provide this exact complete proximal map and work with

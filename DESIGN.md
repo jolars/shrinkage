@@ -1343,3 +1343,36 @@ must not get ahead of implemented and verified combinations.
   formats through concrete implementations. Preserve the initial normalization
   and penalty-scale conventions above.
 - Record significant architectural decisions and deviations in this file.
+
+## Solver observations for documentation
+
+Single typed fits may implement `ObservedSolver` in addition to `Solver`.
+`Problem::fit_with_observer` exposes borrowed optimization-scale coefficients,
+the intercept, the iteration count, and the accepted step kind. Observers cannot
+change numerical state, acceptance, or stopping. Ordinary fits use the same
+kernels with a statically dispatched no-op observer, without trace storage.
+Coordinate descent reports coordinate and intercept updates. Proximal gradient
+reports accepted full updates. IRLS reports accepted outer updates. Gaussian
+hybrid reports proximal transitions and complete cluster sweeps; binomial hybrid
+reports accepted outer updates on the original objective and retains its
+cumulative inner iteration count. Observers may also implement `observe_inner`
+to receive IRLS coordinate updates, hybrid block updates, and binomial hybrid
+quadratic steps. These callbacks include the parent outer iteration and the
+inner iteration count. Surrogate states need not descend the original objective
+or become accepted outer states. Closure observers ignore them by default, and
+rejected line-search trials remain omitted. Initialization and successful final
+states are always observed, including initially optimal and iteration-limited
+fits. Paths and erased runtime fits retain their existing interfaces.
+
+The documentation explorer lives in a separate Cargo workspace and compiles
+these library implementations to WebAssembly. It fixes the intercept at zero and
+uses standardized two-column designs without additional normalization, so
+plotted coordinates equal the observed and returned coefficients. Loss, penalty,
+and objective surfaces use the same Rust components as fitting. A tighter
+proximal fit supplies the reference optimum independently of solver selection.
+
+`InitialPoint` and `Problem::fit_from_with_observer` initialize a single
+observed fit from finite optimization-scale coefficients and an intercept. The
+coefficient count must match the design; a disabled intercept requires zero.
+Solvers rebuild residuals and other numerical state from these parameters.
+Ordinary observed fits retain each solver's default initialization.

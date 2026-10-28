@@ -21,11 +21,12 @@ in
     pkgs.panache
     pkgs.taplo
     pkgs.nodejs
+    pkgs.wasm-bindgen-cli
     pkgs.ruff
     (inputs.diplodocus.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
       patches = (old.patches or [ ]) ++ [
         ./docs/diplodocus-generated-inputs.patch
-        ./docs/diplodocus-math.patch
+        ./docs/diplodocus-components.patch
       ];
     }))
   ];
@@ -36,6 +37,14 @@ in
   };
 
   env.DIPLODOCUS_RUST_TOOLCHAIN = rustDocumentationToolchain;
+  env.PLAYWRIGHT_BROWSERS_PATH =
+    assert lib.assertMsg
+      ((builtins.fromJSON (builtins.readFile ./docs/widget/package.json)).devDependencies."@playwright/test" == pkgs.playwright-driver.version)
+      "Keep the widget's Playwright version aligned with the locked devenv.";
+    pkgs.playwright-driver.browsers-chromium;
+  env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+  env.PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+
 
   # NumPy wheels need these shared libraries outside Nix's patched executables.
   env.LD_LIBRARY_PATH = lib.makeLibraryPath [

@@ -6,7 +6,7 @@ pub use runtime::{
 };
 
 use crate::error::{finite, invalid};
-use crate::solver::{Solver, coordinate};
+use crate::solver::{ObservedSolver, Solver, SolverObserver, coordinate};
 use crate::{Centering, LassoError, LassoFit, Normalization, Preprocessing, Scaling};
 pub use crate::{datafit::Gaussian, penalty::L1, solver::CoordinateDescent};
 use lazymatrix::{ColumnStats, LazyMatrix, RawColumn, RawColumns};
@@ -102,6 +102,33 @@ impl<X, D, P> Problem<X, D, P> {
         solver.solve(self)
     }
 
+    /// Fit a supported typed problem while observing accepted optimization states.
+    ///
+    /// Observations use optimization-scale parameters, before back-transformation.
+    ///
+    /// # Errors
+    /// Returns the same validation, numerical, and backend errors as fitting.
+    pub fn fit_with_observer<S: ObservedSolver<Self>, O: SolverObserver + ?Sized>(
+        &self,
+        solver: &S,
+        observer: &mut O,
+    ) -> Result<S::Fit, S::Error> {
+        solver.solve_with_observer(self, observer)
+    }
+
+    /// Fit from an explicit optimization-scale point while observing updates.
+    ///
+    /// # Errors
+    /// Forwards fitting errors and rejects invalid initial parameters.
+    pub fn fit_from_with_observer<S: ObservedSolver<Self>, O: SolverObserver + ?Sized>(
+        &self,
+        solver: &S,
+        initial: crate::InitialPoint<'_>,
+        observer: &mut O,
+    ) -> Result<S::Fit, S::Error> {
+        solver.solve_from_with_observer(self, Some(initial), observer)
+    }
+
     /// Fit an owned explicit penalty sequence in caller order.
     ///
     /// # Errors
@@ -172,6 +199,20 @@ where
     }
 }
 
+impl<M> ObservedSolver<Problem<&M, Gaussian<'_>, L1>> for CoordinateDescent
+where
+    M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
+{
+    fn solve_from_with_observer<O: SolverObserver + ?Sized>(
+        &self,
+        problem: &Problem<&M, Gaussian<'_>, L1>,
+        initial: Option<crate::InitialPoint<'_>>,
+        observer: &mut O,
+    ) -> Result<Self::Fit, Self::Error> {
+        problem.fit_coordinate_observed(self, initial, observer)
+    }
+}
+
 impl<M> Problem<&M, Gaussian<'_>, L1>
 where
     M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
@@ -182,6 +223,29 @@ where
         self.datafit.validate(self.design.nrows())?;
         let prepared = self.prepare(self.datafit.fit_intercept)?;
         let solution = coordinate::solve(&prepared.matrix, self.datafit, self.penalty, solver)?;
+        LassoFit::from_solution(solution, prepared.into_preprocessing())
+    }
+    fn fit_coordinate_observed<O: SolverObserver + ?Sized>(
+        &self,
+        solver: &CoordinateDescent,
+        initial: Option<crate::InitialPoint<'_>>,
+        observer: &mut O,
+    ) -> Result<LassoFit, LassoError<M::Error>> {
+        self.penalty.validate()?;
+        solver.validate(solver.criterion(self.penalty))?;
+        self.datafit.validate(self.design.nrows())?;
+        let prepared = self.prepare(self.datafit.fit_intercept)?;
+        if let Some(initial) = initial {
+            initial.validate(prepared.matrix.ncols(), self.datafit.fit_intercept)?;
+        }
+        let solution = coordinate::solve_observed(
+            &prepared.matrix,
+            self.datafit,
+            self.penalty,
+            solver,
+            initial,
+            observer,
+        )?;
         LassoFit::from_solution(solution, prepared.into_preprocessing())
     }
 }

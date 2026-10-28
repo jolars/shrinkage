@@ -1,0 +1,1144 @@
+diff --git a/src/assembly/execution.rs b/src/assembly/execution.rs
+index 319ffe2..4a4aab4 100644
+--- a/src/assembly/execution.rs
++++ b/src/assembly/execution.rs
+@@ -174,6 +174,7 @@ fn project(
+             }
+             Block::BlockQuote { blocks, .. }
+             | Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::Callout { blocks, .. } => project(blocks, cells, ordinal),
+             Block::List { items, .. } => {
+diff --git a/src/assembly/package_docs.rs b/src/assembly/package_docs.rs
+index cffe965..bbef199 100644
+--- a/src/assembly/package_docs.rs
++++ b/src/assembly/package_docs.rs
+@@ -607,6 +607,7 @@ fn heading_identifiers(blocks: &mut [Block], identifiers: &mut std::collections:
+             }
+             Block::BlockQuote { blocks, .. }
+             | Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::Callout { blocks, .. } => heading_identifiers(blocks, identifiers),
+             Block::List { items, .. } => {
+@@ -731,6 +732,7 @@ fn rebase_blocks(
+             }
+             Block::BlockQuote { blocks, .. }
+             | Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::Callout { blocks, .. } => rebase_blocks(blocks, base, origin, repository),
+             Block::List { items, .. } => {
+diff --git a/src/assembly/rmarkdown.rs b/src/assembly/rmarkdown.rs
+index 11e1124..95ddffb 100644
+--- a/src/assembly/rmarkdown.rs
++++ b/src/assembly/rmarkdown.rs
+@@ -530,6 +530,7 @@ fn decorate_figures(blocks: &mut [Block], figures: &Figures, diagnostics: &mut V
+                 }
+             }
+             Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::BlockQuote { blocks, .. }
+             | Block::Callout { blocks, .. } => decorate_figures(blocks, figures, diagnostics),
+diff --git a/src/assembly/rmarkdown/citations.rs b/src/assembly/rmarkdown/citations.rs
+index 030c9b3..c600ab5 100644
+--- a/src/assembly/rmarkdown/citations.rs
++++ b/src/assembly/rmarkdown/citations.rs
+@@ -391,6 +391,7 @@ fn visit(blocks: &mut [Block], f: &mut impl FnMut(&mut Inline)) {
+                 inlines_visit(nodes, f)
+             }
+             Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::BlockQuote { blocks, .. }
+             | Block::Callout { blocks, .. } => visit(blocks, f),
+diff --git a/src/cli.rs b/src/cli.rs
+index fc48950..f7daec7 100644
+--- a/src/cli.rs
++++ b/src/cli.rs
+@@ -56,6 +56,9 @@ pub(super) struct ExtractArgs {
+ 
+ #[derive(Debug, Args)]
+ pub(super) struct GenerateArgs {
++    /// Emit executable browser bundles retained in this trusted snapshot.
++    #[arg(long)]
++    pub(super) allow_components: bool,
+     /// Completed SQLite documentation snapshot.
+     #[arg(long, value_name = "PATH")]
+     pub(super) input: PathBuf,
+diff --git a/src/commands.rs b/src/commands.rs
+index 4f1a279..dce9964 100644
+--- a/src/commands.rs
++++ b/src/commands.rs
+@@ -225,7 +225,15 @@ pub fn watch_extract(options: ExtractOptions) -> Result<(), CommandError> {
+ 
+ /// Generate and atomically publish a site using only a completed snapshot.
+ pub fn generate(options: GenerateOptions) -> Result<(), CommandError> {
+-    pipeline::generate_attempt(&options.input, &options.output, true)?;
++    generate_with_components(options, false)
++}
++
++/// Generate a site, optionally enabling explicitly trusted component bundles.
++pub fn generate_with_components(
++    options: GenerateOptions,
++    allow_components: bool,
++) -> Result<(), CommandError> {
++    pipeline::generate_attempt(&options.input, &options.output, true, allow_components)?;
+     Ok(())
+ }
+ 
+diff --git a/src/commands/pipeline.rs b/src/commands/pipeline.rs
+index 7e58d63..bb43359 100644
+--- a/src/commands/pipeline.rs
++++ b/src/commands/pipeline.rs
+@@ -114,12 +114,13 @@ pub(super) async fn build_attempt(
+         cancellation,
+     )
+     .await?;
+-    generate_attempt(&input, &options.output, false)
++    generate_attempt(&input, &options.output, false, true)
+ }
+ pub(super) fn generate_attempt(
+     input: &Path,
+     output: &Path,
+     report_diagnostics: bool,
++    allow_components: bool,
+ ) -> Result<RenderedSite, CommandError> {
+     reject_overlap(output, input)?;
+     let snapshot = Snapshot::load(input)?;
+@@ -128,7 +129,7 @@ pub(super) fn generate_attempt(
+             eprintln!("{}", format_diagnostic(diagnostic));
+         }
+     }
+-    let site = Site::new(&snapshot)?;
++    let site = Site::new(&snapshot)?.with_components(allow_components);
+     let rendered = render_site(&site)?;
+     rendered.publish(output)?;
+     Ok(rendered)
+diff --git a/src/commands/watching.rs b/src/commands/watching.rs
+index 5b43495..7f37c61 100644
+--- a/src/commands/watching.rs
++++ b/src/commands/watching.rs
+@@ -215,6 +215,22 @@ impl Observer {
+         {
+             observe(&root.join(image.path.as_str()), &mut observed);
+         }
++        for component in &config.components {
++            if let Some(root) = roots.get(component.repository.as_str()) {
++                fn bundle(path: &Path, observed: &mut Observation) {
++                    observe(path, observed);
++                    if path.is_symlink() {
++                        return;
++                    }
++                    if let Ok(entries) = fs::read_dir(path) {
++                        for entry in entries.flatten() {
++                            bundle(&entry.path(), observed);
++                        }
++                    }
++                }
++                bundle(&root.join(&component.path), &mut observed);
++            }
++        }
+         for package in &config.packages {
+             let Some(root) = roots.get(package.repository.as_str()) else {
+                 continue;
+diff --git a/src/components.rs b/src/components.rs
+new file mode 100644
+index 0000000..e5d43a1
+--- /dev/null
++++ b/src/components.rs
+@@ -0,0 +1,272 @@
++//! Explicit local browser components and their portable bundles.
++
++use std::collections::{BTreeMap, BTreeSet};
++use std::path::{Component, Path, PathBuf};
++
++use serde::{Deserialize, Serialize};
++
++use crate::assembly::WorkspaceSources;
++use crate::diagnostics::{Diagnostic, DiagnosticCode, Severity};
++use crate::ir::{Attributes, Block};
++use crate::provenance::fingerprint_bytes;
++use crate::validation::ContentAsset;
++
++/// An author-supplied browser component, built before documentation extraction.
++#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(rename_all = "kebab-case", deny_unknown_fields)]
++pub struct ComponentConfiguration {
++    /// Identifier used by authored component blocks.
++    pub id: String,
++    /// Declared repository containing the bundle.
++    pub repository: String,
++    /// Repository-relative directory containing the complete built bundle.
++    pub path: PathBuf,
++    /// Bundle-relative ES module exporting `mount`.
++    pub module: String,
++    /// Bundle-relative stylesheets loaded before mounting.
++    #[serde(default, skip_serializing_if = "Vec::is_empty")]
++    pub stylesheets: Vec<String>,
++}
++
++/// Snapshot-owned component assets with no machine-local paths.
++#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct ComponentBundle {
++    /// Bundle-relative module path.
++    pub module: String,
++    /// Bundle-relative stylesheet paths.
++    pub stylesheets: Vec<String>,
++    /// Bundle-relative filenames mapped to retained SHA-256 asset digests.
++    pub files: BTreeMap<String, String>,
++}
++
++pub(crate) fn name(attributes: &Attributes) -> Option<&str> {
++    attributes
++        .key_values
++        .iter()
++        .find(|a| a.key.value == "name")
++        .map(|a| a.value.value.as_str())
++}
++
++pub(crate) fn safe_path(path: &str) -> bool {
++    !path.is_empty()
++        && !path.contains(['\\', '?', '#', '%', ':'])
++        && !path.chars().any(char::is_control)
++        && Path::new(path)
++            .components()
++            .all(|c| matches!(c, Component::Normal(_)))
++        && Path::new(path).to_str() == Some(path)
++        && path
++            .split('/')
++            .all(|p| !p.is_empty() && p != "." && p != "..")
++}
++
++pub(crate) fn media_type(path: &str) -> &'static str {
++    match Path::new(path).extension().and_then(|e| e.to_str()) {
++        Some("js" | "mjs") => "text/javascript; charset=utf-8",
++        Some("css") => "text/css; charset=utf-8",
++        Some("wasm") => "application/wasm",
++        Some("json" | "map") => "application/json",
++        _ => "application/octet-stream",
++    }
++}
++
++fn diagnostic(message: impl Into<String>) -> Box<Diagnostic> {
++    Box::new(Diagnostic::new(
++        DiagnosticCode::InvalidComponent,
++        Severity::Error,
++        message,
++    ))
++}
++
++type Collected = (
++    BTreeMap<String, ComponentBundle>,
++    BTreeMap<String, ContentAsset>,
++    Vec<(PathBuf, PathBuf)>,
++);
++
++pub(crate) fn collect(sources: &WorkspaceSources) -> Result<Collected, Box<Diagnostic>> {
++    let mut bundles = BTreeMap::new();
++    let mut assets = BTreeMap::new();
++    let mut inputs = Vec::new();
++    for declaration in &sources.configuration().components {
++        if declaration.id.is_empty()
++            || !declaration
++                .id
++                .bytes()
++                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
++            || bundles.contains_key(&declaration.id)
++        {
++            return Err(diagnostic(
++                "Component IDs must be unique nonempty ASCII names.",
++            ));
++        }
++        let repository = sources
++            .paths()
++            .repositories
++            .iter()
++            .find(|r| r.id == declaration.repository)
++            .ok_or_else(|| {
++                diagnostic(format!(
++                    "Unknown component repository: {}",
++                    declaration.repository
++                ))
++            })?;
++        let relative = declaration
++            .path
++            .to_str()
++            .filter(|p| safe_path(p))
++            .ok_or_else(|| {
++                diagnostic("Component directories must be normalized repository-relative paths.")
++            })?;
++        let root = repository.path.join(relative);
++        let mut files = BTreeMap::new();
++        let mut pending = vec![root.clone()];
++        while let Some(directory) = pending.pop() {
++            // Reject links before traversal, including a linked bundle root.
++            let mut prefix = repository.path.clone();
++            for part in directory
++                .strip_prefix(&repository.path)
++                .map_err(|_| diagnostic("Component path escapes its repository."))?
++                .components()
++            {
++                prefix.push(part);
++                let metadata = std::fs::symlink_metadata(&prefix)
++                    .map_err(|e| diagnostic(format!("Cannot read component directory: {e}")))?;
++                if metadata.file_type().is_symlink() {
++                    return Err(diagnostic("Component bundles cannot contain symlinks."));
++                }
++            }
++            let entries = std::fs::read_dir(&directory)
++                .map_err(|e| diagnostic(format!("Cannot read component directory: {e}")))?;
++            for entry in entries {
++                let entry = entry.map_err(|e| diagnostic(e.to_string()))?;
++                let path = entry.path();
++                let kind = entry.file_type().map_err(|e| diagnostic(e.to_string()))?;
++                if kind.is_dir() {
++                    pending.push(path);
++                    continue;
++                }
++                if !kind.is_file() {
++                    return Err(diagnostic(
++                        "Component bundles require regular files without symlinks.",
++                    ));
++                }
++                let relative = path
++                    .strip_prefix(&root)
++                    .ok()
++                    .and_then(|p| p.to_str())
++                    .filter(|p| safe_path(p))
++                    .ok_or_else(|| diagnostic("Invalid component filename."))?;
++                let checked = crate::paths::resolve_input_file(
++                    &repository.path,
++                    "component",
++                    path.strip_prefix(&repository.path).unwrap(),
++                    &repository.path,
++                )
++                .map_err(|e| diagnostic(e.to_string()))?;
++                let bytes = std::fs::read(&checked).map_err(|e| diagnostic(e.to_string()))?;
++                let fingerprint = fingerprint_bytes(&bytes);
++                files.insert(relative.to_owned(), fingerprint.value.clone());
++                // Media types belong to bundle paths; shared bytes remain inert downloads.
++                assets.insert(
++                    fingerprint.value.clone(),
++                    ContentAsset {
++                        fingerprint,
++                        media_type: "application/octet-stream".into(),
++                        bytes,
++                    },
++                );
++                inputs.push((checked, repository.path.clone()));
++            }
++        }
++        if !safe_path(&declaration.module)
++            || !matches!(
++                Path::new(&declaration.module)
++                    .extension()
++                    .and_then(|s| s.to_str()),
++                Some("js" | "mjs")
++            )
++            || !files.contains_key(&declaration.module)
++            || declaration
++                .stylesheets
++                .iter()
++                .any(|s| !safe_path(s) || !s.ends_with(".css") || !files.contains_key(s))
++        {
++            return Err(diagnostic(format!(
++                "Component {} has a missing or invalid module or stylesheet.",
++                declaration.id
++            )));
++        }
++        bundles.insert(
++            declaration.id.clone(),
++            ComponentBundle {
++                module: declaration.module.clone(),
++                stylesheets: declaration.stylesheets.clone(),
++                files,
++            },
++        );
++    }
++    let known = bundles.keys().map(String::as_str).collect();
++    for page in sources.workspace().pages.values() {
++        validate_blocks(&page.document.document.blocks, &known)?;
++    }
++    for package in sources.workspace().packages.values() {
++        for item in package.items.values() {
++            if let Some(document) = &item.documentation {
++                validate_blocks(&document.document.blocks, &known)?;
++            }
++        }
++    }
++    for concept in sources.workspace().concepts.values() {
++        if let Some(document) = &concept.documentation {
++            validate_blocks(&document.document.blocks, &known)?;
++        }
++    }
++    Ok((bundles, assets, inputs))
++}
++
++pub(crate) fn validate_blocks(
++    blocks: &[Block],
++    known: &BTreeSet<&str>,
++) -> Result<(), Box<Diagnostic>> {
++    for block in blocks {
++        match block {
++            Block::Component {
++                attributes, blocks, ..
++            } => {
++                if !name(attributes).is_some_and(|n| known.contains(n)) {
++                    return Err(diagnostic(
++                        "Component blocks must name a declared component.",
++                    ));
++                }
++                validate_blocks(blocks, known)?;
++            }
++            Block::Container { blocks, .. }
++            | Block::Tabset { blocks, .. }
++            | Block::Callout { blocks, .. }
++            | Block::BlockQuote { blocks, .. } => validate_blocks(blocks, known)?,
++            Block::List { items, .. } => {
++                for item in items {
++                    validate_blocks(&item.blocks, known)?;
++                }
++            }
++            Block::Table { rows, .. } => {
++                for row in rows {
++                    for cell in &row.cells {
++                        validate_blocks(&cell.blocks, known)?;
++                    }
++                }
++            }
++            _ => {}
++        }
++    }
++    Ok(())
++}
++
++impl ComponentBundle {
++    pub(crate) fn prefix(&self, id: &str) -> String {
++        let digest = fingerprint_bytes(&serde_json::to_vec(self).expect("serializable bundle"));
++        format!("assets/components/{id}/{}/", digest.value)
++    }
++}
+diff --git a/src/configuration.rs b/src/configuration.rs
+index 1937c4b..db08a13 100644
+--- a/src/configuration.rs
++++ b/src/configuration.rs
+@@ -34,6 +34,9 @@ pub struct WorkspaceConfiguration {
+     /// Explicit local source repositories; omission declares none.
+     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+     pub repositories: Vec<RepositoryConfiguration>,
++    /// Explicit bundles for browser components in authored pages.
++    #[serde(default, skip_serializing_if = "Vec::is_empty")]
++    pub components: Vec<crate::components::ComponentConfiguration>,
+     /// Explicit packages and internal components to document; omission declares none.
+     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+     pub packages: Vec<PackageConfiguration>,
+diff --git a/src/diagnostics.rs b/src/diagnostics.rs
+index 0f91784..1df58bf 100644
+--- a/src/diagnostics.rs
++++ b/src/diagnostics.rs
+@@ -10,6 +10,9 @@ use crate::ir::SourceSpan;
+ /// Stable diagnostic identifier.
+ #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+ pub enum DiagnosticCode {
++    /// An explicitly declared browser component or bundle is invalid.
++    #[serde(rename = "invalid-component")]
++    InvalidComponent,
+     /// An authored local page, asset, or anchor cannot be resolved safely.
+     #[serde(rename = "unresolved-document-reference")]
+     UnresolvedDocumentReference,
+@@ -375,6 +378,7 @@ impl DiagnosticCode {
+             Self::RRdInformationLoss => "r-rd-information-loss",
+             Self::RRdSourceAttribution => "r-rd-source-attribution",
+             Self::UnsupportedRd => "unsupported-rd",
++            Self::InvalidComponent => "invalid-component",
+             Self::UnsupportedAuthoredSyntax => "unsupported-authored-syntax",
+             Self::InvalidEmbeddedYaml => "invalid-embedded-yaml",
+             Self::AmbiguousCellOption => "ambiguous-cell-option",
+diff --git a/src/documents.rs b/src/documents.rs
+index 886614b..fdcf935 100644
+--- a/src/documents.rs
++++ b/src/documents.rs
+@@ -342,6 +342,17 @@ impl AdapterContext {
+             }
+             BlockNode::CodeBlock(code) => Some(self.code_block(code)),
+             BlockNode::FencedDiv(div) => {
++                if !self.evaluated
++                    && div
++                        .attributes()
++                        .is_some_and(|a| a.classes().iter().any(|c| c == "component"))
++                {
++                    return Some(Block::Component {
++                        attributes: div.attributes().map(attributes).unwrap_or_default(),
++                        blocks: div.block_nodes().filter_map(|b| self.block(b)).collect(),
++                        span: span(div.syntax().text_range()),
++                    });
++                }
+                 if div
+                     .attributes()
+                     .is_some_and(|a| a.classes().iter().any(|c| c == "panel-tabset"))
+diff --git a/src/documents/preparation.rs b/src/documents/preparation.rs
+index c0014c2..7cc4391 100644
+--- a/src/documents/preparation.rs
++++ b/src/documents/preparation.rs
+@@ -148,6 +148,9 @@ impl PreparationContext<'_> {
+                 Block::Callout {
+                     attributes, blocks, ..
+                 }
++                | Block::Component {
++                    attributes, blocks, ..
++                }
+                 | Block::Tabset {
+                     attributes, blocks, ..
+                 } => {
+diff --git a/src/execution/output_safety/markdown.rs b/src/execution/output_safety/markdown.rs
+index afb064f..ef28844 100644
+--- a/src/execution/output_safety/markdown.rs
++++ b/src/execution/output_safety/markdown.rs
+@@ -401,6 +401,7 @@ impl Live<'_> {
+                         span,
+                     },
+                     Block::Container { .. }
++                    | Block::Component { .. }
+                     | Block::Tabset { .. }
+                     | Block::CodeCell(_)
+                     | Block::DisplayMath { .. } => {
+diff --git a/src/execution/output_safety/warnings.rs b/src/execution/output_safety/warnings.rs
+index 96ce01c..e116f11 100644
+--- a/src/execution/output_safety/warnings.rs
++++ b/src/execution/output_safety/warnings.rs
+@@ -64,6 +64,7 @@ fn visit_blocks<'a>(
+             }
+             Block::BlockQuote { blocks, .. }
+             | Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::Callout { blocks, .. } => visit_blocks(blocks, nodes, depth + 1)?,
+             Block::List { items, .. } => {
+diff --git a/src/extractors/julia/surface.rs b/src/extractors/julia/surface.rs
+index ec35a3e..587e4c4 100644
+--- a/src/extractors/julia/surface.rs
++++ b/src/extractors/julia/surface.rs
+@@ -715,6 +715,7 @@ fn rewrite_references(blocks: &mut [Block], rewrite: &mut impl FnMut(&str) -> St
+             }
+             Block::BlockQuote { blocks, .. }
+             | Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::Callout { blocks, .. } => rewrite_references(blocks, rewrite),
+             Block::List { items, .. } => {
+diff --git a/src/extractors/python/docstrings/prose.rs b/src/extractors/python/docstrings/prose.rs
+index 66c3a06..943294e 100644
+--- a/src/extractors/python/docstrings/prose.rs
++++ b/src/extractors/python/docstrings/prose.rs
+@@ -148,6 +148,7 @@ fn paragraph_roles(
+         }
+         Block::BlockQuote { blocks, .. }
+         | Block::Container { blocks, .. }
++        | Block::Component { blocks, .. }
+         | Block::Tabset { blocks, .. }
+         | Block::Callout { blocks, .. } => {
+             for block in blocks {
+@@ -257,6 +258,11 @@ fn remap_block(block: &mut Block, offsets: &[usize]) {
+             span,
+             ..
+         }
++        | Block::Component {
++            attributes,
++            blocks,
++            span,
++        }
+         | Block::Tabset {
+             attributes,
+             blocks,
+diff --git a/src/extractors/python/references.rs b/src/extractors/python/references.rs
+index 05cbf08..c91a156 100644
+--- a/src/extractors/python/references.rs
++++ b/src/extractors/python/references.rs
+@@ -118,6 +118,7 @@ impl PythonReferences {
+                 }
+                 Block::BlockQuote { blocks, .. }
+                 | Block::Container { blocks, .. }
++                | Block::Component { blocks, .. }
+                 | Block::Tabset { blocks, .. }
+                 | Block::Callout { blocks, .. } => self.blocks(blocks, owner, diagnostics),
+                 Block::List { items, .. } => {
+diff --git a/src/extractors/rust/documentation.rs b/src/extractors/rust/documentation.rs
+index 9533132..fe6bfaf 100644
+--- a/src/extractors/rust/documentation.rs
++++ b/src/extractors/rust/documentation.rs
+@@ -127,6 +127,7 @@ impl Resolver<'_> {
+                     self.inlines(inlines)
+                 }
+                 Block::Container { blocks, .. }
++                | Block::Component { blocks, .. }
+                 | Block::Tabset { blocks, .. }
+                 | Block::BlockQuote { blocks, .. }
+                 | Block::Callout { blocks, .. } => self.blocks(blocks),
+@@ -331,6 +332,7 @@ fn prepare_blocks(blocks: &mut [Block], identifiers: &mut BTreeSet<String>) {
+                 *source_segments = visible;
+             }
+             Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::BlockQuote { blocks, .. }
+             | Block::Callout { blocks, .. } => prepare_blocks(blocks, identifiers),
+diff --git a/src/ir.rs b/src/ir.rs
+index 68a9654..c5e5724 100644
+--- a/src/ir.rs
++++ b/src/ir.rs
+@@ -135,6 +135,15 @@ pub struct Document {
+ #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+ #[serde(tag = "type", rename_all = "kebab-case")]
+ pub enum Block {
++    /// An explicitly declared browser component with ordinary Markdown fallback.
++    Component {
++        /// Component name and optional local anchor.
++        attributes: Attributes,
++        /// Content retained when scripting is unavailable.
++        blocks: Vec<Block>,
++        /// Range in the enclosing document.
++        span: SourceSpan,
++    },
+     /// Heading-delimited panels presented as an interactive tabset in HTML.
+     Tabset {
+         /// Tabset identifier, classes, and optional synchronization group.
+diff --git a/src/ir/workspace.rs b/src/ir/workspace.rs
+index f7b3c5d..25ad714 100644
+--- a/src/ir/workspace.rs
++++ b/src/ir/workspace.rs
+@@ -24,9 +24,9 @@ use super::{
+ };
+ 
+ /// Current portable workspace schema version.
+-pub const WORKSPACE_SCHEMA_VERSION: u32 = 8;
++pub const WORKSPACE_SCHEMA_VERSION: u32 = 9;
+ 
+-/// The supported schema version, serialized as the integer `8`.
++/// The supported schema version, serialized as the integer `9`.
+ ///
+ /// Deserialization rejects unsupported versions instead of interpreting another
+ /// schema as this one. The workspace version field is required even though a
+diff --git a/src/lib.rs b/src/lib.rs
+index 7395884..1cdea21 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -6,6 +6,7 @@
+ 
+ pub mod assembly;
+ pub mod commands;
++pub mod components;
+ pub mod configuration;
+ pub mod configuration_validation;
+ pub mod diagnostics;
+diff --git a/src/main.rs b/src/main.rs
+index 486adb0..ed385f9 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -62,7 +62,9 @@ fn dispatch(cli: Cli) -> Result<(), CommandError> {
+                         "--url-map requires --format fragments".into(),
+                     )))
+                 }
+-                GenerateFormat::Site => commands::generate(options),
++                GenerateFormat::Site => {
++                    commands::generate_with_components(options, args.allow_components)
++                }
+                 GenerateFormat::Fragments => commands::generate_fragments(options, args.url_map),
+             }
+         }
+diff --git a/src/rendering/components.js b/src/rendering/components.js
+new file mode 100644
+index 0000000..b6f5b57
+--- /dev/null
++++ b/src/rendering/components.js
+@@ -0,0 +1,71 @@
++(() => {
++  let observer;
++  let controllers = [];
++  const modules = new Map();
++  const styles = new Map();
++  const stylesheet = url => {
++    if (!styles.has(url)) styles.set(url, new Promise((resolve, reject) => {
++      const link = document.createElement('link');
++      link.rel = 'stylesheet';
++      link.href = url;
++      link.onload = resolve;
++      link.onerror = () => { link.remove(); styles.delete(url); reject(new Error('Component stylesheet failed.')); };
++      document.head.append(link);
++    }));
++    return styles.get(url);
++  };
++  const mount = async root => {
++    if (!root.isConnected) return;
++    const controller = new AbortController();
++    controllers.push(controller);
++    const { signal } = controller;
++    const moduleUrl = new URL(root.dataset.componentModule, location.href).href;
++    const assetBaseUrl = new URL('./', moduleUrl).href;
++    const fallback = root.querySelector('[data-component-fallback]');
++    const content = document.createElement('div');
++    content.hidden = true;
++    root.append(content);
++    try {
++      await Promise.all(JSON.parse(root.dataset.componentStyles).map(url => stylesheet(new URL(url, location.href).href)));
++      if (signal.aborted) return;
++      if (!modules.has(moduleUrl)) modules.set(moduleUrl, import(moduleUrl).catch(error => { modules.delete(moduleUrl); throw error; }));
++      const component = await modules.get(moduleUrl);
++      if (signal.aborted) return;
++      const cleanup = await component.mount(content, { signal, assetBaseUrl });
++      if (signal.aborted) { cleanup?.(); return; }
++      if (cleanup) signal.addEventListener('abort', cleanup, { once: true });
++      fallback.hidden = true;
++      content.hidden = false;
++      root.dataset.componentReady = 'true';
++    } catch (error) {
++      controller.abort();
++      content.remove();
++      if (root.isConnected) {
++        const status = document.createElement('p');
++        status.setAttribute('role', 'status');
++        status.textContent = 'The interactive component could not load. The static explanation is available below.';
++        root.prepend(status);
++      }
++    }
++  };
++  const dispose = () => {
++    observer?.disconnect();
++    observer = undefined;
++    controllers.forEach(controller => controller.abort());
++    controllers = [];
++  };
++  const initialize = () => {
++    const currentObserver = new IntersectionObserver(entries => {
++      // Delivery can outlive the page that queued these visibility changes.
++      if (observer !== currentObserver) return;
++      for (const entry of entries) if (entry.isIntersecting) { currentObserver.unobserve(entry.target); mount(entry.target); }
++    }, { rootMargin: '200px' });
++    observer = currentObserver;
++    document.querySelectorAll('[data-component-module]').forEach(root => currentObserver.observe(root));
++  };
++  document.addEventListener('diplodocus:before-page-change', dispose);
++  document.addEventListener('diplodocus:page-change', initialize);
++  window.addEventListener('pagehide', dispose);
++  window.addEventListener('pageshow', event => { if (event.persisted) { dispose(); document.querySelectorAll('[data-component-ready]').forEach(root => { root.querySelector('[data-component-fallback]').hidden = false; root.querySelector('[data-component-fallback]').nextElementSibling?.remove(); delete root.dataset.componentReady; }); initialize(); } });
++  initialize();
++})();
+diff --git a/src/rendering/html.rs b/src/rendering/html.rs
+index 01e9027..9e838e6 100644
+--- a/src/rendering/html.rs
++++ b/src/rendering/html.rs
+@@ -92,6 +92,7 @@ fn navigation_shell_fingerprint(
+         SEARCH,
+         include_str!("code.js"),
+         include_str!("tabsets.js"),
++        include_str!("components.js"),
+         include_str!("markdown_worker.js"),
+     ] {
+         shell.push('\0');
+@@ -235,6 +236,14 @@ fn render(site: &Site<'_>, standalone: bool) -> Result<RenderedSite, SiteError>
+                 escape(&site.url(route, &markdown_path))
+             )
+             .unwrap();
++            if site.components_enabled && !site.components.is_empty() {
++                write!(
++                    html,
++                    "<script defer src=\"{}\"></script>",
++                    escape(&site.url(route, "assets/components.js"))
++                )
++                .unwrap();
++            }
+             write!(html, "</head><body data-diplodocus-navigation=\"1\" data-diplodocus-shell=\"{}\" data-layout=\"{}\"><a class=\"skip-link\" href=\"#main\">Skip to content</a>", shell_fingerprint.as_deref().expect("standalone shell fingerprint"), if home.is_some() { "home" } else if full_layout { "full" } else { "docs" }).unwrap();
+             html.push_str("<header>");
+             brand(&mut html, site, route, &images)?;
+@@ -858,6 +867,27 @@ fn render(site: &Site<'_>, standalone: bool) -> Result<RenderedSite, SiteError>
+         .into(),
+         file(style.into_bytes(), "text/css; charset=utf-8"),
+     );
++    if standalone && site.components_enabled && !site.components.is_empty() {
++        files.insert(
++            "assets/components.js".into(),
++            file(
++                include_str!("components.js").as_bytes().to_vec(),
++                "text/javascript; charset=utf-8",
++            ),
++        );
++        for (id, bundle) in site.components {
++            let prefix = bundle.prefix(id);
++            for (path, digest) in &bundle.files {
++                files.insert(
++                    format!("{prefix}{path}"),
++                    file(
++                        site.assets[digest].bytes.clone(),
++                        crate::components::media_type(path),
++                    ),
++                );
++            }
++        }
++    }
+     if standalone {
+         files.insert(
+             "assets/search.js".into(),
+@@ -1507,6 +1537,33 @@ impl Renderer<'_, '_> {
+                     });
+             }
+             match block {
++                Block::Component {
++                    attributes, blocks, ..
++                } => {
++                    if self.standalone && self.site.components_enabled {
++                        let name =
++                            crate::components::name(attributes).ok_or(SiteError::Evidence)?;
++                        let bundle = self.site.components.get(name).ok_or(SiteError::Evidence)?;
++                        let prefix = bundle.prefix(name);
++                        let module = self
++                            .site
++                            .url(self.route, &format!("{prefix}{}", bundle.module));
++                        let styles: Vec<_> = bundle
++                            .stylesheets
++                            .iter()
++                            .map(|s| self.site.url(self.route, &format!("{prefix}{s}")))
++                            .collect();
++                        write!(html, "<div class=\"diplodocus-component\"{} data-component-module=\"{}\" data-component-styles=\"{}\"><div data-component-fallback>{}</div></div>", id(attributes), escape(&module), escape(&serde_json::to_string(&styles).map_err(|_| SiteError::Evidence)?), self.blocks(blocks)?).unwrap();
++                    } else {
++                        write!(
++                            html,
++                            "<div{}>{}</div>",
++                            id(attributes),
++                            self.blocks(blocks)?
++                        )
++                        .unwrap();
++                    }
++                }
+                 Block::Tabset {
+                     attributes, blocks, ..
+                 } => {
+diff --git a/src/rendering/markdown.rs b/src/rendering/markdown.rs
+index 3f1d7a3..f21e370 100644
+--- a/src/rendering/markdown.rs
++++ b/src/rendering/markdown.rs
+@@ -581,7 +581,10 @@ impl Markdown<'_, '_> {
+         let mut output = String::new();
+         for node in nodes {
+             match node {
+-                Block::Tabset {
++                Block::Component {
++                    attributes, blocks, ..
++                }
++                | Block::Tabset {
+                     attributes, blocks, ..
+                 } => {
+                     if let Some(identifier) = &attributes.identifier {
+diff --git a/src/rendering/math.rs b/src/rendering/math.rs
+index 691f7f8..497593b 100644
+--- a/src/rendering/math.rs
++++ b/src/rendering/math.rs
+@@ -6,6 +6,7 @@ pub(super) fn contains_math(blocks: &[Block]) -> bool {
+         Block::Paragraph { inlines, .. } | Block::Heading { inlines, .. } => inline_math(inlines),
+         Block::BlockQuote { blocks, .. }
+         | Block::Container { blocks, .. }
++        | Block::Component { blocks, .. }
+         | Block::Tabset { blocks, .. }
+         | Block::Callout { blocks, .. } => contains_math(blocks),
+         Block::List { items, .. } => items.iter().any(|item| contains_math(&item.blocks)),
+diff --git a/src/site.rs b/src/site.rs
+index 936ee5e..f0fd7bb 100644
+--- a/src/site.rs
++++ b/src/site.rs
+@@ -44,6 +44,8 @@ pub enum SiteError {
+ 
+ /// Complete generation inputs, independent of databases and source checkouts.
+ pub struct Site<'a> {
++    pub(crate) components: &'a BTreeMap<String, crate::components::ComponentBundle>,
++    pub(crate) components_enabled: bool,
+     pub(crate) workspace: &'a Workspace,
+     pub(crate) presentation: &'a PresentationDefaults,
+     pub(crate) logo: Option<&'a AssetReference>,
+@@ -107,12 +109,19 @@ impl PageModel<'_> {
+ }
+ 
+ impl<'a> Site<'a> {
++    /// Enable trusted browser bundles for complete site generation.
++    pub fn with_components(mut self, enabled: bool) -> Self {
++        self.components_enabled = enabled;
++        self
++    }
+     /// Assign collision-checked routes and normalize authored cell presentation.
+     /// No source files, database connections, or language runtimes are used.
+     pub fn new(snapshot: &'a Snapshot) -> Result<Self, SiteError> {
+         let workspace = snapshot.workspace();
+         let mut site = Self {
+             workspace,
++            components: snapshot.components(),
++            components_enabled: false,
+             presentation: snapshot.presentation(),
+             logo: snapshot.logo(),
+             open_graph: snapshot.open_graph(),
+diff --git a/src/snapshots.rs b/src/snapshots.rs
+index 86b9215..9e96862 100644
+--- a/src/snapshots.rs
++++ b/src/snapshots.rs
+@@ -32,6 +32,7 @@ pub struct Snapshot {
+     presentation: PresentationDefaults,
+     logo: Option<AssetReference>,
+     open_graph: Option<AssetReference>,
++    components: BTreeMap<String, crate::components::ComponentBundle>,
+     documents: Vec<ResolvedDocument>,
+     assets: BTreeMap<String, ContentAsset>,
+     producer: String,
+@@ -80,6 +81,7 @@ impl Snapshot {
+             presentation: sources.configuration().presentation.clone(),
+             logo: resolved.logo().cloned(),
+             open_graph: resolved.open_graph().cloned(),
++            components: resolved.components.clone(),
+             documents: resolved.records().to_vec(),
+             assets: resolved.assets().clone(),
+             producer: env!("CARGO_PKG_VERSION").into(),
+@@ -98,6 +100,10 @@ impl Snapshot {
+     pub fn presentation(&self) -> &PresentationDefaults {
+         &self.presentation
+     }
++    /// Retained browser component bundles, inert until generation enables them.
++    pub fn components(&self) -> &BTreeMap<String, crate::components::ComponentBundle> {
++        &self.components
++    }
+     /// Portable navbar image, available without the original repository.
+     pub fn logo(&self) -> Option<&AssetReference> {
+         self.logo.as_ref()
+diff --git a/src/snapshots/canonical.rs b/src/snapshots/canonical.rs
+index cc8cf9e..e17a77e 100644
+--- a/src/snapshots/canonical.rs
++++ b/src/snapshots/canonical.rs
+@@ -76,6 +76,9 @@ pub(super) fn records(snapshot: &Snapshot) -> Result<Vec<Record>, SnapshotError>
+         }
+     }
+     let mut presentation = serde_json::to_value(&snapshot.presentation)?;
++    if !snapshot.components.is_empty() {
++        presentation["component-bundles"] = serde_json::to_value(&snapshot.components)?;
++    }
+     if let Some(logo) = &snapshot.logo {
+         presentation["logo-asset"] = serde_json::to_value(logo)?;
+     }
+diff --git a/src/snapshots/canonical/tests.rs b/src/snapshots/canonical/tests.rs
+index 2804037..ca83064 100644
+--- a/src/snapshots/canonical/tests.rs
++++ b/src/snapshots/canonical/tests.rs
+@@ -27,6 +27,7 @@ fn fixture() -> Snapshot {
+         documents: Vec::new(),
+         logo: None,
+         open_graph: None,
++        components: BTreeMap::new(),
+         assets: BTreeMap::new(),
+         producer: "canonical-fixture".into(),
+         executions: BTreeMap::new(),
+@@ -105,7 +106,7 @@ fn minimal_export_and_snapshot_digest_match_independent_fixture() {
+     );
+     assert_eq!(
+         content_fingerprint(&snapshot, &records(&snapshot).unwrap()).unwrap(),
+-        "493c956bf921bc329336c1abe4a5a27ae6cce2caa788a64d11b2b8784384960c"
++        "d3b3a1e55bee5f78cbbbf1dedbc2cb317f384a0e0aec4a95db869713dbff18e5"
+     );
+ }
+ 
+diff --git a/src/snapshots/outputs.rs b/src/snapshots/outputs.rs
+index c4f09ae..e2864a1 100644
+--- a/src/snapshots/outputs.rs
++++ b/src/snapshots/outputs.rs
+@@ -117,6 +117,7 @@ impl Snapshot {
+             presentation: executed.sources().configuration().presentation.clone(),
+             logo: resolved.logo().cloned(),
+             open_graph: resolved.open_graph().cloned(),
++            components: resolved.components.clone(),
+             documents: resolved.records().to_vec(),
+             assets: resolved.assets().clone(),
+             producer: env!("CARGO_PKG_VERSION").into(),
+@@ -324,6 +325,7 @@ fn cells(blocks: &[Block], visit: &mut impl FnMut(&CodeCell)) {
+             Block::CodeCell(cell) => visit(cell),
+             Block::BlockQuote { blocks, .. }
+             | Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::Callout { blocks, .. } => cells(blocks, visit),
+             Block::List { items, .. } => {
+@@ -367,6 +369,7 @@ fn project(
+             }
+             Block::BlockQuote { blocks, .. }
+             | Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::Callout { blocks, .. } => project(blocks, records, ordinal)?,
+             Block::List { items, .. } => {
+diff --git a/src/snapshots/storage.rs b/src/snapshots/storage.rs
+index 7e18ea6..922dc4d 100644
+--- a/src/snapshots/storage.rs
++++ b/src/snapshots/storage.rs
+@@ -207,6 +207,7 @@ fn decode(
+     let mut presentation = None;
+     let mut logo = None;
+     let mut open_graph = None;
++    let mut components = BTreeMap::new();
+     let mut entities: BTreeMap<&str, serde_json::Map<String, Value>> = BTreeMap::new();
+     let mut nested = Vec::new();
+     let mut documents = Vec::new();
+@@ -225,6 +226,9 @@ fn decode(
+                 if let Some(asset) = object.remove("open-graph-asset") {
+                     open_graph = Some(serde_json::from_value(asset)?);
+                 }
++                if let Some(bundles) = object.remove("component-bundles") {
++                    components = serde_json::from_value(bundles)?;
++                }
+                 presentation = Some(serde_json::from_value(content)?);
+                 continue;
+             }
+@@ -327,6 +331,7 @@ fn decode(
+         presentation: presentation.ok_or(SnapshotError::Invalid("missing presentation"))?,
+         logo,
+         open_graph,
++        components,
+         documents,
+         assets,
+         producer,
+diff --git a/src/snapshots/storage/tests.rs b/src/snapshots/storage/tests.rs
+index 97a60df..d444526 100644
+--- a/src/snapshots/storage/tests.rs
++++ b/src/snapshots/storage/tests.rs
+@@ -11,6 +11,7 @@ fn validation_failure_preserves_the_previous_file_and_cleans_staging() {
+         documents: Vec::new(),
+         logo: None,
+         open_graph: None,
++        components: BTreeMap::new(),
+         assets: BTreeMap::new(),
+         producer: "test".into(),
+         executions: BTreeMap::new(),
+diff --git a/src/snapshots/validation.rs b/src/snapshots/validation.rs
+index 939e3d9..e8ccb14 100644
+--- a/src/snapshots/validation.rs
++++ b/src/snapshots/validation.rs
+@@ -170,6 +170,38 @@ impl Snapshot {
+             "document record set",
+         )?;
+         let mut used_assets = BTreeSet::new();
++        let known_components = self.components.keys().map(String::as_str).collect();
++        for (id, bundle) in &self.components {
++            require(
++                !id.is_empty()
++                    && id
++                        .bytes()
++                        .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'),
++                "component identity",
++            )?;
++            require(
++                crate::components::safe_path(&bundle.module)
++                    && bundle.files.contains_key(&bundle.module)
++                    && matches!(
++                        std::path::Path::new(&bundle.module)
++                            .extension()
++                            .and_then(|s| s.to_str()),
++                        Some("js" | "mjs")
++                    )
++                    && bundle
++                        .stylesheets
++                        .iter()
++                        .all(|s| s.ends_with(".css") && bundle.files.contains_key(s)),
++                "component entry assets",
++            )?;
++            for (path, digest) in &bundle.files {
++                require(
++                    crate::components::safe_path(path) && self.assets.contains_key(digest),
++                    "component asset",
++                )?;
++                used_assets.insert(digest.clone());
++            }
++        }
+         require(
+             self.presentation.open_graph.is_some() == self.open_graph.is_some(),
+             "Open Graph presentation evidence",
+@@ -226,6 +258,8 @@ impl Snapshot {
+             })
+             .collect();
+         for (identity, (document, owner)) in expected_documents {
++            crate::components::validate_blocks(&document.document.blocks, &known_components)
++                .map_err(|_| SnapshotError::Invalid("component block"))?;
+             if let Some(source) = &document.source_location {
+                 require(
+                     workspace.repositories.contains_key(&source.repository),
+diff --git a/src/snapshots/validation/links.rs b/src/snapshots/validation/links.rs
+index 26a225b..8c9e41b 100644
+--- a/src/snapshots/validation/links.rs
++++ b/src/snapshots/validation/links.rs
+@@ -999,6 +999,7 @@ impl Links<'_> {
+             match block {
+                 Block::BlockQuote { blocks, .. }
+                 | Block::Container { blocks, .. }
++                | Block::Component { blocks, .. }
+                 | Block::Tabset { blocks, .. }
+                 | Block::Callout { blocks, .. } => self.blocks(blocks)?,
+                 Block::List { items, .. } => {
+diff --git a/src/validation/workspace.rs b/src/validation/workspace.rs
+index 5f11658..b129cc8 100644
+--- a/src/validation/workspace.rs
++++ b/src/validation/workspace.rs
+@@ -154,6 +154,7 @@ pub struct ContentAsset {
+ #[derive(Debug)]
+ pub struct ResolvedWorkspace {
+     records: Vec<ResolvedDocument>,
++    pub(crate) components: BTreeMap<String, crate::components::ComponentBundle>,
+     logo: Option<AssetReference>,
+     open_graph: Option<AssetReference>,
+     assets: BTreeMap<String, ContentAsset>,
+@@ -432,6 +433,7 @@ fn resolve(
+         generated,
+         result: ResolvedWorkspace {
+             records: vec![],
++            components: BTreeMap::new(),
+             logo: None,
+             open_graph: None,
+             assets: BTreeMap::new(),
+@@ -592,6 +594,23 @@ fn resolve(
+             resolution.result.diagnostics.into_iter().collect(),
+         ));
+     }
++    let (components, assets, inputs) = crate::components::collect(sources)
++        .map_err(|diagnostic| ResolutionError::Diagnostics(vec![*diagnostic]))?;
++    resolution.result.components = components;
++    for (digest, asset) in assets {
++        resolution.result.assets.entry(digest).or_insert(asset);
++    }
++    for (path, boundary) in inputs {
++        let fingerprint = fingerprint_bytes(&fs::read(&path).map_err(AssemblyError::from)?);
++        resolution.result.inputs.insert(
++            path.clone(),
++            AssetObservation {
++                path,
++                boundary,
++                fingerprint,
++            },
++        );
++    }
+     sources.revalidate()?;
+     resolution.result.revalidate()?;
+     Ok(resolution.result)
+diff --git a/src/validation/workspace/walk.rs b/src/validation/workspace/walk.rs
+index 08048b6..b9db657 100644
+--- a/src/validation/workspace/walk.rs
++++ b/src/validation/workspace/walk.rs
+@@ -12,6 +12,7 @@ pub(crate) fn references(
+             }
+             Block::BlockQuote { blocks, .. }
+             | Block::Container { blocks, .. }
++            | Block::Component { blocks, .. }
+             | Block::Tabset { blocks, .. }
+             | Block::Callout { blocks, .. } => references(blocks, generated, visit),
+             Block::List { items, .. } => {
+@@ -136,6 +137,9 @@ fn collect_anchors(blocks: &[Block], anchors: &mut BTreeSet<String>) {
+             Block::Callout {
+                 attributes, blocks, ..
+             }
++            | Block::Component {
++                attributes, blocks, ..
++            }
+             | Block::Tabset {
+                 attributes, blocks, ..
+             } => {

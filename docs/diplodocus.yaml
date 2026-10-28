@@ -50,6 +50,13 @@ repositories:
     path: ".."
     url: "https://github.com/jolars/shrinkage"
 
+components:
+  - id: "optimization-explorer"
+    repository: "shrinkage"
+    path: "docs/widget/dist"
+    module: "index.js"
+    stylesheets: ["style.css"]
+
 packages:
   - id: "rust"
     name: "Shrinkage for Rust"
@@ -58,6 +65,7 @@ packages:
     repository: "shrinkage"
     path: "."
     metadata-path: "Cargo.toml"
+    overview: "docs/rust-overview.md"
     targets:
       - id: "api"
         extractor: "rust"

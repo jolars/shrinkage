@@ -4,7 +4,9 @@ use lazymatrix::{LazyMatrix, RawColumns};
 
 use super::quadratic::Weights;
 use crate::error::finite;
+use crate::solver::observer::notify_inner;
 use crate::{ClusteredLasso, FitError};
+use crate::{SolverObserver, StepKind};
 
 #[derive(Default)]
 pub(super) struct Block {
@@ -64,15 +66,23 @@ impl super::Partition<ClusteredLasso> for State {
         self.rebuild(matrix, coefficients, residual, iteration)
     }
 
-    fn sweep<E>(
+    fn sweep_observed<E, T: SolverObserver + ?Sized>(
         &mut self,
         coefficients: &mut [f64],
         intercept: &mut f64,
         fit_intercept: bool,
         penalty: &ClusteredLasso,
         iteration: usize,
+        observer: &mut T,
     ) -> Result<(), FitError<E>> {
-        self.sweep(coefficients, intercept, fit_intercept, penalty, iteration)
+        self.sweep_observed(
+            coefficients,
+            intercept,
+            fit_intercept,
+            penalty,
+            iteration,
+            observer,
+        )
     }
 
     fn labels(&self) -> &[usize] {
@@ -253,6 +263,7 @@ impl State {
         Ok(())
     }
 
+    #[cfg(test)]
     pub(super) fn sweep<E>(
         &mut self,
         coefficients: &mut [f64],
@@ -260,6 +271,25 @@ impl State {
         fit_intercept: bool,
         penalty: &ClusteredLasso,
         iteration: usize,
+    ) -> Result<(), FitError<E>> {
+        self.sweep_observed(
+            coefficients,
+            intercept,
+            fit_intercept,
+            penalty,
+            iteration,
+            &mut crate::solver::observer::NoObserver,
+        )
+    }
+
+    pub(super) fn sweep_observed<E, T: SolverObserver + ?Sized>(
+        &mut self,
+        coefficients: &mut [f64],
+        intercept: &mut f64,
+        fit_intercept: bool,
+        penalty: &ClusteredLasso,
+        iteration: usize,
+        observer: &mut T,
     ) -> Result<(), FitError<E>> {
         self.sweep_order.clear();
         self.sweep_order
@@ -309,10 +339,29 @@ impl State {
                 coefficients[j] = value;
             }
             self.move_block(index, value, iteration)?;
+            notify_inner(
+                observer,
+                coefficients,
+                *intercept,
+                iteration + 1,
+                visit + 1,
+                StepKind::Block { index: visit },
+            );
         }
         if fit_intercept {
+            let previous = *intercept;
             self.weights
                 .update_intercept(&mut self.residual, intercept, iteration)?;
+            if *intercept != previous {
+                notify_inner(
+                    observer,
+                    coefficients,
+                    *intercept,
+                    iteration + 1,
+                    self.sweep_order.len() + 1,
+                    StepKind::Intercept,
+                );
+            }
         }
         Ok(())
     }

@@ -49,6 +49,62 @@ where
     }
 }
 
+impl<M, V, P> ObservedSolver<Problem<&M, Binomial<'_>, P>> for Hybrid<V>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    V: ProximalVector,
+    P: HybridPenalty,
+{
+    fn solve_from_with_observer<O: SolverObserver + ?Sized>(
+        &self,
+        problem: &Problem<&M, Binomial<'_>, P>,
+        initial: Option<crate::InitialPoint<'_>>,
+        observer: &mut O,
+    ) -> Result<HybridFit, Self::Error> {
+        let threshold = self.validate()?;
+        if self.max_outer_iterations == 0 || self.max_inner_iterations == 0 {
+            return Err(invalid(
+                "logistic outer and inner iteration limits must be positive",
+            ));
+        }
+        let n = problem.design().nrows();
+        let p = problem.design().ncols();
+        let datafit = *problem.datafit();
+        if n == 0 || datafit.nobs() != n {
+            return Err(invalid(
+                "datafit observation count must match nonempty training rows",
+            ));
+        }
+        let mut inner = Workspace::<P>::new(n, p);
+        datafit
+            .value(&inner.residual)
+            .map_err(|e| FitError::from_component(e, 0))?;
+        problem
+            .penalty()
+            .validate_input(&inner.coefficients)
+            .map_err(|e| FitError::from_component(e, 0))?;
+        let prepared = problem.prepare(datafit.fits_intercept())?;
+        let mut design = NativeDesign::<_, V>::new(prepared);
+        if let Some(initial) = initial {
+            initial.apply(
+                &mut inner.coefficients,
+                &mut inner.intercept,
+                datafit.fits_intercept(),
+            )?;
+        }
+        let solution = iterate_observed(
+            &mut design,
+            datafit,
+            problem.penalty(),
+            self,
+            threshold,
+            &mut inner,
+            observer,
+        )?;
+        HybridFit::from_solution(solution, design.into_preprocessing())
+    }
+}
+
 struct Outer {
     coefficients: Vec<f64>,
     intercept: f64,
@@ -73,10 +129,36 @@ where
     V: ProximalVector,
     P: HybridPenalty,
 {
+    iterate_observed(
+        design,
+        datafit,
+        penalty,
+        options,
+        threshold,
+        inner,
+        &mut NoObserver,
+    )
+}
+
+fn iterate_observed<M, V, W, P, T>(
+    design: &mut NativeDesign<M, V>,
+    datafit: Binomial<'_>,
+    penalty: &P,
+    options: &Hybrid<W>,
+    threshold: f64,
+    inner: &mut Workspace<P>,
+    observer: &mut T,
+) -> Result<Solution, FitError<M::Error>>
+where
+    T: SolverObserver + ?Sized,
+    M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    V: ProximalVector,
+    P: HybridPenalty,
+{
     let n = design.nrows();
     let mut outer = Outer {
-        coefficients: vec![0.0; design.ncols()],
-        intercept: 0.0,
+        coefficients: inner.coefficients.clone(),
+        intercept: inner.intercept,
         eta: vec![0.0; n],
         derivative: vec![0.0; n],
         weights: vec![0.0; n],
@@ -112,6 +194,13 @@ where
         backtracks: 0,
     };
     let (mut outer_iterations, mut outer_backtracks) = (0, 0);
+    notify(
+        observer,
+        &outer.coefficients,
+        outer.intercept,
+        0,
+        StepKind::Initial,
+    );
     loop {
         inner.coefficients.copy_from_slice(&outer.coefficients);
         inner.intercept = outer.intercept;
@@ -183,6 +272,13 @@ where
             let mut solution = total.finish(inner, options, threshold);
             solution.outer_iterations = outer_iterations;
             solution.outer_backtracks = outer_backtracks;
+            notify(
+                observer,
+                &outer.coefficients,
+                outer.intercept,
+                solution.proximal.iterations,
+                StepKind::Final(solution.proximal.termination),
+            );
             return Ok(solution);
         }
         datafit
@@ -202,13 +298,17 @@ where
         inner_options.max_iterations = options
             .max_inner_iterations
             .min(options.max_iterations - total.iterations);
-        let report = iterate_quadratic(
+        let report = iterate_quadratic_observed(
             design,
             model,
             penalty,
             &inner_options,
             0.1 * mapping.max(threshold),
             inner,
+            &mut InnerObserver {
+                observer,
+                outer_iteration: outer_iterations + 1,
+            },
         )?;
         total.iterations += report.iterations;
         total.pg_steps += report.pg_steps;
@@ -345,5 +445,12 @@ where
             });
         }
         outer_iterations += 1;
+        notify(
+            observer,
+            &outer.coefficients,
+            outer.intercept,
+            total.iterations,
+            StepKind::Irls,
+        );
     }
 }

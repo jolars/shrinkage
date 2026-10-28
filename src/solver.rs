@@ -1,5 +1,8 @@
 //! Solver capabilities, configuration, and stopping rules.
 
+mod observer;
+pub use observer::{InitialPoint, ObservedSolver, SolverObserver, SolverStep, StepKind};
+
 pub(crate) mod coordinate;
 pub(crate) mod hybrid;
 pub(crate) mod irls;

@@ -3,9 +3,8 @@
 `Gaussian` fits a single real-valued response using averaged squared error:
 
 $$
-  L(y,\eta) = \frac{1}{2n}\sum_{i=1}^n(y_i - \eta_i)^2,
-  \qquad
-  \nabla_\eta L = \frac{\eta - y}{n},\qquad \nabla_\eta^2 L = \frac{1}{n}I.
+  L(y,\eta) = \frac{1}{2n}\sum_{i=1}^n(y_i - \eta_i)^2, \qquad \nabla_\eta L
+            = \frac{\eta - y}{n},\qquad \nabla_\eta^2 L = \frac{1}{n}I.
 $$
 
 Supply one finite response per observation. The constructor borrows the response

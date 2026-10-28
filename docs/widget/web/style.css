@@ -1,0 +1,190 @@
+.optimization-explorer {
+  --plot-contour: light-dark(rgb(255 255 255 / 90%), rgb(255 255 255 / 35%));
+  --plot-penalty: #4682b4;
+  --plot-trace: #000000;
+  color: var(--ink);
+  margin-block: 1.5rem 3rem;
+}
+.optimization-explorer [hidden] {
+  display: none !important;
+}
+.optimization-explorer .explorer-intro p {
+  margin: 0 0 0.8rem;
+}
+.optimization-explorer .explorer-eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 650;
+}
+.optimization-explorer .explorer-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
+  gap: 1.5rem 2rem;
+  padding: 1rem 0 0;
+}
+.optimization-explorer fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.optimization-explorer legend {
+  margin-bottom: 0.8rem;
+  padding: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.optimization-explorer .explorer-group-fields {
+  display: grid;
+  gap: 0.9rem 1.3rem;
+}
+.optimization-explorer .explorer-data .explorer-group-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.optimization-explorer label {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 550;
+  min-width: 0;
+}
+.optimization-explorer output {
+  margin-left: auto;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.optimization-explorer select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.optimization-explorer input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  margin: 0.3rem 0 0;
+  accent-color: var(--accent);
+}
+.optimization-explorer .explorer-plots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding-top: 1.4rem;
+}
+.optimization-explorer figure {
+  min-width: 0;
+  margin: 0;
+}
+.optimization-explorer figcaption {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-align: center;
+}
+.optimization-explorer svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.optimization-explorer [data-contour-lines] path {
+  stroke: var(--plot-contour);
+}
+.optimization-explorer [data-field="penalty"] [stroke="#4682b4"] {
+  stroke: var(--plot-penalty);
+}
+.optimization-explorer [data-field="penalty"] [fill="#4682b4"] {
+  fill: var(--plot-penalty);
+}
+.optimization-explorer [data-trajectory] path {
+  stroke: var(--plot-trace);
+  filter: drop-shadow(0 0 0.6px rgb(255 255 255 / 70%));
+}
+.optimization-explorer [data-trajectory] circle,
+.optimization-explorer [data-trajectory] rect {
+  fill: var(--plot-trace);
+}
+.optimization-explorer [data-trajectory] [data-inner-iterate] {
+  fill: #ffffff;
+  stroke: var(--plot-trace);
+}
+.optimization-explorer figure p {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 0 0 1rem;
+}
+.optimization-explorer :is(select, input, button):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+.optimization-explorer [data-plot="objective"] {
+  position: relative;
+}
+.optimization-explorer .explorer-start-handle {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 15%);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.optimization-explorer .explorer-start-handle::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+}
+.optimization-explorer .explorer-start-handle svg {
+  width: 21px;
+  height: 21px;
+  pointer-events: none;
+}
+.optimization-explorer [data-dragging],
+.optimization-explorer [data-dragging] .explorer-start-handle {
+  cursor: grabbing;
+}
+.optimization-explorer .explorer-status {
+  font-size: 0.8rem;
+  margin: 0.7rem 0 0;
+  color: var(--muted);
+}
+@media (max-width: 900px) {
+  .optimization-explorer .explorer-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .optimization-explorer .explorer-data {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 680px) {
+  .optimization-explorer .explorer-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .optimization-explorer .explorer-plots {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .optimization-explorer figure {
+    max-width: 420px;
+    width: 100%;
+    margin-inline: auto;
+  }
+}

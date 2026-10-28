@@ -6,6 +6,7 @@ tasks:
     cmds:
       - cargo fmt --all
       - cargo fmt --manifest-path packages/python/Cargo.toml
+      - cargo fmt --manifest-path docs/widget/Cargo.toml
       - ruff format packages/python scripts
       - ruff check --fix packages/python scripts
       - panache format .
@@ -199,6 +200,47 @@ tasks:
     cmds:
       - python scripts/check_python_artifacts.py --sdist
 
+  docs:widget:build:
+    desc: Build the browser explorer from the Rust solvers
+    sources:
+      - src/**/*.rs
+      - Cargo.toml
+      - docs/widget/Cargo.toml
+      - docs/widget/Cargo.lock
+      - docs/widget/src/**/*.rs
+      - docs/widget/web/*
+      - docs/widget/package.json
+      - docs/widget/package-lock.json
+      - docs/widget/build.mjs
+      - rust-toolchain.toml
+    generates:
+      - docs/widget/dist/index.js
+      - docs/widget/dist/worker.js
+      - docs/widget/dist/style.css
+      - docs/widget/dist/shrinkage_widget_bg.wasm
+      - docs/widget/pkg/shrinkage_widget.js
+    cmds:
+      - cargo build --locked --manifest-path docs/widget/Cargo.toml --release --lib --target wasm32-unknown-unknown
+      - wasm-bindgen docs/widget/target/wasm32-unknown-unknown/release/shrinkage_widget.wasm --target web --out-dir docs/widget/pkg --out-name shrinkage_widget
+      - npm --prefix docs/widget ci --ignore-scripts
+      - npm --prefix docs/widget run build
+
+  docs:widget:figure:
+    desc: Regenerate the static explorer illustration
+    cmds:
+      - uv run --script scripts/optimization_figure.py
+
+  docs:widget:check:
+    desc: Verify solver traces, WebAssembly parity, and browser interaction
+    cmds:
+      - cargo fmt --manifest-path docs/widget/Cargo.toml -- --check
+      - cargo clippy --locked --manifest-path docs/widget/Cargo.toml --all-targets -- -D warnings
+      - cargo test --locked --manifest-path docs/widget/Cargo.toml
+      - task: docs:widget:build
+      - npm --prefix docs/widget test
+      - uv run --script scripts/optimization_figure.py --check
+      - npm --prefix docs/widget run test:browser
+
   docs:prepare:
     internal: true
     cmds:
@@ -208,7 +250,7 @@ tasks:
 
   docs:serve:
     desc: Preview the shared Rust and Python documentation
-    deps: [docs:prepare]
+    deps: [docs:prepare, docs:widget:build]
     cmds:
       - uv run --locked --project packages/python diplodocus serve --config docs/diplodocus.yaml --output docs/site
 
@@ -224,16 +266,20 @@ tasks:
 
   docs:build:
     desc: Validate and build the shared documentation site
-    deps: [docs:prepare]
+    deps: [docs:prepare, docs:widget:build]
     cmds:
       - uv run --locked --project packages/python diplodocus check --config docs/diplodocus.yaml
       - uv run --locked --project packages/python diplodocus build --config docs/diplodocus.yaml --output docs/site
       - python scripts/prepare_documentation.py
 
   docs:check:
-    desc: Build documentation and verify its Cloudflare Worker package
+    desc: Build documentation and verify its explorer and Cloudflare Worker package
     cmds:
+      - task: docs:widget:check
       - task: docs:figures:check
       - task: docs:build
       - npm --prefix docs ci --ignore-scripts
       - npm --prefix docs run check
+      - cmd: npm --prefix docs/widget run test:browser
+        env:
+          SHRINKAGE_DOCS_SITE: "{{.ROOT_DIR}}/docs/site"

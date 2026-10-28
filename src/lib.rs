@@ -89,8 +89,9 @@ pub use problem::{
     RuntimeProblem,
 };
 pub use solver::{
-    CoordinateDescent, Hybrid, HybridStep, Irls, ProximalDesign, ProximalGradient, ProximalVector,
-    Solver, StoppingCriterion,
+    CoordinateDescent, Hybrid, HybridStep, InitialPoint, Irls, ObservedSolver, ProximalDesign,
+    ProximalGradient, ProximalVector, Solver, SolverObserver, SolverStep, StepKind,
+    StoppingCriterion,
 };
 
 /// Matrix capabilities, borrowed columns, and lazy normalization.

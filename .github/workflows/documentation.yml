@@ -18,9 +18,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Keep this revision and the patches aligned with devenv's generator.
+      - name: Check out the pinned documentation generator
+        uses: actions/checkout@v7
+        with:
+          repository: jolars/diplodocus
+          ref: f677d820a4e613161c87fd4e8b75b071fe17931c
+          path: .build/diplodocus
+          persist-credentials: false
       - name: Install Rust toolchains
         run: |
-          rustup toolchain install 1.89.0 --profile minimal
+          rustup toolchain install 1.89.0 --profile minimal --target wasm32-unknown-unknown
+          rustup toolchain install 1.98.0 --profile minimal
           rustup toolchain install nightly-2026-09-28 --profile minimal
           echo "DIPLODOCUS_RUST_TOOLCHAIN=$(dirname "$(dirname "$(rustup which --toolchain nightly-2026-09-28 rustc)")")" >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2
@@ -28,36 +37,63 @@ jobs:
           workspaces: |
             .
             packages/python
-          key: documentation
-      - name: Install Diplodocus
-        uses: jolars/setup-diplodocus@v1
+            docs/widget
+            .build/diplodocus
+          key: documentation-components
+      - name: Build the pinned documentation generator
+        run: |
+          git -C .build/diplodocus apply "$GITHUB_WORKSPACE/docs/diplodocus-generated-inputs.patch"
+          git -C .build/diplodocus apply "$GITHUB_WORKSPACE/docs/diplodocus-components.patch"
+          cargo +1.98.0 build --locked --release --manifest-path .build/diplodocus/Cargo.toml --bin diplodocus
+          echo "$GITHUB_WORKSPACE/.build/diplodocus/target/release" >> "$GITHUB_PATH"
+      - uses: actions/setup-node@v7
         with:
-          version: "0.9.0"
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            docs/package-lock.json
+            docs/widget/package-lock.json
+      - name: Install WebAssembly and browser tools
+        run: |
+          cargo +1.98.0 install --locked wasm-bindgen-cli --version 0.2.127
+          npm --prefix docs/widget ci --ignore-scripts
+          npm --prefix docs/widget exec -- playwright install --with-deps chromium
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           enable-cache: true
           python-version: "3.11"
       - name: Configure the Python environment
-        # Keep generated environment symlinks outside the Rust input inventory.
         run: echo "UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/shrinkage-docs-venv" >> "$GITHUB_ENV"
       - name: Prepare package dependencies
         run: |
           cp CONTRIBUTING.md docs/pages/contribution.md
           uv sync --locked --project packages/python
           cargo fetch --locked
-      - name: Check documentation
-        run: uv run --no-sync --project packages/python diplodocus check --config docs/diplodocus.yaml
-      - name: Check penalty figures
-        run: uv run --script scripts/penalty_regions.py --check
+      - name: Check native explorer calculations
+        run: |
+          cargo fmt --manifest-path docs/widget/Cargo.toml -- --check
+          cargo clippy --locked --manifest-path docs/widget/Cargo.toml --all-targets -- -D warnings
+          cargo test --locked --manifest-path docs/widget/Cargo.toml
+      - name: Build and check the WebAssembly explorer
+        run: |
+          cargo build --locked --manifest-path docs/widget/Cargo.toml --release --lib --target wasm32-unknown-unknown
+          wasm-bindgen docs/widget/target/wasm32-unknown-unknown/release/shrinkage_widget.wasm --target web --out-dir docs/widget/pkg --out-name shrinkage_widget
+          npm --prefix docs/widget run build
+          npm --prefix docs/widget test
+          npm --prefix docs/widget run test:browser
+      - name: Check documentation and figures
+        run: |
+          uv run --no-sync --project packages/python diplodocus check --config docs/diplodocus.yaml
+          uv run --script scripts/penalty_regions.py --check
+          uv run --script scripts/optimization_figure.py --check
       - name: Build documentation
-        run: uv run --no-sync --project packages/python diplodocus build --config docs/diplodocus.yaml --output docs/site
-      - name: Install public assets and shared head markup
-        run: python scripts/prepare_documentation.py
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: docs/package-lock.json
+        run: |
+          uv run --no-sync --project packages/python diplodocus build --config docs/diplodocus.yaml --output docs/site
+          python scripts/prepare_documentation.py
+      - name: Check the landing-page explorer
+        run: npm --prefix docs/widget run test:browser
+        env:
+          SHRINKAGE_DOCS_SITE: ${{ github.workspace }}/docs/site
       - name: Install deployment dependencies
         run: npm --prefix docs ci --ignore-scripts
       - name: Check Worker package

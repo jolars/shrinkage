@@ -8,6 +8,8 @@ mod slope;
 #[cfg(test)]
 mod tests;
 
+use super::observer::{InnerObserver, NoObserver, notify};
+use super::{ObservedSolver, SolverObserver, StepKind};
 use std::marker::PhantomData;
 
 use quadratic::{Model, Weights};
@@ -37,6 +39,7 @@ trait Partition<P>: Sized {
         penalty: &P,
         iteration: usize,
     ) -> Result<(), FitError<M::Error>>;
+    #[cfg(test)]
     fn sweep<E>(
         &mut self,
         coefficients: &mut [f64],
@@ -44,6 +47,24 @@ trait Partition<P>: Sized {
         fit_intercept: bool,
         penalty: &P,
         iteration: usize,
+    ) -> Result<(), FitError<E>> {
+        self.sweep_observed(
+            coefficients,
+            intercept,
+            fit_intercept,
+            penalty,
+            iteration,
+            &mut NoObserver,
+        )
+    }
+    fn sweep_observed<E, T: SolverObserver + ?Sized>(
+        &mut self,
+        coefficients: &mut [f64],
+        intercept: &mut f64,
+        fit_intercept: bool,
+        penalty: &P,
+        iteration: usize,
+        observer: &mut T,
     ) -> Result<(), FitError<E>>;
     fn labels(&self) -> &[usize];
     fn values(&self) -> Vec<f64>;
@@ -263,6 +284,21 @@ where
     }
 }
 
+impl<M, V> ObservedSolver<Problem<&M, Gaussian<'_>, ClusteredLasso>> for Hybrid<V>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    V: ProximalVector,
+{
+    fn solve_from_with_observer<O: SolverObserver + ?Sized>(
+        &self,
+        problem: &Problem<&M, Gaussian<'_>, ClusteredLasso>,
+        initial: Option<crate::InitialPoint<'_>>,
+        observer: &mut O,
+    ) -> Result<HybridFit, Self::Error> {
+        solve_observed(problem, self, initial, observer)
+    }
+}
+
 impl<M, V> Solver<Problem<&M, Gaussian<'_>, ChainFusedLasso>> for Hybrid<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
@@ -279,6 +315,21 @@ where
     }
 }
 
+impl<M, V> ObservedSolver<Problem<&M, Gaussian<'_>, ChainFusedLasso>> for Hybrid<V>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    V: ProximalVector,
+{
+    fn solve_from_with_observer<O: SolverObserver + ?Sized>(
+        &self,
+        problem: &Problem<&M, Gaussian<'_>, ChainFusedLasso>,
+        initial: Option<crate::InitialPoint<'_>>,
+        observer: &mut O,
+    ) -> Result<HybridFit, Self::Error> {
+        solve_observed(problem, self, initial, observer)
+    }
+}
+
 impl<M, V> Solver<Problem<&M, Gaussian<'_>, Slope>> for Hybrid<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
@@ -292,11 +343,41 @@ where
     }
 }
 
+impl<M, V> ObservedSolver<Problem<&M, Gaussian<'_>, Slope>> for Hybrid<V>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    V: ProximalVector,
+{
+    fn solve_from_with_observer<O: SolverObserver + ?Sized>(
+        &self,
+        problem: &Problem<&M, Gaussian<'_>, Slope>,
+        initial: Option<crate::InitialPoint<'_>>,
+        observer: &mut O,
+    ) -> Result<HybridFit, Self::Error> {
+        solve_observed(problem, self, initial, observer)
+    }
+}
+
 fn solve<M, V, P>(
     problem: &Problem<&M, Gaussian<'_>, P>,
     options: &Hybrid<V>,
 ) -> Result<HybridFit, FitError<M::Error>>
 where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    V: ProximalVector,
+    P: HybridPenalty,
+{
+    solve_observed(problem, options, None, &mut NoObserver)
+}
+
+fn solve_observed<M, V, P, T>(
+    problem: &Problem<&M, Gaussian<'_>, P>,
+    options: &Hybrid<V>,
+    initial: Option<crate::InitialPoint<'_>>,
+    observer: &mut T,
+) -> Result<HybridFit, FitError<M::Error>>
+where
+    T: SolverObserver + ?Sized,
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
     P: HybridPenalty,
@@ -322,13 +403,21 @@ where
             0,
         )?;
     }
-    let solution = iterate(
+    if let Some(initial) = initial {
+        initial.apply(
+            &mut work.coefficients,
+            &mut work.intercept,
+            problem.datafit().fit_intercept,
+        )?;
+    }
+    let solution = iterate_observed(
         &mut design,
         *problem.datafit(),
         problem.penalty(),
         options,
         threshold,
         &mut work,
+        observer,
     )?;
     HybridFit::from_solution(solution, design.into_preprocessing())
 }
@@ -569,6 +658,7 @@ fn initial_curvature<M: RawColumns<f64> + lazymatrix::MatrixErrorType, V: Proxim
     Ok(if value == 0.0 { 1.0 } else { value })
 }
 
+#[cfg(test)]
 fn iterate_quadratic<'a, M, V, W, P>(
     design: &mut NativeDesign<M, V>,
     datafit: Model<'a>,
@@ -578,6 +668,32 @@ fn iterate_quadratic<'a, M, V, W, P>(
     work: &mut Workspace<P>,
 ) -> Result<Progress, FitError<M::Error>>
 where
+    M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    V: ProximalVector,
+    P: HybridPenalty,
+{
+    iterate_quadratic_observed(
+        design,
+        datafit,
+        penalty,
+        options,
+        threshold,
+        work,
+        &mut NoObserver,
+    )
+}
+
+fn iterate_quadratic_observed<'a, M, V, W, P, T>(
+    design: &mut NativeDesign<M, V>,
+    datafit: Model<'a>,
+    penalty: &P,
+    options: &Hybrid<W>,
+    threshold: f64,
+    work: &mut Workspace<P>,
+    observer: &mut T,
+) -> Result<Progress, FitError<M::Error>>
+where
+    T: SolverObserver + ?Sized,
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
     P: HybridPenalty,
@@ -592,6 +708,13 @@ where
         initial_curvature(design, datafit.fits_intercept(), &work.weights, options)?;
     let (mut pg_steps, mut coordinate_sweeps, mut diagnostic_checks, mut backtracks) = (0, 0, 0, 0);
     let mut since_pg = options.cluster_sweeps;
+    notify(
+        observer,
+        &work.coefficients,
+        work.intercept,
+        0,
+        StepKind::Initial,
+    );
     for iteration in 0..=options.max_iterations {
         if iteration % options.check_every == 0 || iteration == options.max_iterations {
             let (objective, mapping) =
@@ -607,6 +730,17 @@ where
                     penalty,
                     iteration,
                 )?;
+                notify(
+                    observer,
+                    &work.coefficients,
+                    work.intercept,
+                    iteration,
+                    StepKind::Final(if mapping <= threshold {
+                        Termination::Converged
+                    } else {
+                        Termination::IterationLimit
+                    }),
+                );
                 return Ok(Progress {
                     iterations: iteration,
                     objective,
@@ -692,16 +826,31 @@ where
             curvature = trial_curvature;
             pg_steps += 1;
             since_pg = 0;
+            notify(
+                observer,
+                &work.coefficients,
+                work.intercept,
+                iteration + 1,
+                StepKind::ProximalGradient,
+            );
         } else {
-            work.state.sweep(
+            work.state.sweep_observed(
                 &mut work.coefficients,
                 &mut work.intercept,
                 datafit.fits_intercept(),
                 penalty,
                 iteration,
+                observer,
             )?;
             coordinate_sweeps += 1;
             since_pg += 1;
+            notify(
+                observer,
+                &work.coefficients,
+                work.intercept,
+                iteration + 1,
+                StepKind::CoordinateSweep,
+            );
         }
     }
     unreachable!("the iteration budget always triggers a final full check")
@@ -751,6 +900,7 @@ impl Progress {
     }
 }
 
+#[cfg(test)]
 fn iterate<M, V, W, P>(
     design: &mut NativeDesign<M, V>,
     datafit: Gaussian<'_>,
@@ -764,8 +914,40 @@ where
     V: ProximalVector,
     P: HybridPenalty,
 {
-    Ok(
-        iterate_quadratic(design, datafit.into(), penalty, options, threshold, work)?
-            .finish(work, options, threshold),
+    iterate_observed(
+        design,
+        datafit,
+        penalty,
+        options,
+        threshold,
+        work,
+        &mut NoObserver,
     )
+}
+
+fn iterate_observed<M, V, W, P, T>(
+    design: &mut NativeDesign<M, V>,
+    datafit: Gaussian<'_>,
+    penalty: &P,
+    options: &Hybrid<W>,
+    threshold: f64,
+    work: &mut Workspace<P>,
+    observer: &mut T,
+) -> Result<Solution, FitError<M::Error>>
+where
+    T: SolverObserver + ?Sized,
+    M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    V: ProximalVector,
+    P: HybridPenalty,
+{
+    Ok(iterate_quadratic_observed(
+        design,
+        datafit.into(),
+        penalty,
+        options,
+        threshold,
+        work,
+        observer,
+    )?
+    .finish(work, options, threshold))
 }

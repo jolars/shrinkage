@@ -1,0 +1,20 @@
+{
+  "name": "shrinkage-optimization-explorer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "playwright test",
+    "capture": "playwright test --grep capture",
+    "fallback": "node fallback.mjs",
+    "check:fallback": "node fallback.mjs --check"
+  },
+  "dependencies": {
+    "d3-contour": "4.0.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "@playwright/test": "1.61.1"
+  }
+}

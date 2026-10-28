@@ -1,5 +1,8 @@
 //! Quadratic loss models solved by cyclic coordinate descent.
 
+use super::observer::{NoObserver, notify, notify_inner};
+use super::{ObservedSolver, SolverObserver, StepKind};
+
 use lazymatrix::{ColumnStats, LazyMatrix, MatrixErrorType, RawColumn, RawColumns};
 
 use crate::error::{finite, invalid, unsupported};
@@ -146,6 +149,41 @@ where
     }
 }
 
+impl<M, D, P> ObservedSolver<Problem<&M, D, P>> for Irls
+where
+    M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
+    D: DiagonalHessianDatafit,
+    P: CoordinatePenalty,
+{
+    fn solve_from_with_observer<O: SolverObserver + ?Sized>(
+        &self,
+        problem: &Problem<&M, D, P>,
+        initial: Option<crate::InitialPoint<'_>>,
+        observer: &mut O,
+    ) -> Result<IrlsFit, Self::Error> {
+        self.validate()?;
+        validate_rows(problem.design().nrows(), problem.datafit())?;
+        let prepared = problem.prepare(problem.datafit().fits_intercept())?;
+        let mut work = Workspace::new(prepared.matrix.nrows(), prepared.matrix.ncols());
+        if let Some(initial) = initial {
+            initial.apply(
+                &mut work.coefficients,
+                &mut work.intercept,
+                problem.datafit().fits_intercept(),
+            )?;
+        }
+        let solution = iterate_observed(
+            &prepared.matrix,
+            problem.datafit(),
+            problem.penalty(),
+            self,
+            &mut work,
+            observer,
+        )?;
+        IrlsFit::from_solution(solution, prepared.into_preprocessing())
+    }
+}
+
 pub(crate) fn validate_rows<D: DiagonalHessianDatafit, E>(
     nrows: usize,
     datafit: &D,
@@ -274,20 +312,22 @@ impl Workspace {
         Ok((objective, violation))
     }
 
-    fn quadratic<M, D, P, E>(
+    fn quadratic<M, D, P, E, O>(
         &mut self,
         matrix: &LazyMatrix<M>,
         datafit: &D,
         penalty: &P,
         options: &Irls,
-        target: f64,
-        iteration: usize,
+        control: (f64, usize),
+        observer: &mut O,
     ) -> Result<(f64, usize), FitError<E>>
     where
         M: RawColumns<f64>,
         D: DiagonalHessianDatafit,
         P: CoordinatePenalty,
+        O: SolverObserver + ?Sized,
     {
+        let (target, iteration) = control;
         datafit
             .hessian_diagonal(&self.eta, &mut self.weights)
             .map_err(|e| FitError::from_component(e, iteration))?;
@@ -361,6 +401,14 @@ impl Workspace {
                     self.residual
                         .subtract(matrix, j, delta, &self.weights, iteration)?;
                     self.inner[j] = updated;
+                    notify_inner(
+                        observer,
+                        &self.inner,
+                        intercept,
+                        iteration,
+                        sweep,
+                        StepKind::Coordinate { index: j },
+                    );
                 }
             }
             if datafit.fits_intercept() {
@@ -375,6 +423,16 @@ impl Workspace {
                     "updating the weighted residual offset",
                     iteration,
                 )?;
+                if delta != 0.0 {
+                    notify_inner(
+                        observer,
+                        &self.inner,
+                        intercept,
+                        iteration,
+                        sweep,
+                        StepKind::Intercept,
+                    );
+                }
             }
             // Sparse updates carry sums algebraically. Refresh the full model
             // gradient before every check so accumulated error cannot certify it.
@@ -571,15 +629,50 @@ where
     D: DiagonalHessianDatafit,
     P: CoordinatePenalty,
 {
+    iterate_observed(matrix, datafit, penalty, options, work, &mut NoObserver)
+}
+
+pub(crate) fn iterate_observed<M, D, P, T>(
+    matrix: &LazyMatrix<M>,
+    datafit: &D,
+    penalty: &P,
+    options: &Irls,
+    work: &mut Workspace,
+    observer: &mut T,
+) -> Result<Solution, FitError<M::Error>>
+where
+    T: SolverObserver + ?Sized,
+    M: RawColumns<f64> + MatrixErrorType,
+    D: DiagonalHessianDatafit,
+    P: CoordinatePenalty,
+{
     let threshold = options.validate()?;
     penalty
         .validate_input(&work.coefficients)
         .map_err(|e| FitError::from_component(e, 0))?;
     let mut iterations = 0;
     let mut coordinate_sweeps = 0;
+    notify(
+        observer,
+        &work.coefficients,
+        work.intercept,
+        0,
+        StepKind::Initial,
+    );
     loop {
         let (objective, violation) = work.evaluate(matrix, datafit, penalty, iterations)?;
         if violation <= threshold || iterations == options.max_iterations {
+            notify(
+                observer,
+                &work.coefficients,
+                work.intercept,
+                iterations,
+                StepKind::Final(if violation <= threshold {
+                    Termination::Converged
+                } else {
+                    Termination::IterationLimit
+                }),
+            );
             return Ok(Solution {
                 coefficients: work.coefficients.clone(),
                 intercept: work.intercept,
@@ -598,7 +691,7 @@ where
         let next = iterations + 1;
         let target = 0.1 * violation.max(threshold);
         let (inner_intercept, sweeps) =
-            work.quadratic(matrix, datafit, penalty, options, target, next)?;
+            work.quadratic(matrix, datafit, penalty, options, (target, next), observer)?;
         coordinate_sweeps += sweeps;
         let intercept_delta = inner_intercept - work.intercept;
         predictor(
@@ -695,5 +788,12 @@ where
             });
         }
         iterations = next;
+        notify(
+            observer,
+            &work.coefficients,
+            work.intercept,
+            iterations,
+            StepKind::Irls,
+        );
     }
 }

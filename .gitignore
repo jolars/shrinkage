@@ -37,3 +37,8 @@ result-*
 
 # Panache cache
 .panache/
+/docs/widget/target/
+/docs/widget/pkg/
+/docs/widget/dist/
+/docs/widget/node_modules/
+/docs/widget/artifacts/

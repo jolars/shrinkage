@@ -9,7 +9,9 @@ use super::Partition;
 use super::cluster::scalar_minimum;
 use super::quadratic::Weights;
 use crate::error::finite;
+use crate::solver::observer::notify_inner;
 use crate::{ChainFusedLasso, FitError};
+use crate::{SolverObserver, StepKind};
 
 #[derive(Default)]
 struct Segment {
@@ -101,13 +103,14 @@ impl Partition<ChainFusedLasso> for State {
         Ok(())
     }
 
-    fn sweep<E>(
+    fn sweep_observed<E, T: SolverObserver + ?Sized>(
         &mut self,
         coefficients: &mut [f64],
         intercept: &mut f64,
         fit_intercept: bool,
         penalty: &ChainFusedLasso,
         iteration: usize,
+        observer: &mut T,
     ) -> Result<(), FitError<E>> {
         self.sweep_order.clear();
         self.sweep_order
@@ -154,10 +157,29 @@ impl Partition<ChainFusedLasso> for State {
                 .subtract(&segment.column, &mut self.residual, delta, iteration)?;
             coefficients[segment.start..segment.end].fill(value);
             self.move_segment(index, value, iteration)?;
+            notify_inner(
+                observer,
+                coefficients,
+                *intercept,
+                iteration + 1,
+                visit + 1,
+                StepKind::Block { index: visit },
+            );
         }
         if fit_intercept {
+            let previous = *intercept;
             self.weights
                 .update_intercept(&mut self.residual, intercept, iteration)?;
+            if *intercept != previous {
+                notify_inner(
+                    observer,
+                    coefficients,
+                    *intercept,
+                    iteration + 1,
+                    self.sweep_order.len() + 1,
+                    StepKind::Intercept,
+                );
+            }
         }
         Ok(())
     }

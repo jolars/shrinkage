@@ -7,8 +7,8 @@ exactly one finite, nonnegative, nonincreasing weight per coefficient; the
 weights already include the penalty strength.
 
 $$
-  P(\theta) = \sum_{j=1}^p w_j|\theta|_{(j)},\qquad w_1 \geq \cdots
-                                                        \geq w_p \geq 0.
+  P(\theta) = \sum_{j=1}^p w_j|\theta|_{(j)},\qquad w_1
+            \geq \cdots \geq w_p \geq 0.
 $$
 
 ## Constraint region

@@ -12,9 +12,8 @@ Gaussian lasso; see the [Python installation guide](installation.md#python).
 For a design with $n$ observations and $p$ features, Shrinkage solves
 
 $$
-  \min_{b,\theta}\; L(y,\eta) + P(\theta),
-  \qquad
-  \eta = b\mathbf{1} + \widetilde X\theta.
+  \min_{b,\theta}\; L(y,\eta)
+  + P(\theta), \qquad \eta = b\mathbf{1} + \widetilde X\theta.
 $$
 
 The datafit $L$ averages over observations. The complete penalty $P$ includes
@@ -34,9 +33,9 @@ training centers and $S$ is diagonal with the resolved feature scales. The
 reported coefficients and intercept satisfy
 
 $$
-  \beta = S^{-1}\theta,\qquad b_{\mathrm{original}} = b - c^\mathsf{T}\beta,
-  \qquad
-  X\beta + b_{\mathrm{original}}\mathbf{1} = \widetilde X\theta + b\mathbf{1}.
+  \beta = S^{-1}\theta,\qquad b_{\mathrm{original}}
+        = b - c^\mathsf{T}\beta, \qquad X\beta + b_{\mathrm{original}}\mathbf{1}
+        = \widetilde X\theta + b\mathbf{1}.
 $$
 
 The fitted result owns these original-scale parameters and retains its training

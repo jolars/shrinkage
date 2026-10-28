@@ -1,3 +1,5 @@
+use super::observer::{NoObserver, notify};
+use super::{SolverObserver, StepKind};
 use lazymatrix::{LazyColumn, LazyMatrix, RawColumn, RawColumns};
 
 use super::{CoordinateDescent, StoppingCriterion};
@@ -421,13 +423,37 @@ pub(crate) fn solve<M: RawColumns<f64>>(
     penalty: L1,
     options: &CoordinateDescent,
 ) -> Result<Solution, NumericalFailure> {
+    solve_observed(matrix, datafit, penalty, options, None, &mut NoObserver)
+}
+
+pub(crate) fn solve_observed<M: RawColumns<f64>, T: SolverObserver + ?Sized>(
+    matrix: &LazyMatrix<M>,
+    datafit: Gaussian<'_>,
+    penalty: L1,
+    options: &CoordinateDescent,
+    initial: Option<crate::InitialPoint<'_>>,
+    observer: &mut T,
+) -> Result<Solution, NumericalFailure> {
     let mut work = Workspace::new(matrix, datafit)?;
+    if let Some(initial) = initial {
+        // Public entry points validate the parameters before the numerical kernel.
+        work.coefficients.copy_from_slice(initial.coefficients);
+        work.intercept = initial.intercept;
+        work.residual.refresh(
+            matrix,
+            datafit.response,
+            &work.coefficients,
+            work.intercept,
+            &work.summaries,
+            0,
+        )?;
+    }
     let full = CoordinateDescent {
         screening: false,
         working_sets: false,
         ..*options
     };
-    solve_with_workspace(matrix, datafit, penalty, &full, &mut work)
+    solve_with_workspace_observed(matrix, datafit, penalty, &full, &mut work, observer)
 }
 
 pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
@@ -436,6 +462,17 @@ pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
     penalty: L1,
     options: &CoordinateDescent,
     work: &mut Workspace,
+) -> Result<Solution, NumericalFailure> {
+    solve_with_workspace_observed(matrix, datafit, penalty, options, work, &mut NoObserver)
+}
+
+pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserver + ?Sized>(
+    matrix: &LazyMatrix<M>,
+    datafit: Gaussian<'_>,
+    penalty: L1,
+    options: &CoordinateDescent,
+    work: &mut Workspace,
+    observer: &mut T,
 ) -> Result<Solution, NumericalFailure> {
     let y = datafit.response;
     let criterion = options.criterion(penalty);
@@ -481,6 +518,13 @@ pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
     )?;
     work.select(penalty, options, &check);
     let mut iterations = 0;
+    notify(
+        observer,
+        &work.coefficients,
+        work.intercept,
+        0,
+        StepKind::Initial,
+    );
     while stopping_value(&check, criterion) > threshold && iterations < options.max_iterations {
         iterations += 1;
         let Workspace {
@@ -495,7 +539,7 @@ pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
             working_set,
             screened: _,
         } = work;
-        for (j, coefficient) in coefficients.iter_mut().enumerate() {
+        for j in 0..coefficients.len() {
             if !working_set[j] {
                 continue;
             }
@@ -506,7 +550,7 @@ pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
             let column = matrix.column(j);
             let curvature = summary.norm_squared / n;
             let partial = finite(
-                residual.dot(&column, summary, iterations)? / n + curvature * *coefficient,
+                residual.dot(&column, summary, iterations)? / n + curvature * coefficients[j],
                 "computing a coordinate update",
                 iterations,
             )?;
@@ -516,13 +560,20 @@ pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
                 iterations,
             )?;
             let delta = finite(
-                updated - *coefficient,
+                updated - coefficients[j],
                 "computing a coefficient change",
                 iterations,
             )?;
             if delta != 0.0 {
                 residual.subtract_column(&column, summary, delta, iterations)?;
-                *coefficient = updated;
+                coefficients[j] = updated;
+                notify(
+                    observer,
+                    coefficients,
+                    *intercept,
+                    iterations,
+                    StepKind::Coordinate { index: j },
+                );
             }
         }
         if datafit.fit_intercept {
@@ -533,6 +584,15 @@ pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
                 "updating the intercept residual",
                 iterations,
             )?;
+        }
+        if datafit.fit_intercept {
+            notify(
+                observer,
+                coefficients,
+                *intercept,
+                iterations,
+                StepKind::Intercept,
+            );
         }
         let refreshed = iterations % REFRESH_INTERVAL == 0 || iterations == options.max_iterations;
         if refreshed {
@@ -580,6 +640,17 @@ pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
         ..
     } = work;
     let final_value = stopping_value(&check, criterion);
+    notify(
+        observer,
+        coefficients,
+        *intercept,
+        iterations,
+        StepKind::Final(if final_value <= threshold {
+            Termination::Converged
+        } else {
+            Termination::IterationLimit
+        }),
+    );
     Ok(Solution {
         coefficients: coefficients.clone(),
         intercept: *intercept,

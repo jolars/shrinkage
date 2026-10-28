@@ -5,6 +5,8 @@ mod multivariate;
 pub(crate) use design::NativeDesign;
 pub use design::ProximalDesign;
 
+use super::observer::{NoObserver, notify};
+use super::{ObservedSolver, SolverObserver, StepKind};
 use std::marker::PhantomData;
 
 use lazymatrix::{
@@ -282,6 +284,48 @@ where
     }
 }
 
+impl<M, D, P, V> ObservedSolver<Problem<&M, D, P>> for ProximalGradient<V>
+where
+    M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
+    D: SmoothDatafit,
+    P: ProximalPenalty,
+    V: ProximalVector,
+{
+    fn solve_from_with_observer<O: SolverObserver + ?Sized>(
+        &self,
+        problem: &Problem<&M, D, P>,
+        initial: Option<crate::InitialPoint<'_>>,
+        observer: &mut O,
+    ) -> Result<Self::Fit, Self::Error> {
+        let threshold = self.validate()?;
+        if problem.datafit().nobs() != problem.design().nrows() {
+            return Err(invalid(
+                "datafit observation count must match training rows",
+            ));
+        }
+        let prepared = problem.prepare(problem.datafit().fits_intercept())?;
+        let mut design = NativeDesign::<_, V>::new(prepared);
+        let mut work = Workspace::new(design.nrows(), design.ncols());
+        if let Some(initial) = initial {
+            initial.apply(
+                &mut work.coefficients,
+                &mut work.intercept,
+                problem.datafit().fits_intercept(),
+            )?;
+        }
+        let solution = iterate_with_workspace_observed(
+            &mut design,
+            problem.datafit(),
+            problem.penalty(),
+            self,
+            threshold,
+            &mut work,
+            observer,
+        )?;
+        ProximalFit::from_solution(solution, design.into_preprocessing())
+    }
+}
+
 // Slice buffers keep scalar loops concrete even when components are erased.
 // Native product buffers belong to the design adapter.
 pub(crate) struct Workspace {
@@ -338,8 +382,34 @@ where
     D: SmoothDatafit + ?Sized,
     P: ProximalPenalty + ?Sized,
 {
+    iterate_observed(
+        design,
+        datafit,
+        penalty,
+        options,
+        threshold,
+        &mut NoObserver,
+    )
+}
+
+pub(crate) fn iterate_observed<O, D, P, V, T>(
+    design: &mut O,
+    datafit: &D,
+    penalty: &P,
+    options: &ProximalGradient<V>,
+    threshold: f64,
+    observer: &mut T,
+) -> Result<Solution, FitError<O::Error>>
+where
+    T: SolverObserver + ?Sized,
+    O: ProximalDesign + ?Sized,
+    D: SmoothDatafit + ?Sized,
+    P: ProximalPenalty + ?Sized,
+{
     let mut work = Workspace::new(design.nrows(), design.ncols());
-    iterate_with_workspace(design, datafit, penalty, options, threshold, &mut work)
+    iterate_with_workspace_observed(
+        design, datafit, penalty, options, threshold, &mut work, observer,
+    )
 }
 
 pub(crate) fn iterate_path<O, D, P, V>(
@@ -376,10 +446,37 @@ where
     D: SmoothDatafit + ?Sized,
     P: ProximalPenalty + ?Sized,
 {
+    iterate_with_workspace_observed(
+        design,
+        datafit,
+        penalty,
+        options,
+        threshold,
+        work,
+        &mut NoObserver,
+    )
+}
+
+pub(crate) fn iterate_with_workspace_observed<O, D, P, V, T>(
+    design: &mut O,
+    datafit: &D,
+    penalty: &P,
+    options: &ProximalGradient<V>,
+    threshold: f64,
+    work: &mut Workspace,
+    observer: &mut T,
+) -> Result<Solution, FitError<O::Error>>
+where
+    T: SolverObserver + ?Sized,
+    O: ProximalDesign + ?Sized,
+    D: SmoothDatafit + ?Sized,
+    P: ProximalPenalty + ?Sized,
+{
     let mut coefficients = std::mem::take(&mut work.coefficients);
     let mut intercept = work.intercept;
     let mut step = options.initial_step;
     let mut iteration = 0;
+    notify(observer, &coefficients, intercept, 0, StepKind::Initial);
     loop {
         work.predict(design, &coefficients, intercept, iteration)?;
         let loss = datafit
@@ -479,6 +576,17 @@ where
         // The mapping belongs to the current coefficients, not the trial
         // point. Check it before accepting the next update, including at budget.
         if mapping <= threshold || iteration == options.max_iterations {
+            notify(
+                observer,
+                &coefficients,
+                intercept,
+                iteration,
+                StepKind::Final(if mapping <= threshold {
+                    Termination::Converged
+                } else {
+                    Termination::IterationLimit
+                }),
+            );
             work.coefficients = coefficients;
             work.intercept = intercept;
             return Ok(Solution {
@@ -500,6 +608,13 @@ where
         std::mem::swap(&mut coefficients, &mut work.candidate);
         intercept = candidate_intercept;
         iteration += 1;
+        notify(
+            observer,
+            &coefficients,
+            intercept,
+            iteration,
+            StepKind::ProximalGradient,
+        );
     }
 }
 
