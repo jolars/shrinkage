@@ -40,9 +40,10 @@ Each edge contributes once. Empty and single-feature chains have no edges. Zero
 fusion recovers lasso. A two-feature chain has one pair, so its unit-weight
 constraint region coincides with clustered lasso; larger chains only fuse
 neighbors. Gaussian and binomial fits support [proximal
-gradient](../solvers/proximal-gradient.md) and [hybrid](../solvers/hybrid.md).
-See the [chain fused lasso guide](../models/chain-fused-lasso.md) for segment
-interpretation and detailed fitting controls.
+gradient](../reference/solvers/proximal-gradient.md) and
+[hybrid](../reference/solvers/hybrid.md). See the [chain fused lasso
+guide](../models/chain-fused-lasso.md) for segment interpretation and detailed
+fitting controls.
 
 API:
 [`shrinkage::ChainFusedLasso`](https://shrinkage.cc/packages/rust/reference/b88554a6c3f1121915d157c3e7684558bb6e9e9f59dbacd8115eb616c3631ce1).

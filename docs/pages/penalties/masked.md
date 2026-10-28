@@ -39,9 +39,9 @@ penalty exactly. L1, ridge, and elastic net implement the required
 `RestrictedProximalPenalty` capability. `Scaled` preserves it. Coupled penalties
 cannot be masked merely by restoring coefficients after an unrestricted prox.
 
-Use [proximal gradient](../solvers/proximal-gradient.md) and compose the wrapper
-inside [AxisPenalty](axis.md) when needed. The wrapper does not supply the
-coordinate capability required by IRLS.
+Use [proximal gradient](../reference/solvers/proximal-gradient.md) and compose
+the wrapper inside [AxisPenalty](axis.md) when needed. The wrapper does not
+supply the coordinate capability required by IRLS.
 
 API:
 [`shrinkage::Masked`](https://shrinkage.cc/packages/rust/reference/2dec36b360b55f50673aea5f43199a63294c9255ade7907fb4ade3d975bb106c)

@@ -43,7 +43,7 @@ The iteration reuses its product and proximal workspaces.
 
 Typed and runtime problems share the solver. Explicit paths accept compatible
 penalty sequences; automatic paths additionally need `PathPenalty`.
-[Multivariate regression](../models/multivariate.md) uses the same iteration
+[Multivariate regression](../../models/multivariate.md) uses the same iteration
 with `AxisPenalty` and response-major storage.
 
 API:

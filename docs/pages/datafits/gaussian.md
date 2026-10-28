@@ -3,8 +3,9 @@
 `Gaussian` fits a single real-valued response using averaged squared error:
 
 $$
-  L(y,\eta) = \frac{1}{2n}\sum_{i=1}^n(y_i - \eta_i)^2, \qquad \nabla_\eta L
-            = \frac{\eta - y}{n},\qquad \nabla_\eta^2 L = \frac{1}{n}I.
+  L(y,\eta) = \frac{1}{2n}\sum_{i=1}^n(y_i - \eta_i)^2,
+  \qquad
+  \nabla_\eta L = \frac{\eta - y}{n},\qquad \nabla_\eta^2 L = \frac{1}{n}I.
 $$
 
 Supply one finite response per observation. The constructor borrows the response
@@ -28,7 +29,7 @@ For model fitting, see [linear regression](../models/linear.md) or the [Lasso
 convenience API](../models/lasso.md). All four built-in solvers support Gaussian
 problems with their respective compatible penalties. Because the loss averages
 over observations, a penalty strength is not multiplied by the sample size. See
-the [shared conventions](../index.md).
+the [shared conventions](../modeling.md).
 
 API:
 [`shrinkage::Gaussian`](https://shrinkage.cc/packages/rust/reference/8f2aa89a892fb708e0e09c276910730b91ed3cb252a10cacd0a458cfbe59be13).

@@ -5,16 +5,18 @@ likelihood:
 
 $$
   L(y,\eta)
-  = \frac1n\sum_{i=1}^n \left[ \log(1 + e^{\eta_i}) - y_i\eta_i \right], \qquad p_i
-            = \frac{1}{1 + e^{-\eta_i}}.
+  = \frac1n\sum_{i=1}^n \left[ \log(1 + e^{\eta_i}) - y_i\eta_i \right],
+  \qquad
+  p_i = \frac{1}{1 + e^{-\eta_i}}.
 $$
 
 The predictor derivatives are
 
 $$
-  \frac{\partial L}{\partial\eta_i}
-  = \frac{p_i - y_i}{n}, \qquad \frac{\partial^2 L}{\partial\eta_i^2}
-                                    = \frac{p_i(1 - p_i)}{n} \leq \frac{1}{4n}.
+  \frac{\partial L}{\partial\eta_i} = \frac{p_i - y_i}{n},
+  \qquad
+  \frac{\partial^2 L}{\partial\eta_i^2} = \frac{p_i(1 - p_i)}{n}
+                                        \leq \frac{1}{4n}.
 $$
 
 The implementation evaluates the loss and derivatives stably for large logits.
@@ -39,11 +41,12 @@ Fitted predictions are **logits**. Apply the logistic function to obtain
 probabilities. See [logistic regression](../models/logistic.md) for a stable
 conversion and a complete fit.
 
-[Proximal gradient](../solvers/proximal-gradient.md) supports the built-in
-proximal penalties. [IRLS](../solvers/irls.md) supports L1, ridge, and elastic
-net. The [hybrid solver](../solvers/hybrid.md) supports clustered lasso, chain
-fused lasso, and SLOPE. Unpenalized separated data may have no finite minimizer;
-inspect termination and choose a regularized model when appropriate.
+[Proximal gradient](../reference/solvers/proximal-gradient.md) supports the
+built-in proximal penalties. [IRLS](../reference/solvers/irls.md) supports L1,
+ridge, and elastic net. The [hybrid solver](../reference/solvers/hybrid.md)
+supports clustered lasso, chain fused lasso, and SLOPE. Unpenalized separated
+data may have no finite minimizer; inspect termination and choose a regularized
+model when appropriate.
 
 API:
 [`shrinkage::Binomial`](https://shrinkage.cc/packages/rust/reference/cabade7e6bb5cb30e1afe92b7012a4d0f67c7bec0235c94ef5bca1dda3c635f8).

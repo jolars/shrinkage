@@ -39,7 +39,8 @@ Alternatively, `ElasticNet::from_alpha(lambda, alpha)` uses
 $\lambda_1 = \lambda\alpha$ and $\lambda_2 = \lambda(1 - \alpha)$, where
 $0 \leq \alpha \leq 1$. The proximal map soft-thresholds at $s\lambda_1$ and
 then divides by $1 + s\lambda_2$. Fits support [proximal
-gradient](../solvers/proximal-gradient.md) and [IRLS](../solvers/irls.md).
+gradient](../reference/solvers/proximal-gradient.md) and
+[IRLS](../reference/solvers/irls.md).
 
 API:
 [`shrinkage::ElasticNet`](https://shrinkage.cc/packages/rust/reference/7641c13ebf6510be067e5a5c045b16f0f42f3cd34ed29cbab52422e9f76ccdb2).

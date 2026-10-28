@@ -47,5 +47,6 @@ response. To select a feature jointly across responses, use
 all response coordinates. `PenaltyAxis::All` applies one complete penalty to the
 flattened coefficient matrix. See [AxisPenalty](../penalties/axis.md).
 
-Only [proximal gradient](../solvers/proximal-gradient.md) currently fits this
-layout. Typed and runtime multivariate problems share the same iteration.
+Only [proximal gradient](../reference/solvers/proximal-gradient.md) currently
+fits this layout. Typed and runtime multivariate problems share the same
+iteration.

@@ -48,11 +48,13 @@ also minimizes
 
 $$
   \operatorname{prox}_{sP}(v)
-  = \mathop{\arg\min}_{z}\left\{ \frac{\|z - v\|_2^2}{2s} + P(z) \right\}, \qquad s
-                              > 0.
+  = \mathop{\arg\min}_{z}\left\{ \frac{\|z - v\|_2^2}{2s} + P(z) \right\},
+  \qquad
+  s > 0.
 $$
 
 All seven base penalties provide this exact complete proximal map and work with
-[proximal gradient](../solvers/proximal-gradient.md). A sum does not acquire an
-exact map simply because its terms have individual maps. Other solvers need
-additional capabilities; see the [compatibility table](../solvers/index.md).
+[proximal gradient](../reference/solvers/proximal-gradient.md). A sum does not
+acquire an exact map simply because its terms have individual maps. Other
+solvers need additional capabilities; see the [compatibility
+table](../reference/solvers/index.md).

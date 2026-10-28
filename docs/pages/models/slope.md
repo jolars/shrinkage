@@ -4,8 +4,8 @@ SLOPE assigns larger penalties to larger coefficient magnitudes. Shrinkage
 provides its exact proximal map, Gaussian proximal-gradient fits, and a hybrid
 of full PG steps and exact magnitude-cluster sweeps.
 
-See the [penalty reference](../penalties/slope.md) for its definition and
-constraint geometry.
+See the [penalty guide](../penalties/slope.md) for its definition and constraint
+geometry.
 
 ## Fit a Gaussian model
 

@@ -33,8 +33,8 @@ Every response has a free, unpenalized intercept by default.
 `.fit_intercept(false)` disables all free intercepts. Predictors and predictions
 use the same response-major layout as the observations.
 
-Fitting uses [proximal gradient](../solvers/proximal-gradient.md) and an
-[AxisPenalty](../penalties/axis.md) with an explicit feature-by-response
+Fitting uses [proximal gradient](../reference/solvers/proximal-gradient.md) and
+an [AxisPenalty](../penalties/axis.md) with an explicit feature-by-response
 `CoefficientLayout`. See [multivariate regression](../models/multivariate.md)
 for a complete example and feature selection across responses.
 

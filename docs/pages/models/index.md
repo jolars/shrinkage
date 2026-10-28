@@ -17,10 +17,10 @@ model's name.
 Use `Problem::new(&x, datafit, penalty).fit_with(&solver)` for typed
 composition. The type system checks supported combinations. Runtime problems
 permit dynamic selection with explicit capability checks; see the [solver
-compatibility table](../solvers/index.md).
+compatibility table](../reference/solvers/index.md).
 
 `Lasso` is currently the sole named convenience model. Other model families use
-composition. The [shared conventions](../index.md) describe intercepts,
+composition. The [shared conventions](../modeling.md) describe intercepts,
 normalization, penalty scales, and original-scale output. The Python package
 currently exposes the Gaussian lasso convenience API only.
 

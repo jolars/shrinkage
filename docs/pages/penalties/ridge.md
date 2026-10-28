@@ -33,10 +33,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-Use [proximal gradient](../solvers/proximal-gradient.md) or
-[IRLS](../solvers/irls.md) with Gaussian or binomial datafits. Its proximal map
-divides each input by $1 + s\lambda$. With zero strength, it returns the input
-unchanged.
+Use [proximal gradient](../reference/solvers/proximal-gradient.md) or
+[IRLS](../reference/solvers/irls.md) with Gaussian or binomial datafits. Its
+proximal map divides each input by $1 + s\lambda$. With zero strength, it
+returns the input unchanged.
 
 API:
 [`shrinkage::Ridge`](https://shrinkage.cc/packages/rust/reference/cbb3b47b3b63b801639d1697f8ab9090627986cae975bb7f06d11764acdeee8c).

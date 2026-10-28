@@ -2,7 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["matplotlib==3.10.7", "numpy==2.3.5"]
 # ///
-"""Generate deterministic SVG constraint regions for the penalty reference."""
+"""Generate deterministic SVG constraint regions for the penalty guide."""
 
 import argparse
 from collections.abc import Callable
@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 
-OUTPUT = Path(__file__).resolve().parents[1] / "docs/pages/reference/penalties/figures"
+OUTPUT = Path(__file__).resolve().parents[1] / "docs/pages/penalties/figures"
 BLUE = "#2563a6"
 FILL = "#d9e9f5"
 ScalarTerm = Callable[[np.ndarray, np.ndarray], np.ndarray]

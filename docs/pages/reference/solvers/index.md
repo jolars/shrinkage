@@ -53,7 +53,8 @@ scaled, and masked penalties do not currently provide automatic paths.
 No solver forms a Gram matrix or materializes the normalized design by default.
 Hybrid solvers retain dense cluster aggregates, which can grow to the size of
 the dense design. Matrix backend requirements remain solver-specific; consult
-[installation](../../installation.md) and the [shared conventions](../index.md).
+[installation](../../installation.md) and the [shared
+conventions](../../modeling.md).
 
 API:
 [`shrinkage::Solver`](https://shrinkage.cc/packages/rust/reference/f80ebf14b213d3129f84bb1ccc4912d7d7123fed16e872d24da1a9f5ef741b0a),

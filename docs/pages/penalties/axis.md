@@ -48,7 +48,7 @@ Disjoint groups make the composed proximal map exact whenever the inner map is
 exact. `Scaled` and `Masked` can wrap the inner penalty; mask length follows the
 selected vector width.
 
-Fitting uses [proximal gradient](../solvers/proximal-gradient.md) with
+Fitting uses [proximal gradient](../reference/solvers/proximal-gradient.md) with
 [multivariate Gaussian](../datafits/multivariate-gaussian.md).
 
 API:

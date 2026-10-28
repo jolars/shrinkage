@@ -41,7 +41,7 @@ unchanged. IRLS provides no dual certificate or safe screening.
 
 The solver uses typed column-access problems and $O(n + p)$ workspace. Explicit
 and supported automatic paths reuse that workspace. Binomial predictions are
-logits; see [logistic regression](../models/logistic.md) for probabilities.
+logits; see [logistic regression](../../models/logistic.md) for probabilities.
 
 API:
 [`shrinkage::Irls`](https://shrinkage.cc/packages/rust/reference/38d3c0c77c3a369dc72fa82940fe75e00e04888f78613113e69bdc12b1c8d7dd)

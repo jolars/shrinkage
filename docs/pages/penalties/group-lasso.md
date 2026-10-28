@@ -45,9 +45,9 @@ groups are also unpenalized. A group can become exactly zero because the
 proximal map shrinks its input vector by $\max(1 - s\lambda w_g/\|v_g\|_2,0)$,
 with zero input mapped to zero.
 
-Use [proximal gradient](../solvers/proximal-gradient.md) with Gaussian or
-binomial datafits. The [multivariate model](../models/multivariate.md) shows how
-an axis penalty can select features across responses.
+Use [proximal gradient](../reference/solvers/proximal-gradient.md) with Gaussian
+or binomial datafits. The [multivariate model](../models/multivariate.md) shows
+how an axis penalty can select features across responses.
 
 API:
 [`shrinkage::GroupLasso`](https://shrinkage.cc/packages/rust/reference/0e1357425403f686e1e3ace6b0f0af21e368cafd2bcaef0932eafd1ce2a4cf9c)

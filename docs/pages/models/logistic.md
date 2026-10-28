@@ -4,9 +4,11 @@ A binomial model relates a linear predictor to a probability through the
 logistic function:
 
 $$
-  \eta_i = b + \widetilde x_i^\mathsf{T}\theta, \qquad p_i
-         = \frac{1}{1 + e^{-\eta_i}}, \qquad \min_{b,\theta}\;\frac1n\sum_i[\log(1 + e^{\eta_i}) - y_i\eta_i]
-           + P(\theta).
+  \eta_i = b + \widetilde x_i^\mathsf{T}\theta,
+  \qquad
+  p_i = \frac{1}{1 + e^{-\eta_i}},
+  \qquad
+  \min_{b,\theta}\;\frac1n\sum_i[\log(1 + e^{\eta_i}) - y_i\eta_i] + P(\theta).
 $$
 
 Responses lie in $[0,1]$, with zeros and ones representing binary observations.
@@ -45,9 +47,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 without overflowing the exponential for extreme predictors. Shrinkage does not
 choose a classification threshold.
 
-[IRLS](../solvers/irls.md) supports L1, ridge, and elastic net. [Proximal
-gradient](../solvers/proximal-gradient.md) also supports the coupled penalties,
-while [hybrid](../solvers/hybrid.md) uses weighted subproblems for SLOPE and the
-two fusion penalties. The [clustered lasso
+[IRLS](../reference/solvers/irls.md) supports L1, ridge, and elastic net.
+[Proximal gradient](../reference/solvers/proximal-gradient.md) also supports the
+coupled penalties, while [hybrid](../reference/solvers/hybrid.md) uses weighted
+subproblems for SLOPE and the two fusion penalties. The [clustered lasso
 guide](clustered-lasso.md#logistic-regression) explains hybrid logistic budgets
 and diagnostics.

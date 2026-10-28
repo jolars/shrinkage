@@ -20,4 +20,4 @@ supplies loss evaluation,
 adds gradients, and
 [`shrinkage::DiagonalHessianDatafit`](https://shrinkage.cc/packages/rust/reference/0c7a483f4e622180bfcc5efab524b3377e2104e91e0d263eb5a204d4a4ab722e)
 supplies the predictor curvature used by IRLS. These capabilities determine
-which [solvers](../solvers/index.md) can fit a composition.
+which [solvers](../reference/solvers/index.md) can fit a composition.

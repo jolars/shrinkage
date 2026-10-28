@@ -43,7 +43,7 @@ threshold. Gap Safe screening and working sets accelerate paths and can be
 controlled separately.
 
 Dense and sparse CSC designs use the same statistical conventions. For backend
-requirements, see [installation](../../installation.md). Use typed [linear
+requirements, see [installation](../installation.md). Use typed [linear
 regression composition](linear.md) to select other penalties or solvers.
 
 API:

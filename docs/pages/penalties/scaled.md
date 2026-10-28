@@ -37,8 +37,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 The multiplier must be finite and nonnegative. Scaling a value-only term does
 not supply an exact proximal map. A scaled built-in proximal penalty supports
-[proximal gradient](../solvers/proximal-gradient.md), but the wrapper does not
-add coordinate, IRLS, or hybrid compatibility. Compose it inside
+[proximal gradient](../reference/solvers/proximal-gradient.md), but the wrapper
+does not add coordinate, IRLS, or hybrid compatibility. Compose it inside
 [AxisPenalty](axis.md) for matrix coefficients.
 
 API:

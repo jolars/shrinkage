@@ -32,11 +32,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 The default fits an unpenalized intercept and standardizes features using
 training statistics. See
-[normalization](../index.md#normalization-and-predictions) to change these
+[normalization](../modeling.md#normalization-and-predictions) to change these
 modeling choices.
 
-For Gaussian L1 problems, [coordinate descent](../solvers/coordinate-descent.md)
-and the [Lasso builder](lasso.md) provide a specialized implementation.
-[IRLS](../solvers/irls.md) also supports separable penalties; the [hybrid
-solver](../solvers/hybrid.md) handles supported fusion and SLOPE models. The
-[compatibility table](../solvers/index.md) lists the available combinations.
+For Gaussian L1 problems, [coordinate
+descent](../reference/solvers/coordinate-descent.md) and the [Lasso
+builder](lasso.md) provide a specialized implementation.
+[IRLS](../reference/solvers/irls.md) also supports separable penalties; the
+[hybrid solver](../reference/solvers/hybrid.md) handles supported fusion and
+SLOPE models. The [compatibility table](../reference/solvers/index.md) lists the
+available combinations.

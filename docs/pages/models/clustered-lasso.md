@@ -4,8 +4,8 @@ Clustered lasso encourages sparse coefficients and equal signed effects. The
 Rust API provides its exact proximal map, Gaussian proximal-gradient fits, and a
 hybrid solver that interleaves PG steps with exact cluster-coordinate sweeps.
 
-See the [penalty reference](../penalties/clustered-lasso.md) for its definition
-and constraint geometry.
+See the [penalty guide](../penalties/clustered-lasso.md) for its definition and
+constraint geometry.
 
 ## Fit a Gaussian model
 

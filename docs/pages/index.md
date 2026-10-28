@@ -31,14 +31,16 @@ registries.
 
 ## Explore further
 
-Browse the [Reference](reference/index.md) for mathematical definitions,
-constraint plots, model examples, and solver compatibility.
+Browse the Guide's [datafits](datafits/index.md), [models](models/index.md), and
+[penalties](penalties/index.md) for mathematical definitions, constraint plots,
+and model examples. The [solver reference](reference/solvers/index.md) compares
+supported compositions and convergence diagnostics.
 
 The Rust API supports regularization paths and penalties including lasso, ridge,
-elastic net, [SLOPE](reference/models/slope.md), disjoint Group LASSO,
-[clustered lasso](reference/models/clustered-lasso.md), and [chain fused
-lasso](reference/models/chain-fused-lasso.md). SLOPE and both fusion penalties
-have dense Gaussian and logistic hybrid solvers. See the [Rust API
+elastic net, [SLOPE](models/slope.md), disjoint Group LASSO, [clustered
+lasso](models/clustered-lasso.md), and [chain fused
+lasso](models/chain-fused-lasso.md). SLOPE and both fusion penalties have dense
+Gaussian and logistic hybrid solvers. See the [Rust API
 reference](https://shrinkage.cc/packages/rust/) for supported combinations and
 the [statistical
 conventions](https://github.com/jolars/shrinkage/blob/main/DESIGN.md) for loss
