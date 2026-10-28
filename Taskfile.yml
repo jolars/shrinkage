@@ -244,7 +244,7 @@ tasks:
   docs:prepare:
     internal: true
     cmds:
-      - cp CONTRIBUTING.md docs/pages/contribution.md
+      - cp CONTRIBUTING.md docs/pages/contributing.md
       - task: python:install
       - cargo fetch --locked
 
