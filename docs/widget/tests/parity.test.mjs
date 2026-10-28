@@ -106,6 +106,36 @@ test("SVG contours and trajectories share coefficient coordinates", () => {
   assert.ok(!path.includes("NaN"));
 });
 
+test("binomial hybrid paths contain only accepted IRLS steps", () => {
+  const config = {
+    ...base,
+    loss: "binomial",
+    penalty: "clustered-lasso",
+    strength: 0.00788,
+  };
+  const scene = evaluateScene(config, 0);
+  for (const start of [[0, 0], [2.8, 2.8], [38.5, -1]]) {
+    const trace = fitTrace(config, "hybrid", start);
+    assert.equal(trace.fit.converged, true);
+    close(trace.fit.objective, scene.reference.objective, 1e-10);
+    const accepted = trace.points.filter((point) => !point.inner);
+    assert.equal(accepted.length, trace.points.length);
+    for (let i = 1; i < accepted.length; i++)
+      assert.ok(accepted[i].objective <= accepted[i - 1].objective + 1e-12);
+
+    const svg = trajectory(scene, trace.points, trace.points.length - 1);
+    const path = svg.match(/<path d="([^"]*)"/);
+    assert.ok(path);
+    assert.deepEqual(
+      [...path[1].matchAll(/[ML]([^ML]+)/g)].map((match) =>
+        match[1].split(",").map(Number),
+      ),
+      accepted.map((point) => project(scene, point.coefficients)),
+    );
+    assert.ok(!svg.includes("data-inner-iterate"));
+  }
+});
+
 test("zero penalty, pure fusion, and invalid requests retain clear semantics", () => {
   const zero = evaluateScene({ ...base, strength: 0 }, 0);
   assert.ok(zero.penalty.every((v) => v === 0));

@@ -95,7 +95,7 @@ cargo run --locked --example regularization_path --features faer
 - **Structured penalties:** [Group LASSO](examples/group_lasso.rs) selects
   groups of features, [SLOPE](https://shrinkage.cc/models/slope/) applies ranked
   penalties, [clustered lasso](https://shrinkage.cc/models/clustered-lasso/)
-  encourages equal coefficient magnitudes, and [chain fused
+  encourages equal coefficients, and [chain fused
   lasso](https://shrinkage.cc/models/chain-fused-lasso/) encourages neighboring
   coefficients to be equal.
 - **Regularization paths** fit a sequence of penalty strengths, reusing previous

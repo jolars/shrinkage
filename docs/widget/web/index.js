@@ -240,7 +240,7 @@ ${select("method", "Solver", Object.entries(methods))}
                 : `${scene.penalty_clipped ? "The region continues beyond this view. " : "Shading includes the boundary. "}${fusion && current.mixing === 0 ? "Pure fusion gives an unbounded strip." : ""}`));
       root.querySelector('[data-caption="objective"]').textContent = scene
         .reference.converged
-        ? "Loss + penalty, evaluated at every grid point. Orange dot: penalized optimum."
+        ? "Loss + penalty, evaluated at every grid point. Orange dot: penalized optimum. Black line: accepted steps."
         : "Loss + penalty. Reference optimum unavailable.";
       solver.innerHTML = scene.compatible_methods
         .map(

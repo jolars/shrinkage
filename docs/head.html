@@ -4,3 +4,60 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-title" content="Shrinkage" />
 <link rel="manifest" href="/site.webmanifest" />
+<style>
+  [data-explorer-loading] {
+    display: none;
+  }
+  /* Reserve the controls and plots before the component stylesheet loads. */
+  .js .explorer-shell {
+    container-type: inline-size;
+    --explorer-space: calc(24rem + 50cqi);
+    margin-block: 1.5rem 3rem;
+  }
+  .js .explorer-shell > .optimization-explorer {
+    min-block-size: var(--explorer-space);
+    margin: 0;
+  }
+  .js .explorer-shell:not(:has(> [role="status"])) [data-explorer-loading] {
+    display: flex;
+    justify-content: center;
+    align-items: start;
+    gap: 0.75rem;
+    min-block-size: var(--explorer-space);
+    padding: 6rem 1rem 1rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .js .explorer-shell:not(:has(> [role="status"]))
+    [data-component-fallback] > :not([data-explorer-loading]) {
+    display: none;
+  }
+  .explorer-loading-indicator {
+    flex: 0 0 auto;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .explorer-loading-indicator {
+      animation: explorer-loading 0.8s linear infinite;
+    }
+  }
+  @keyframes explorer-loading {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+  @media (max-width: 900px) {
+    .js .explorer-shell {
+      --explorer-space: calc(34rem + 50cqi);
+    }
+  }
+  @media (max-width: 680px) {
+    .js .explorer-shell {
+      --explorer-space: calc(58rem + min(200cqi, 840px));
+    }
+  }
+</style>

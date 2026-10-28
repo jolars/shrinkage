@@ -244,7 +244,7 @@ fn zero_budget_regions_preserve_the_exact_zero_set() {
 }
 
 #[test]
-fn irls_and_hybrid_record_inner_updates_on_the_original_objective() {
+fn binomial_traces_exclude_surrogate_updates() {
     for loss in [Loss::Gaussian, Loss::Binomial] {
         for (penalty, method) in [
             (Regularizer::L1, Method::Irls),
@@ -260,7 +260,14 @@ fn irls_and_hybrid_record_inner_updates_on_the_original_objective() {
             let trace = trace_from(&config, method, [-2., 1.5]).unwrap();
             let scene = scene(&config).unwrap();
             let inner: Vec<_> = trace.points.iter().filter(|p| p.inner).collect();
-            assert!(!inner.is_empty(), "{config:?} {method:?}");
+            if loss == Loss::Binomial {
+                assert!(inner.is_empty(), "{config:?} {method:?}");
+                for pair in trace.points.windows(2) {
+                    assert!(pair[1].objective <= pair[0].objective + 1e-12);
+                }
+            } else {
+                assert!(!inner.is_empty(), "{config:?} {method:?}");
+            }
             assert!(
                 inner
                     .iter()

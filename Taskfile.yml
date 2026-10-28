@@ -280,6 +280,4 @@ tasks:
       - task: docs:build
       - npm --prefix docs ci --ignore-scripts
       - npm --prefix docs run check
-      - cmd: npm --prefix docs/widget run test:browser
-        env:
-          SHRINKAGE_DOCS_SITE: "{{.ROOT_DIR}}/docs/site"
+      - SHRINKAGE_DOCS_SITE="{{.ROOT_DIR}}/docs/site" npm --prefix docs/widget run test:browser

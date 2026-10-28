@@ -328,6 +328,83 @@ test("keeps the static explanation when WebAssembly cannot load", async ({
   }
 });
 
+test("reserves the explorer's space while its scripts and worker load", async ({
+  page,
+}, info) => {
+  test.skip(
+    !process.env.SHRINKAGE_DOCS_SITE,
+    "Requires the generated landing page.",
+  );
+  let releaseScript, releaseWasm;
+  const scriptGate = new Promise((resolve) => {
+    releaseScript = resolve;
+  });
+  const wasmGate = new Promise((resolve) => {
+    releaseWasm = resolve;
+  });
+  await page.route("**/assets/components.js", async (route) => {
+    await scriptGate;
+    await route.continue();
+  });
+  await page.route("**/*.wasm", async (route) => {
+    await wasmGate;
+    await route.continue();
+  });
+  try {
+    await page.goto("/", { waitUntil: "commit" });
+    const component = page.locator(".diplodocus-component");
+    const loading = component.locator("[data-explorer-loading]");
+    await expect(loading).toBeVisible();
+    await expect(loading).toHaveAttribute("role", "status");
+    await expect(loading).toContainText("Loading the optimization explorer");
+    await expect(component.locator("[data-component-fallback] img")).toBeHidden();
+    await component.scrollIntoViewIfNeeded();
+    const before = await component.boundingBox();
+    releaseScript();
+    await expect(explorer(page)).toBeAttached();
+    await expect(loading).toBeVisible();
+    await expect(explorer(page)).toBeHidden();
+    const indicator = loading.locator(".explorer-loading-indicator");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(indicator).toHaveCSS("animation-name", "none");
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await expect(indicator).toHaveCSS("animation-name", "explorer-loading");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await component.screenshot({
+      path: `artifacts/${info.project.name}-loading.png`,
+    });
+    releaseWasm();
+    await expect(explorer(page)).toHaveAttribute("data-ready", "true");
+    await expect(loading).toBeHidden();
+    const after = await component.boundingBox();
+    expect(Math.abs(after.height - before.height)).toBeLessThan(2);
+  } finally {
+    releaseScript();
+    releaseWasm();
+  }
+});
+
+test("shows the static explanation when JavaScript is disabled", async ({
+  browser,
+}, info) => {
+  test.skip(
+    !process.env.SHRINKAGE_DOCS_SITE,
+    "Requires the generated landing page.",
+  );
+  const context = await browser.newContext({
+    javaScriptEnabled: false,
+    viewport: info.project.use.viewport,
+  });
+  try {
+    const page = await context.newPage();
+    await page.goto("http://127.0.0.1:8792/");
+    await expect(page.locator("[data-component-fallback] img")).toBeVisible();
+    await expect(page.locator("[data-explorer-loading]")).toBeHidden();
+  } finally {
+    await context.close();
+  }
+});
+
 test("terminates its worker when the component unmounts", async ({ page }) => {
   await page.addInitScript(() => {
     const NativeWorker = window.Worker;
@@ -396,7 +473,7 @@ test("dragging a new start preserves both plots and their limits", async ({
   expect(hashes(await snapshot())).toEqual(hashes(before));
 });
 
-test("CD (IRLS) and hybrid trajectories include inner iterations", async ({
+test("only Gaussian trajectories include inner iterations", async ({
   page,
 }) => {
   await ready(page);
@@ -416,16 +493,65 @@ test("CD (IRLS) and hybrid trajectories include inner iterations", async ({
       await expect(root).toHaveAttribute("aria-busy", "false");
       await root.locator("[name=method]").selectOption(method);
       await expect(root).toHaveAttribute("aria-busy", "false");
-      await expect.poll(() => inner.count()).toBeGreaterThan(0);
-      await expect(inner.first()).toHaveAttribute("fill", "#ffffff");
-      await expect(inner.first()).toHaveCSS("fill", "rgb(255, 255, 255)");
-      await expect(inner.first()).toHaveCSS("stroke", "rgb(0, 0, 0)");
-      await expect(inner.first().locator("title")).toContainText(
-        "inner iteration",
-      );
+      if (loss === "binomial") {
+        await expect(inner).toHaveCount(0);
+      } else {
+        await expect.poll(() => inner.count()).toBeGreaterThan(0);
+        await expect(inner.first()).toHaveAttribute("fill", "#ffffff");
+        await expect(inner.first()).toHaveCSS("fill", "rgb(255, 255, 255)");
+        await expect(inner.first()).toHaveCSS("stroke", "rgb(0, 0, 0)");
+        await expect(inner.first().locator("title")).toContainText(
+          "inner iteration",
+        );
+      }
       await expect(root.locator("[role=status]")).toBeHidden();
     }
   }
+});
+
+test("large binomial quadratic proposals preserve a useful viewport", async ({
+  page,
+}) => {
+  await ready(page);
+  const result = await page.evaluate(async () => {
+    const module = document.querySelector("[data-component-module]")
+      ?.dataset.componentModule;
+    const entry = module ? new URL(module, location.href) : location.href;
+    const worker = new Worker(new URL("worker.js", entry), { type: "module" });
+    try {
+      return await new Promise((resolve, reject) => {
+        worker.onmessage = ({ data }) => resolve(data);
+        worker.onerror = (event) => reject(new Error(event.message));
+        worker.postMessage({
+          id: 1,
+          config: {
+            loss: "binomial",
+            penalty: "clustered-lasso",
+            correlation: 0.7,
+            signal: [2, -1],
+            strength: 0.00788,
+            mixing: 0.5,
+            rank_ratio: 0.5,
+          },
+          method: "hybrid",
+          start: [38.5, -1],
+          trajectoryOnly: false,
+        });
+      });
+    } finally {
+      worker.terminate();
+    }
+  });
+  expect(result.error).toBeUndefined();
+  expect(result.method).toBe("hybrid");
+  expect(result.trace.fit.converged).toBe(true);
+  const accepted = result.trace.points.filter((point) => !point.inner);
+  expect(accepted).toHaveLength(result.trace.points.length);
+  const extent = Math.max(
+    ...accepted.flatMap((point) => point.coefficients.map(Math.abs)),
+  );
+  expect(result.scene.radius).toBeGreaterThan(extent);
+  expect(result.scene.radius).toBeLessThan(2 * extent);
 });
 
 test("penalty slider resolves weak binomial penalties and includes zero", async ({

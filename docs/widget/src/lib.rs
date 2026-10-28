@@ -233,6 +233,7 @@ fn run<'a, D, P, S>(
     penalty: P,
     solver: &S,
     start: [f64; 2],
+    record_inner: bool,
 ) -> Result<Trace, String>
 where
     D: Datafit<Error = FitError>,
@@ -253,6 +254,11 @@ where
                 intercept: 0.,
             },
             &mut Recorder(|step: SolverStep<'_>, outer: Option<usize>| {
+                // Binomial surrogate updates remain proposals until outer
+                // backtracking accepts a step on the original objective.
+                if outer.is_some() && !record_inner {
+                    return;
+                }
                 for (i, value) in eta.iter_mut().enumerate() {
                     *value = step.intercept
                         + x[(i, 0)] * step.coefficients[0]
@@ -313,8 +319,8 @@ pub fn trace_from(config: &Config, method: Method, start: [f64; 2]) -> Result<Tr
     macro_rules! fit {
         ($p:expr, $s:expr) => {
             match config.loss {
-                Loss::Gaussian => run(&x, gaussian, $p, &$s, start),
-                Loss::Binomial => run(&x, binomial, $p, &$s, start),
+                Loss::Gaussian => run(&x, gaussian, $p, &$s, start, true),
+                Loss::Binomial => run(&x, binomial, $p, &$s, start, false),
             }
         };
     }
@@ -325,6 +331,7 @@ pub fn trace_from(config: &Config, method: Method, start: [f64; 2]) -> Result<Tr
             L1::new(config.strength),
             &CoordinateDescent::new(),
             start,
+            true,
         ),
         Method::Proximal => {
             with_penalty!(config, p, fit!(p, ProximalGradient::<DVector<f64>>::new()))

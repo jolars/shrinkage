@@ -19,6 +19,11 @@ build requires the toolchain's `wasm32-unknown-unknown` target and
 Node dependencies are pinned in this package's lockfile. Generated bindings,
 bundles, test artifacts, and Rust build output stay untracked.
 
+The generated landing page reserves responsive space for the explorer and shows
+a loading indicator until the first fit is ready. The static illustration stays
+available when JavaScript is disabled or the component cannot load. Reduced
+motion preferences disable the loading animation.
+
 The explorer fixes the intercept at zero and disables additional normalization.
 It constructs 32 deterministic observations with centered, unit-variance columns
 and the selected correlation. Gaussian responses equal the selected linear
@@ -41,11 +46,12 @@ supported and otherwise selects an applicable solver automatically. Dragging the
 hand handle moves the starting point and refits the actual Rust solver. The
 handle supports mouse and touch input, as well as arrow keys, and stays within
 the current plot limits. Dragging and solver changes preserve the current
-contours and axis limits. There are no playback controls. The black line
-connects library observations, with filled dots for accepted outer updates and
-hollow dots for inner coordinate, block, and quadratic updates in IRLS and
-hybrid solves. Inner surrogate states can increase the original objective before
-the solver accepts an outer step.
+contours and axis limits. There are no playback controls. Binomial trajectories
+show only accepted outer IRLS steps. Inner quadratic proposals are excluded from
+the trace and viewport bounds because backtracking may shorten them before
+acceptance. Gaussian trajectories also show inner coordinate and block updates,
+marked with hollow dots, because these optimize the displayed objective
+directly. Filled dots mark accepted outer updates.
 
 The widget offers L1, ridge, elastic net, SLOPE, and clustered lasso. Group
 lasso and chain fused lasso remain available through the library API.
