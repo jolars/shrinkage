@@ -15,10 +15,13 @@ presentation:
     actions:
       - label: "Get started"
         path: "installation.html"
+        icon: "book-open"
       - label: "Rust API"
         path: "packages/rust/index.html"
+        icon: "code"
       - label: "Python API"
         path: "packages/python/index.html"
+        icon: "terminal"
     features:
       - title: "Models from reusable parts"
         description: "Combine Gaussian, binomial, and multivariate Gaussian losses with compatible penalties and solvers. Extend the Rust API with your own components."
