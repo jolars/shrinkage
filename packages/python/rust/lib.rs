@@ -1,7 +1,9 @@
 //! Native support for the Shrinkage Python package.
 
+mod common;
 mod input;
 mod lasso;
+mod model;
 
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
@@ -22,5 +24,7 @@ fn _shrinkage(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(input::_prepare_dense_inputs, module)?)?;
     module.add_class::<lasso::PyLasso>()?;
     module.add_class::<lasso::PyLassoFit>()?;
+    module.add_class::<model::PySolver>()?;
+    module.add_class::<model::PyModelFit>()?;
     Ok(())
 }

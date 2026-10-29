@@ -98,6 +98,10 @@ required-features = ["experimental-block-reader", "zarrs_v0_22"]
 name = "python_lasso_fixture"
 required-features = ["ndarray_v0_17"]
 
+[[example]]
+name = "python_model_fixture"
+required-features = ["ndarray_v0_17"]
+
 [[bench]]
 name = "lasso"
 harness = false

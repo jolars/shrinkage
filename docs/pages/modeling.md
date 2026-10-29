@@ -4,8 +4,11 @@ Build a model by choosing a [datafit](datafits/index.md), a
 [penalty](penalties/index.md), and a compatible
 [solver](reference/solvers/index.md). The [model pages](models/index.md) put
 these choices together for linear, logistic, and multivariate regression. All
-components described here are available through Rust. Python currently exposes
-Gaussian lasso; see the [Python installation guide](installation.md#python).
+components described here are available through Rust. Python exposes Gaussian
+lasso and compositional Gaussian and binomial fits with the three MVP penalties,
+using explicit hybrid or proximal-gradient solvers. See the [Python installation
+guide](installation.md#python) and [package
+guide](../../packages/python/README.md) for fitting and prediction.
 
 ## Objective and notation
 

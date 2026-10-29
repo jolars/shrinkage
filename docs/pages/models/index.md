@@ -22,7 +22,8 @@ compatibility table](../reference/solvers/index.md).
 `Lasso` is currently the sole named convenience model. Other model families use
 composition. The [shared conventions](../modeling.md) describe intercepts,
 normalization, penalty scales, and original-scale output. The Python package
-currently exposes the Gaussian lasso convenience API only.
+exposes Gaussian lasso and composition with Gaussian or binomial datafits, the
+three MVP penalties, and explicit hybrid or proximal-gradient solvers.
 
 API:
 [`shrinkage::Problem`](https://shrinkage.cc/packages/rust/reference/4fd51b866367bd6673d82fc698be06078f421c181aef012c7bc5b92a97232647)

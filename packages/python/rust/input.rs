@@ -30,7 +30,7 @@ impl DenseDesign {
     }
 }
 
-/// A dense Gaussian problem whose storage is independent of Python objects.
+/// A dense single-response problem whose storage is independent of Python objects.
 #[pyclass(frozen, name = "_DenseInputs", module = "shrinkage._shrinkage")]
 pub(crate) struct DenseInputs {
     pub(crate) design: DenseDesign,

@@ -1,9 +1,10 @@
 //! Gaussian lasso calls over owned input, detached from the Python interpreter.
 
-use pyo3::exceptions::{PyFloatingPointError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use shrinkage::{
-    Centering, FitError, Lasso, LassoFit, Normalization, Scaling, StoppingCriterion, Termination,
+use shrinkage::{Lasso, LassoFit};
+
+use crate::common::{
+    self, fit_error, normalization as normalization_name, parse_stopping, positive,
 };
 
 use crate::input::{DenseDesign, DenseInputs};
@@ -23,23 +24,8 @@ impl PyLasso {
         stopping: Option<(String, f64, f64)>,
         max_iterations: isize,
     ) -> PyResult<Self> {
-        let normalization = match normalization {
-            "auto" => Normalization::Auto,
-            "none" => Normalization::None,
-            "center" => Normalization::Center,
-            "standardize" => Normalization::Standardize,
-            "min_max" => Normalization::MinMax,
-            "max_abs" => Normalization::MaxAbs,
-            "l1" => Normalization::L1,
-            "l2" => Normalization::L2,
-            _ => {
-                return Err(PyValueError::new_err(
-                    "normalization must be one of: auto, none, center, standardize, min_max, max_abs, l1, l2",
-                ));
-            }
-        };
-        let max_iterations = usize::try_from(max_iterations)
-            .map_err(|_| PyValueError::new_err("max_iterations must be strictly positive"))?;
+        let normalization = normalization_name(normalization)?;
+        let max_iterations = positive("max_iterations", max_iterations)?;
         let mut model = Lasso::new(lambda_)
             .fit_intercept(fit_intercept)
             .normalize(normalization)
@@ -62,31 +48,6 @@ impl PyLasso {
         // All buffer exports have ended, and the closure reads only Rust-owned data.
         let fit = py.detach(|| self.model.fit(&data.design.matrix, &data.response));
         fit.map(|fit| PyLassoFit { fit }).map_err(fit_error)
-    }
-}
-
-fn parse_stopping((kind, absolute, relative): (String, f64, f64)) -> PyResult<StoppingCriterion> {
-    match kind.as_str() {
-        "duality_gap" => Ok(StoppingCriterion::DualityGap { absolute, relative }),
-        "kkt_violation" if relative == 0.0 => Ok(StoppingCriterion::kkt_violation(absolute)),
-        "kkt_violation" => Err(PyValueError::new_err(
-            "KKT violation uses only an absolute tolerance; relative must be zero",
-        )),
-        _ => Err(PyValueError::new_err(
-            "stopping kind must be duality_gap or kkt_violation for Gaussian lasso",
-        )),
-    }
-}
-
-fn fit_error(error: FitError) -> PyErr {
-    let message = error.to_string();
-    match error {
-        FitError::InvalidInput { .. } | FitError::UnsupportedCombination { .. } => {
-            PyValueError::new_err(message)
-        }
-        FitError::NumericalFailure { .. } => PyFloatingPointError::new_err(message),
-        FitError::LineSearchFailure { .. } => PyRuntimeError::new_err(message),
-        FitError::Backend { source, .. } => match source {},
     }
 }
 
@@ -115,31 +76,15 @@ impl PyLassoFit {
     }
     #[getter]
     fn centering(&self) -> &'static str {
-        match self.fit.preprocessing().centering() {
-            Centering::None => "none",
-            Centering::Mean => "mean",
-            Centering::Min => "min",
-            Centering::Median => "median",
-        }
+        common::centering(self.fit.preprocessing().centering())
     }
     #[getter]
     fn scaling(&self) -> &'static str {
-        match self.fit.preprocessing().scaling() {
-            Scaling::None => "none",
-            Scaling::Sd { .. } => "sd",
-            Scaling::Range => "range",
-            Scaling::MaxAbs => "max_abs",
-            Scaling::L1 => "l1",
-            Scaling::L2 => "l2",
-            Scaling::QuantileRange(_) => "quantile_range",
-        }
+        common::scaling(self.fit.preprocessing().scaling())
     }
     #[getter]
     fn termination(&self) -> &'static str {
-        match self.fit.termination() {
-            Termination::Converged => "converged",
-            Termination::IterationLimit => "iteration_limit",
-        }
+        common::termination(self.fit.termination())
     }
     #[getter]
     fn iterations(&self) -> usize {
@@ -171,15 +116,7 @@ impl PyLassoFit {
     }
     #[getter]
     fn stopping(&self) -> (&'static str, f64, f64) {
-        match self.fit.stopping_criterion() {
-            StoppingCriterion::DualityGap { absolute, relative } => {
-                ("duality_gap", absolute, relative)
-            }
-            StoppingCriterion::KktViolation { absolute } => ("kkt_violation", absolute, 0.0),
-            StoppingCriterion::ProximalGradientMapping { .. } => {
-                unreachable!("lasso rejects mapping criteria")
-            }
-        }
+        common::stopping(self.fit.stopping_criterion())
     }
     #[getter]
     fn stopping_value(&self) -> f64 {

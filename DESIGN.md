@@ -14,7 +14,9 @@ paths for their supported compositions, with shared automatic deviance stopping.
 Univariate Gaussian and binomial cross-validation fits whole paths per fold,
 selects candidates from held-out scores, and refits on all observations. This
 document records commitments and an implementation sequence; illustrative API
-names are not frozen interfaces.
+names are not frozen interfaces. Python exposes single Gaussian and binomial
+fits and prediction for the three MVP penalties through explicit hybrid and
+proximal-gradient solvers, alongside the Gaussian lasso convenience API.
 
 The next goal is an MVP that the clustered-lasso paper can use and cite through
 a public Rust and Python release. The uniform clustered-lasso penalty and dense
@@ -239,8 +241,8 @@ certifies approximate stationarity, not existence of a finite optimum.
 `IrlsFit` stores original-scale parameters, preprocessing, objective, full KKT
 violation, accepted outer steps, and total coordinate sweeps. Predictions are
 linear predictors, including binomial logits. Only absolute KKT stopping is
-implemented. The runtime proximal oracles and Python bindings do not expose
-IRLS.
+implemented. Runtime proximal oracles do not expose this coordinate IRLS solver.
+Python exposes logistic Hybrid IRLS with its full-space PG mapping criterion.
 
 ## 4. Static computation and runtime composition
 
@@ -750,8 +752,9 @@ includes nonuniform weights, a cut, normalization, and a free intercept.
 `task bench:chain` compares proximal operations and complete solves at matched
 accuracy; bounded runs include setup, first PG, and subsequent rebuild work.
 `task bench:chain:heap` checks warmed scratch reuse and complete-solve storage
-for strongly fused and nearly singleton partitions. Fusion screening, Python
-exposure, and sparse-specific optimizations remain later milestones.
+for strongly fused and nearly singleton partitions. Python single fits and
+prediction are available; Python paths, fusion screening, and sparse-specific
+optimizations remain later milestones.
 
 ## 7. Specialized SLOPE support
 
@@ -870,8 +873,8 @@ complete PG and hybrid solves on constructed distinct, tied, and highly
 clustered optima at matched accuracy. Bounded runs include setup, the first PG,
 and a subsequent rebuild. `task bench:slope:heap` measures warmed proximal
 allocations and complete-solve peak storage at low, high, and changing block
-counts. Fusion screening, Python exposure, and sparse-specific optimization
-remain later milestones.
+counts. Python single fits and prediction are available; Python paths, fusion
+screening, and sparse-specific optimization remain later milestones.
 
 ### Logistic hybrid IRLS
 
@@ -1241,7 +1244,8 @@ visits. Diagnostics count quadratic subproblems within their parent fit. Sweep
 budgets count restricted sweeps as one sweep, and checks do not consume updates.
 `task bench:working-sets` measures complete fits and existing paths, including
 preprocessing, scans, rebuilds, allocations, and memory at matched original-loss
-accuracy. Python inherits the default without new policy options.
+accuracy. Python exposes these policies for Hybrid single fits and reports the
+resolved policy and work counters.
 
 An initial quick comparison on October 29, 2026, validated 544 configurations on
 a synthetic design with 160 observations and 256 features, stored densely and as
@@ -1464,9 +1468,9 @@ buffer API without adding Python or matrix backend dependencies to the default
 Rust build. The binding enables the versioned ndarray backend in its own
 workspace, moving each copied design vector into an owned column-major ndarray
 without another matrix copy. LazyMatrix supplies its raw columns and statistics.
-The first numerical boundary is dense, single-response Gaussian data. The
-private `_prepare_dense_inputs` entry point tests the shared `DenseInputs`
-container independently of fitting.
+The numerical boundary accepts dense, single-response Gaussian and binomial
+data. The private `_prepare_dense_inputs` entry point tests the shared
+`DenseInputs` container independently of fitting.
 
 Accept exact `numpy.ndarray` instances with native-endian `float64` dtype and
 aligned storage. Require a two-dimensional design of shape `(n, p)` and a
@@ -1519,6 +1523,49 @@ penalty, an initially optimal fit, and an iteration limit. The generator's
 `--check` mode guards against stale fixtures. Installed wheel and isolated
 source-distribution tests compare all exposed diagnostics and predictions,
 alongside analytical fits and independent objective and KKT calculations.
+
+### Python compositional fitting
+
+`Problem(X, datafit, penalty, normalization=...)` composes `Gaussian(y)` or
+`Binomial(y)` with `ClusteredLasso`, `ChainFusedLasso`, or `Slope`.
+`fit_with(Hybrid(...))` returns `HybridFit`, and
+`fit_with(ProximalGradient(...))` returns `ProximalFit`. Solver configurations
+expose the existing Rust controls and defaults, including Hybrid step and
+working-set policies. Both solvers use absolute proximal-gradient mapping
+stopping. The existing Gaussian `Lasso` convenience interface retains its gap
+and KKT criteria. Shared option conversion preserves solver compatibility errors
+and normalization conventions.
+
+Problems retain input references until each fit snapshots them. Penalty weight
+sequences become immutable tuples at construction; dimensions and numerical
+validity are checked against the selected problem when fitting. The dense input
+adapter remains the only boundary for training and prediction matrices. After
+copying, a detached native call constructs fresh penalties and their mutable
+scratch. Hybrid dispatch selects one of six typed ndarray combinations. PG uses
+independently boxed datafit and penalty oracles through `RuntimeProblem` and the
+ndarray `MatrixDesign` adapter. Runtime backend errors need not be thread-safe,
+so detached calls transport an owned error category and message and construct
+Python exceptions only after reattaching. No Python references or shared penalty
+workspaces reach the numerical loops.
+
+Results retain only native fitted state and family metadata. Both report the
+chosen solver, original-scale parameters, preprocessing, original-loss mapping,
+optional dual certificates, and screening diagnostics. Hybrid adds cluster
+metadata, working-set diagnostics, and inner and outer work counters. Cluster
+labels and values use the optimization scale; SLOPE additionally retains
+individual signs. Array-valued properties return independent NumPy copies.
+`predict` returns Gaussian means or binomial logits with shape `(n_samples,)`.
+Neither prediction nor result inspection refits normalization. Python paths,
+cross-validation, and plotting remain subsequent milestones.
+
+The `python_model_fixture` generator checks all twelve penalty, family, and
+solver combinations against typed public Rust fits, including normalization,
+screening, working sets, step policies, and iteration budgets. Installed-wheel
+and isolated-source-distribution tests compare all diagnostics and predictions,
+recompute objectives, check independent analytical solutions, and exercise
+concurrent fits and GIL release during fitting and prediction. The runnable
+Python hybrid example compares both solvers for every penalty and family through
+the installed distribution.
 
 ## 12. Results, correctness, and performance
 

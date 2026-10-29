@@ -123,8 +123,8 @@ presentation:
       - title: "Dense and sparse matrices"
         description: "Use faer, nalgebra, ndarray, or sparse CSC matrices. Enable the integrations you need through optional Rust features."
         path: "installation.html"
-      - title: "Lasso from Python"
-        description: "Fit dense Gaussian lasso from NumPy arrays, predict on new observations, and inspect convergence diagnostics."
+      - title: "Compose models in Python"
+        description: "Fit Gaussian and logistic models from NumPy arrays with explicit hybrid or proximal-gradient solvers, and inspect predictions and convergence."
         path: "packages/python/index.html"
   logo:
     repository: "shrinkage"

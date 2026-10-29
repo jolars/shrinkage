@@ -237,7 +237,7 @@ decision and concrete follow-up tasks.
 
 ### 7. Complete the Python MVP surface
 
-- [ ] **Python hybrid fitting and prediction:** Expose clustered lasso, chain
+- [x] **Python hybrid fitting and prediction:** Expose clustered lasso, chain
   fused lasso, and SLOPE through the Rust fitting facade, with Gaussian
   hybrids and logistic IRLS using hybrid inner solves. Provide explicit
   solver choice, penalty parameters, normalization, stopping controls,

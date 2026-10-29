@@ -29,8 +29,11 @@ devenv shell -- cargo run --locked --example lasso --features faer_v0_24
 ## Python {#python}
 
 The distribution and import names are both `shrinkage`. The package currently
-fits dense, single-response Gaussian lasso and provides prediction, fitted
-preprocessing, and convergence diagnostics. It requires NumPy 2.0 or newer.
+fits dense, single-response Gaussian and binomial models with clustered lasso,
+chain fused lasso, or SLOPE. Compose an explicit hybrid or proximal-gradient
+solver, or use the Gaussian lasso convenience API. Results provide prediction,
+fitted preprocessing, and convergence diagnostics. NumPy 2.0 or newer is
+required.
 
 The CI matrix builds an interpreter-specific wheel and tests its installation
 and import for each supported combination:

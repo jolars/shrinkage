@@ -3,12 +3,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
 
 import numpy as np
-import numpy.typing as npt
 
 from . import _shrinkage
+from ._common import (
+    FloatArray,
+    preprocessing,
+    stopping_spec,
+)
+from ._common import (
+    Normalization as Normalization,
+)
+from ._common import (
+    Preprocessing as Preprocessing,
+)
+from ._common import (
+    StoppingCriterion as StoppingCriterion,
+)
+from ._common import (
+    Termination as Termination,
+)
 
 __all__ = [
     "Lasso",
@@ -18,53 +33,6 @@ __all__ = [
     "StoppingCriterion",
     "Termination",
 ]
-
-Normalization = Literal[
-    "auto", "none", "center", "standardize", "min_max", "max_abs", "l1", "l2"
-]
-Termination = Literal["converged", "iteration_limit"]
-FloatArray = npt.NDArray[np.float64]
-
-
-@dataclass(frozen=True)
-class StoppingCriterion:
-    """A convergence check with tolerances in its own units.
-
-    Use ``duality_gap`` or ``kkt_violation`` to select a criterion. Tolerances
-    must be finite and nonnegative, with at least one positive component.
-    KKT violation uses only an absolute tolerance.
-    """
-
-    kind: Literal["duality_gap", "kkt_violation"]
-    absolute: float
-    relative: float = 0.0
-
-    @classmethod
-    def duality_gap(
-        cls, relative: float = 1e-6, *, absolute: float = 0.0
-    ) -> StoppingCriterion:
-        """Require gap <= absolute + relative * fixed null-model loss."""
-        return cls("duality_gap", absolute, relative)
-
-    @classmethod
-    def kkt_violation(cls, absolute: float = 1e-6) -> StoppingCriterion:
-        """Require the largest absolute KKT violation <= absolute."""
-        return cls("kkt_violation", absolute)
-
-
-@dataclass(frozen=True, eq=False)
-class Preprocessing:
-    """Training-column normalization resolved during fitting.
-
-    ``centers`` and ``scales`` have shape ``(n_features,)`` when enabled and
-    are ``None`` otherwise. Zero computed scales become one. Arrays are
-    independent snapshots; changing them cannot change a fitted model.
-    """
-
-    centering: str
-    scaling: str
-    centers: FloatArray | None
-    scales: FloatArray | None
 
 
 @dataclass(frozen=True)
@@ -103,14 +71,11 @@ class Lasso:
         Nonfinite arithmetic from finite inputs raises ``FloatingPointError``.
         An exhausted budget returns a fit with termination ``"iteration_limit"``.
         """
-        stopping = self.stopping
         native = _shrinkage._Lasso(
             self.lambda_,
             self.fit_intercept,
             self.normalization,
-            None
-            if stopping is None
-            else (stopping.kind, stopping.absolute, stopping.relative),
+            stopping_spec(self.stopping),
             self.max_iterations,
         )
         return LassoFit(native.fit(x, y, copy=copy))
@@ -140,13 +105,7 @@ class LassoFit:
     @property
     def preprocessing(self) -> Preprocessing:
         """Training transformations; prediction never estimates new ones."""
-        centers, scales = self._native.centers, self._native.scales
-        return Preprocessing(
-            self._native.centering,
-            self._native.scaling,
-            None if centers is None else np.asarray(centers, dtype=np.float64),
-            None if scales is None else np.asarray(scales, dtype=np.float64),
-        )
+        return preprocessing(self._native)
 
     @property
     def termination(self) -> Termination:

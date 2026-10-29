@@ -1,10 +1,12 @@
 # Shrinkage for Python
 
-Shrinkage fits dense, single-response Gaussian lasso models through Rust
+Shrinkage fits dense, single-response Gaussian and binomial models through Rust.
+Compose clustered lasso, chain fused lasso, or SLOPE with an explicit hybrid or
+proximal-gradient solver. Gaussian lasso also has a convenience API using
 coordinate descent. Fitted results provide original-scale coefficients and
-predictions, training preprocessing, and convergence diagnostics. The Python
-package copies NumPy inputs into independent Rust storage and releases the GIL
-during fitting and prediction.
+predictions, training preprocessing, and convergence diagnostics. The package
+copies NumPy inputs into independent Rust storage and releases the GIL during
+fitting and prediction.
 
 The distribution and import names are both `shrinkage`. Build from the
 repository with Rust 1.85 or newer and standard CPython 3.11 or newer:
@@ -20,7 +22,141 @@ including building and importing an interpreter-specific wheel. Free-threaded
 Python and other interpreters are outside the initial support matrix. Wheels are
 not published yet.
 
-## Gaussian lasso
+## Compose a model
+
+```python
+import numpy as np
+from shrinkage import Binomial, ClusteredLasso, Hybrid, Problem, StoppingCriterion
+
+X = np.array([[-2.0, -1.0], [-1.0, -2.0], [1.0, 2.0], [2.0, 1.0]])
+y = np.array([0.1, 0.2, 0.8, 0.9])
+problem = Problem(
+    X,
+    Binomial(y, fit_intercept=True),
+    ClusteredLasso(l1=0.02, fusion=0.03),
+    normalization="auto",
+)
+fit = problem.fit_with(
+    Hybrid(stopping=StoppingCriterion.proximal_gradient_mapping(1e-8))
+)
+assert fit.termination == "converged"
+logits = fit.predict(X)
+probabilities = np.exp(-np.logaddexp(0, -logits))
+```
+
+Use `Gaussian(y)` for average squared loss divided by two, or `Binomial(y)` for
+average Bernoulli negative log likelihood. Both fit an unpenalized intercept by
+default. Binomial responses must lie in `[0, 1]`; fractional responses denote
+proportions with equal observation weights. Binomial `predict` returns logits,
+and the conversion above gives probabilities without overflow. Gaussian
+predictions are response means. Both have shape `(n_samples,)` and dtype
+`float64`.
+
+`Problem(X, datafit, penalty, *, normalization="auto")` retains input references
+without copying. `problem.fit_with(solver, *, copy=True)` snapshots the current
+inputs on every call. Keep inputs unchanged until fitting returns. Returned
+results retain no problem, training arrays, or design snapshots. Array-valued
+properties return independent copies, so mutating them cannot change prediction.
+
+Choose one complete penalty, applied to optimization-scale coefficients `theta`.
+The intercept is excluded:
+
+  | Penalty                                        | Definition and configuration                                                                              |
+  | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+  | `ClusteredLasso(l1, fusion)`                   | `l1 * sum(abs(theta)) + fusion * sum(i < j, abs(theta[i] - theta[j]))`; each signed pair contributes once |
+  | `ChainFusedLasso(l1, fusion, *, weights=None)` | `l1 * sum(abs(theta)) + fusion * sum(weights * abs(diff(theta)))`; feature order defines the chain        |
+  | `Slope(weights)`                               | Rank weights multiply decreasing coefficient magnitudes; weights include the complete penalty strength    |
+
+Strengths and weights must be finite and nonnegative. Chain weights default to
+one and otherwise have length `max(n_features - 1, 0)`; zero weights cut the
+chain. SLOPE requires one nonincreasing weight per feature. Equal SLOPE weights
+give L1, and zero strengths give the corresponding unpenalized limits. Weight
+inputs accept one-dimensional real numeric sequences and are copied into
+immutable tuples; the stricter dense contract below applies to `X` and `y`.
+Strengths, weight lengths, and solver compatibility are checked when fitting.
+
+### Choose a solver
+
+`Hybrid(...)` returns `HybridFit`. Gaussian models alternate PG transitions and
+exact block sweeps. Binomial models use weighted hybrid subproblems inside IRLS,
+with backtracking on the original logistic objective. Only the full
+original-loss mapping, including the free-intercept derivative, certifies
+convergence. A surrogate check or unchanged block sweep does not certify it.
+
+All solver arguments are keyword-only. Hybrid defaults match Rust:
+
+  | Control                | Default                     | Meaning                                                                              |
+  | ---------------------- | --------------------------- | ------------------------------------------------------------------------------------ |
+  | `stopping`             | `None`                      | Absolute full-space PG mapping tolerance `1e-6`                                      |
+  | `max_iterations`       | `10_000`                    | Total committed PG transitions plus block sweeps, shared across logistic subproblems |
+  | `max_outer_iterations` | `100`                       | Accepted logistic IRLS steps                                                         |
+  | `max_inner_iterations` | `1_000`                     | PG transitions plus sweeps per logistic quadratic model                              |
+  | `max_outer_backtracks` | `100`                       | Logistic step halvings after the full trial                                          |
+  | `cluster_sweeps`       | `5`                         | Block sweeps between PG transitions                                                  |
+  | `check_every`          | `10`                        | Check interval, with checks also initially and at the budget                         |
+  | `screening`            | `True`                      | Original-problem Gap Safe zero screening                                             |
+  | `working_set_policy`   | `WorkingSetPolicy.auto()`   | Independent heuristic restrictions                                                   |
+  | `step_policy`          | `HybridStep.backtracking()` | PG curvature policy                                                                  |
+
+Gaussian fits ignore the logistic budgets. Iteration limits, sweep counts, and
+check intervals must be positive. Backtracking limits may be zero.
+`HybridStep.backtracking(initial_curvature=None, max_backtracks=100)` uses a
+positive supplied curvature or a column-based seed and doubles it after rejected
+trials. `HybridStep.fixed_bound()` uses a computed Frobenius bound.
+
+Working sets offer `WorkingSetPolicy.auto()`, `.disabled()`, `.ever_active()`,
+and `.adaptive(initial_size=10, prune=True)`. Automatic sets resolve to adaptive
+sets for single fits. Screening and working sets are independent; disable both
+to update all features. A heuristic exclusion is not a certified zero.
+
+Use `ProximalGradient(...)` with the same problem for the reference solver. It
+returns `ProximalFit` and optimizes the original Gaussian or binomial loss
+directly. Its controls are `stopping=None`, `max_iterations=10_000`,
+`initial_step=1.0`, `max_backtracks=100`, and `screening=True`. `max_iterations`
+counts accepted proximal updates. The initial step must be finite and positive;
+backtracking halves it. Working sets are a Hybrid control.
+
+Both solvers support only `StoppingCriterion.proximal_gradient_mapping(...)`,
+with a finite, strictly positive absolute tolerance. Duality-gap and KKT
+criteria produce compatibility errors with a supported alternative.
+
+### Inspect the result
+
+Both result types report `solver`, `family`, `coefficients`, `intercept`,
+`preprocessing`, `termination`, `iterations`, `objective`, `stopping`,
+`stopping_value`, `stopping_threshold`, and `step_size`. Check `termination`:
+`"iteration_limit"` returns finite parameters without certifying convergence.
+`dual_certificate`, `dual_objective`, and `duality_gap` are optional
+original-loss diagnostics and are `None` when screening is disabled. The padded
+duality gap does not replace mapping stopping. `screening_diagnostics` reports
+certificate passes, zero tests, certified features, remaining dimension,
+rebuilds, and fallbacks.
+
+`HybridFit` also reports `pg_steps`, `coordinate_sweeps`, `diagnostic_checks`,
+`backtracks`, `outer_iterations`, `outer_backtracks`, `step_policy`, and
+`working_set_diagnostics`. Inner logistic checks concern quadratic models;
+original-loss checks control convergence. Outer counters are zero for Gaussian
+fits. Working-set diagnostics retain the resolved policy and feature and block
+work.
+
+Hybrid cluster metadata uses the optimization scale. `cluster_labels` is an
+integer array of shape `(n_features,)` indexing `cluster_values`, whose shape is
+`(n_clusters,)`. Clustered lasso values are signed and strictly increasing.
+Chain values follow contiguous segment order; equal values across zero-weight
+cuts can have separate labels. SLOPE values are decreasing magnitudes, and
+`coefficient_signs` has shape `(n_features,)`. Reconstruct SLOPE coefficients as
+`coefficient_signs * cluster_values[cluster_labels]`; other penalties use the
+indexed values directly. Dividing by the fitted training scales gives the
+reported original-scale coefficients. Unequal scales can change equalities.
+
+Run all three penalties with both families and compare both solvers through the
+installed package:
+
+```console
+uv run --locked --project packages/python python packages/python/examples/hybrid.py
+```
+
+## Gaussian lasso convenience API
 
 ```python
 import numpy as np
@@ -109,8 +245,8 @@ Invalid array types and dtypes raise `TypeError`. Invalid dimensions, values,
 penalty strengths, normalization names, stopping controls, and copying policies
 raise `ValueError`. Finite inputs that produce nonfinite arithmetic raise
 `FloatingPointError`, retaining the Rust operation and iteration in the message.
-The first Python slice supports lasso fits and prediction; paths and other
-penalties remain later milestones.
+Line-search exhaustion raises `RuntimeError` with the iteration and solver
+settings. Python paths, cross-validation, and plotting remain later milestones.
 
 ## Dense input contract
 
@@ -173,13 +309,17 @@ checks run in Rust. Python callbacks stay outside numerical loops.
 `task python:check` tests the editable package. `task python:artifacts` runs the
 same tests against an installed wheel and a wheel rebuilt outside the checkout
 from a source distribution. These include analytical solutions, independently
-evaluated objectives and KKT conditions, input ownership, concurrent Python
-execution during fitting, and all diagnostics from 21 Rust fixtures.
+evaluated objectives and analytical Gaussian and logistic solutions, input
+ownership, concurrent fits, GIL release during fitting and prediction, and all
+diagnostics from public Rust fixtures. The model fixtures cover all twelve
+combinations of penalty, family, and solver, every normalization preset, both
+Hybrid step policies, working sets, screening settings, and iteration limits.
 
 Regenerate the fixtures after an intentional numerical change:
 
 ```console
 cargo run --locked --example python_lasso_fixture --features ndarray_v0_17 > packages/python/tests/fixtures/lasso_rust.json
+cargo run --locked --example python_model_fixture --features ndarray_v0_17 > packages/python/tests/fixtures/model_rust.json
 ```
 
 `task example` and CI run that generator with `--check` to verify the committed

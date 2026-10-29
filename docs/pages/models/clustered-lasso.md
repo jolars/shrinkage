@@ -164,5 +164,7 @@ Run `task bench:hybrid:irls` for complete-fit comparisons with PG and
 `task bench:hybrid:irls:heap` for weighted workspace storage checks.
 
 Gaussian and binomial [hybrid paths](../modeling.md#regularization-paths) reuse
-the solver's workspaces across tuning points. Python exposure, fusion screening,
-and sparse-specific extensions follow in later roadmap milestones.
+the solver's workspaces across tuning points. Python exposes single fits and
+prediction with explicit hybrid or PG selection; see the [Python package
+guide](../../../packages/python/README.md). Python paths, fusion screening, and
+sparse-specific extensions follow in later roadmap milestones.

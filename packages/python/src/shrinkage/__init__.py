@@ -1,7 +1,7 @@
 """Regularized statistical models backed by Rust.
 
-Fit dense Gaussian lasso with owned NumPy inputs, original-scale predictions,
-fitted preprocessing, and explicit convergence diagnostics.
+Compose Gaussian or binomial models with complete penalties and explicit
+solvers. Results own original-scale parameters and convergence diagnostics.
 
 Examples
 --------
@@ -19,32 +19,78 @@ True
 """
 
 from . import _shrinkage as _shrinkage
-from .lasso import (
-    Lasso as Lasso,
-)
-from .lasso import (
-    LassoFit as LassoFit,
-)
-from .lasso import (
+from ._common import (
     Normalization as Normalization,
 )
-from .lasso import (
+from ._common import (
     Preprocessing as Preprocessing,
 )
-from .lasso import (
+from ._common import (
     StoppingCriterion as StoppingCriterion,
 )
-from .lasso import (
+from ._common import (
     Termination as Termination,
+)
+from .datafit import Binomial as Binomial
+from .datafit import Gaussian as Gaussian
+from .fit import (
+    HybridFit as HybridFit,
+)
+from .fit import (
+    ProximalFit as ProximalFit,
+)
+from .fit import (
+    ScreeningDiagnostics as ScreeningDiagnostics,
+)
+from .fit import (
+    WorkingSetDiagnostics as WorkingSetDiagnostics,
+)
+from .lasso import Lasso as Lasso
+from .lasso import LassoFit as LassoFit
+from .penalty import (
+    ChainFusedLasso as ChainFusedLasso,
+)
+from .penalty import (
+    ClusteredLasso as ClusteredLasso,
+)
+from .penalty import (
+    Slope as Slope,
+)
+from .problem import Problem as Problem
+from .solver import (
+    Hybrid as Hybrid,
+)
+from .solver import (
+    HybridStep as HybridStep,
+)
+from .solver import (
+    ProximalGradient as ProximalGradient,
+)
+from .solver import (
+    WorkingSetPolicy as WorkingSetPolicy,
 )
 
 __version__ = "0.2.0"
 __all__ = [
+    "Binomial",
+    "ChainFusedLasso",
+    "ClusteredLasso",
+    "Gaussian",
+    "Hybrid",
+    "HybridFit",
+    "HybridStep",
     "Lasso",
     "LassoFit",
     "Normalization",
     "Preprocessing",
+    "Problem",
+    "ProximalFit",
+    "ProximalGradient",
+    "ScreeningDiagnostics",
+    "Slope",
     "StoppingCriterion",
     "Termination",
+    "WorkingSetDiagnostics",
+    "WorkingSetPolicy",
     "__version__",
 ]
