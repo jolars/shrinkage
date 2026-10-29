@@ -131,6 +131,11 @@ name = "proximal"
 harness = false
 required-features = ["faer_v0_24"]
 
+[[bench]]
+name = "proximal_buffers"
+harness = false
+required-features = ["faer_v0_24"]
+
 [lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"

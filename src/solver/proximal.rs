@@ -11,7 +11,7 @@ use std::marker::PhantomData;
 
 use lazymatrix::{
     ColumnStats, DotSlice, ElemDivAssign, MatTransposeVecInto, MatVecInto, RawColumns,
-    ScaledSubSlice, SubScalarAssign, SumEntries,
+    ScaledSubSlice, SubScalarAssign, SumEntries, VectorOwned, VectorView, VectorViewMut,
 };
 
 use crate::error::{finite, invalid, unsupported};
@@ -25,6 +25,10 @@ use crate::{
 /// Matrix products and normalization remain in LazyMatrix. This capability
 /// supplies reusable buffers and bridges native vectors to the slice-based
 /// predictor and proximal capabilities. It does not represent device storage.
+///
+/// LazyMatrix vectors with `VectorOwned<Owned = Self>`, mutable indexed access,
+/// and the normalization operations below implement this trait automatically.
+/// Indexed access may be strided; it does not require contiguous storage.
 pub trait ProximalVector:
     Clone
     + ElemDivAssign<f64>
@@ -41,54 +45,25 @@ pub trait ProximalVector:
     fn set(&mut self, index: usize, value: f64);
 }
 
-impl ProximalVector for Vec<f64> {
+impl<V> ProximalVector for V
+where
+    V: Clone
+        + VectorOwned<f64, Owned = V>
+        + VectorViewMut<f64>
+        + ElemDivAssign<f64>
+        + DotSlice<f64>
+        + SubScalarAssign<f64>
+        + SumEntries<f64>
+        + ScaledSubSlice<f64>,
+{
     fn zeros(length: usize) -> Self {
-        vec![0.0; length]
+        V::owned_from_fn(length, |_| 0.0)
     }
     fn get(&self, index: usize) -> f64 {
-        self[index]
+        VectorView::get(self, index)
     }
     fn set(&mut self, index: usize, value: f64) {
-        self[index] = value;
-    }
-}
-
-#[cfg(feature = "faer_v0_24")]
-impl ProximalVector for faer::Col<f64> {
-    fn zeros(length: usize) -> Self {
-        Self::zeros(length)
-    }
-    fn get(&self, index: usize) -> f64 {
-        self[index]
-    }
-    fn set(&mut self, index: usize, value: f64) {
-        self[index] = value;
-    }
-}
-
-#[cfg(feature = "nalgebra_v0_34")]
-impl ProximalVector for nalgebra::DVector<f64> {
-    fn zeros(length: usize) -> Self {
-        Self::zeros(length)
-    }
-    fn get(&self, index: usize) -> f64 {
-        self[index]
-    }
-    fn set(&mut self, index: usize, value: f64) {
-        self[index] = value;
-    }
-}
-
-#[cfg(feature = "ndarray_v0_17")]
-impl ProximalVector for ndarray::Array1<f64> {
-    fn zeros(length: usize) -> Self {
-        Self::zeros(length)
-    }
-    fn get(&self, index: usize) -> f64 {
-        self[index]
-    }
-    fn set(&mut self, index: usize, value: f64) {
-        self[index] = value;
+        VectorViewMut::set(self, index, value);
     }
 }
 

@@ -374,8 +374,21 @@ These milestones record the tested capabilities already available to build on.
   unsupported combinations.
 - [x] Establish reusable workspace ownership across iterations and path points.
   Measure normalized-product and proximal allocations, including LazyMatrix
-  0.5.0's scaled input clone. Verify reusable normalization scratch storage
-  upstream before claiming allocation-free normalized iterations.
+  0.9.0's remaining sparse scaled input clone. Verify reusable normalization
+  scratch storage upstream before claiming allocation-free normalized
+  iterations.
+- [x] Replace separate `ProximalVector` backend implementations with a blanket
+  adapter over LazyMatrix's vector construction and indexed access
+  capabilities.
+- [x] Evaluate native vector copies separately from normalization allocations.
+  Use `task bench:proximal:buffers` to compare isolated copies, direct
+  products, and prepared consumer calls before requesting borrowed
+  contiguous slice access upstream. Preserve strided views and coarse
+  runtime dispatch.
+- [ ] Evaluate explicit borrowed slice and product capabilities upstream when
+  complete-fit measurements justify them. The blanket vector adapter reduced
+  the measured CSC consumer product overhead to about 6–11%; slice access
+  alone cannot replace faer's owned input and output vector requirements.
 - [x] Prototype a separate fallible block-reader capability with bounded buffer
   reuse and explicit borrowing contracts before stabilizing solver
   interfaces.

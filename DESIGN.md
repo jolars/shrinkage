@@ -120,12 +120,15 @@ backtracking against the smooth quadratic upper bound. `ProximalDesign` exposes
 complete slice-based forward and transposed products to the shared iteration.
 Concrete adapters own normalized LazyMatrix views and native buffers, while
 iteration owns slice buffers for scalar updates. `ProximalVector` supplies owned
-CPU work buffers for `Vec`, faer `Col`, nalgebra `DVector`, and ndarray
-`Array1`. Slice buffers bridge predictor derivatives and complete proximal maps
-to those native buffers, with storage reused within a fit and along a penalty
-path. This CPU capability does not prescribe future device storage. Shared
-problem preparation retains normalization metadata without copying its vectors.
-All normalization algebra remains in LazyMatrix. Dense products center entries
+CPU work buffers through a blanket implementation over LazyMatrix's
+`VectorOwned<Owned = Self>`, `VectorView`, `VectorViewMut`, and normalization
+operations. Shrinkage retains its public solver vector bound without separate
+backend implementations. Indexed access does not require contiguous storage.
+Slice buffers bridge predictor derivatives and complete proximal maps to those
+native buffers, with storage reused within a fit and along a penalty path. This
+CPU capability does not prescribe future device storage. Shared problem
+preparation retains normalization metadata without copying its vectors. All
+normalization algebra remains in LazyMatrix. Dense products center entries
 before accumulation to preserve small variation around large column offsets. The
 generic forward product clones coefficients only when scaling is active and the
 backend does not specialize normalization.
@@ -157,6 +160,51 @@ every backend; adopting that API requires its additional fused-product
 capabilities. Batched LazyMatrix products could also replace repeated
 response-wise products in multivariate fitting, but require a batched capability
 on the shared runtime design oracle.
+
+`task bench:proximal:buffers` separates vector construction, copies into native
+storage, copies back to slices, raw products, normalized products, and complete
+consumer calls. The copy cases process one observation vector and one
+coefficient vector per sample; together, the two directions represent all four
+bridge copies in a forward/transpose pair. They allocate their buffers before
+measurement. Product cases compare the same normalized matrix through
+LazyMatrix's faer vectors and the prepared runtime consumer, checking outputs
+before timing. Copy cases also cover `Vec`, nalgebra, and ndarray when their
+versioned features are enabled. The existing heap harness measures normalization
+allocations separately.
+
+On an AMD Ryzen 9 7900 with Rust 1.89.0 release builds, comparing the original
+adapter from commit `2165279` with the blanket adapter in one exclusive compute
+window gave these central estimates in microseconds. Each pair includes a
+forward and a transposed product, or their four isolated bridge copies.
+
+  | Shape       | Faer copies, before | Faer copies, after | CSC consumer pair, before | CSC consumer pair, after |
+  | ----------- | ------------------: | -----------------: | ------------------------: | -----------------------: |
+  | 1,024 × 64  |                2.02 |               0.56 |                      6.33 |                     4.37 |
+  | 16,384 × 16 |               30.44 |               8.27 |                     65.67 |                    35.60 |
+
+The copy cases improved across `Vec`, faer, nalgebra, and ndarray. Their paired
+times fell from 2.02–2.22 to 0.56–0.80 microseconds for the smaller shape and
+from 30.44–33.48 to 8.27–11.49 microseconds for the taller shape. Separate
+microbenchmarks use warm buffers; their times do not form an additive profile of
+a complete fit. Complete 1,024 × 64 elastic-net fits measured:
+
+  | Storage | Typed fit, before (ms) | Typed fit, after (ms) | Runtime fit, before (ms) | Runtime fit, after (ms) |
+  | ------- | ---------------------: | --------------------: | -----------------------: | ----------------------: |
+  | Dense   |                  17.72 |                 17.06 |                    17.75 |                   17.42 |
+  | CSC     |                   2.53 |                  2.00 |                     2.52 |                    1.97 |
+
+After the refactor, the measured CSC consumer pairs took about 6–11% longer than
+direct normalized native products. Borrowing remains a focused upstream
+follow-up whose benefit needs complete-fit measurements. The heap checks still
+report one coefficient-copy allocation per scaled CSC forward product and none
+for centered dense products.
+
+Borrowing a contiguous native buffer needs a separate, explicit capability.
+`VectorView` covers strided storage and cannot promise a slice. Faer's published
+vector products accept owned `Col` inputs and outputs, so slice access alone
+would not remove both bridge copies. Borrowed product implementations or a
+coarse oracle that lends its native output would also be needed. Preserve
+strided storage support without hidden gathers or scalar trait-object calls.
 
 Build working numerical code before stabilizing abstractions. Do not introduce
 an elaborate type system or one crate per prospective feature at bootstrap.

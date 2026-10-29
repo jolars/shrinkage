@@ -95,6 +95,11 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench proximal_heap
 
+  bench:proximal:buffers:
+    desc: Separate native vector copies from normalized proximal products
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24,nalgebra_v0_34,ndarray_v0_17 --bench proximal_buffers -- {{.CLI_ARGS}}
+
   bench:slope:
     desc: Benchmark exact SLOPE proximal maps with distinct and tied magnitudes
     cmds:
