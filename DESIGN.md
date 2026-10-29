@@ -11,8 +11,10 @@ sweeps; weighted chain fused lasso and SLOPE share its driver with contiguous
 segment and signed magnitude-cluster sweeps. This hybrid also fits binomial
 models through weighted IRLS subproblems. All solver families expose warm-start
 paths for their supported compositions, with shared automatic deviance stopping.
-This document records commitments and an implementation sequence; illustrative
-API names are not frozen interfaces.
+Univariate Gaussian and binomial cross-validation fits whole paths per fold,
+selects candidates from held-out scores, and refits on all observations. This
+document records commitments and an implementation sequence; illustrative API
+names are not frozen interfaces.
 
 The next goal is an MVP that the clustered-lasso paper can use and cite through
 a public Rust and Python release. The uniform clustered-lasso penalty and dense
@@ -1149,6 +1151,60 @@ iteration limits. Screening eligibility is rebuilt at each strength and disabled
 at zero penalty. Single fits use adaptive working sets by default. Proximal and
 multivariate paths reuse native products and iteration storage with complete
 mapping checks, including all unpenalized intercepts.
+
+### Cross-validation
+
+`FoldAssignments` validates consecutive, nonempty held-out groups, with every
+observation assigned exactly once and at least two groups. Seeded ordinary and
+binary-stratified constructors use a fixed SplitMix64 Fisher-Yates shuffle with
+unbiased bounded sampling. Stratification balances each class and total fold
+size. Fractional binomial responses use supplied or ordinary shuffled folds.
+
+`Problem::cross_validate_path_with` and
+`cross_validate_regularization_path_with` compose existing `PathSolver` and
+`RegularizationPathSolver` implementations. `Lasso` exposes equivalent
+convenience methods. `CrossValidationDatafit` rebuilds Gaussian and binomial
+families on training responses, preserving the intercept setting. `RowSubset`
+gathers raw observations into owned dense or CSC backend storage; statistics and
+products remain in LazyMatrix. Dense views and strided ndarray views select into
+owned matrices. Custom backends can implement the same capability. No matrix
+backend is enabled by default.
+
+Each fold selects rows before fitting normalization and calls its path solver
+once. Its path retains preprocessing, solver buffers, screening, and working
+sets across every candidate. Supplied center or scale vectors are rejected.
+Explicit candidates preserve complete penalties without imposing a scalar
+parameterization: L1 and fusion strengths, chain edge weights, and SLOPE
+profiles may vary independently. Automatic paths align by fractions of separate
+training-fold anchors. Resolve the default endpoint ratio once using the
+smallest training fold's dimensions, and disable early stopping. Caller-supplied
+`lambda_start` remains a fixed external anchor across all folds. Neither
+full-data preprocessing nor a full-data automatic anchor enters validation.
+
+Gaussian scores default to mean squared error and optionally use mean absolute
+error. Binomial scores default to mean negative log likelihood or optionally use
+mean deviance above saturation. Scoring uses original-scale predictions, logits
+for binomial models, and excludes the penalty. Every fold score averages over
+its held-out observations. Aggregate those scores with equal fold weights,
+including unequal folds. Standard errors are the sample standard deviations of
+fold scores divided by the square root of the fold count; overlapping training
+sets are not modeled in that uncertainty estimate.
+
+Minimum-error selection and ties choose the first lowest-loss candidate. The
+one-standard-error rule chooses the first candidate within one standard error of
+the minimum-loss point. Explicit candidate order expresses preference for
+simpler models; the caller supplies this order for multi-parameter penalties.
+Automatic paths order decreasing relative strength. After selection, fit a new
+full-data path using its own preprocessing and automatic anchor, and return the
+chosen point along with that entire path. `CrossValidationFit` retains fold
+paths, row assignments, scores, standard errors, both selection indices, and the
+selected full-data model and penalty.
+
+Reject free-intercept binomial training folds whose responses all lie at one
+boundary, even for explicit paths. They have no finite optimum. Solver errors
+and nonconverged points fail the whole cross-validation operation, including
+full-data refits. `CrossValidationError` retains fold and candidate context when
+available, with original backend errors in its source chain.
 
 ### Working-set policies
 

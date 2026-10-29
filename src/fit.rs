@@ -1,10 +1,12 @@
 //! Owned fitted parameters, training transformations, and diagnostics.
 
+mod cross_validation;
 mod hybrid;
 mod irls;
 mod lasso;
 mod multivariate;
 mod proximal;
+pub use cross_validation::{CrossValidationFit, FoldPath};
 pub use hybrid::HybridFit;
 pub use irls::IrlsFit;
 pub use lasso::LassoFit;

@@ -59,6 +59,48 @@ impl MatrixErrorType for Source {
     type Error = ReadFailure;
 }
 
+impl shrinkage::RowSubset for Source {
+    type Subset = Self;
+    fn select_rows(&self, _: &[usize]) -> Result<Self, shrinkage::FitError<ReadFailure>> {
+        Err(shrinkage::FitError::Backend {
+            operation: "selecting fold rows",
+            source: ReadFailure,
+        })
+    }
+}
+
+#[test]
+fn cross_validation_preserves_fold_backend_errors_and_sources() {
+    let source = Source {
+        values: [1.0, 2.0],
+        calls: Cell::new(0),
+        statistics: Err(ReadFailure),
+    };
+    let cv = shrinkage::CrossValidation::new(shrinkage::FoldAssignments::new(vec![0, 1]).unwrap());
+    let error = Lasso::new(0.1)
+        .cross_validate_path(&source, &[1.0, 2.0], &[0.1], &cv)
+        .unwrap_err();
+    assert!(matches!(
+        &error,
+        shrinkage::CrossValidationError::Fold {
+            fold: 0,
+            source: shrinkage::FitError::Backend {
+                operation: "selecting fold rows",
+                source: ReadFailure
+            }
+        }
+    ));
+    assert_eq!(
+        error
+            .source()
+            .unwrap()
+            .source()
+            .unwrap()
+            .downcast_ref::<ReadFailure>(),
+        Some(&ReadFailure)
+    );
+}
+
 macro_rules! unused_stats {
     ($($name:ident $(($arg:ident: $ty:ty))?),* $(,)?) => {
         $(fn $name(&self $(, $arg: $ty)?) -> Result<Vec<f64>, Self::Error> {

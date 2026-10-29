@@ -51,6 +51,7 @@
 //! supports row-major, column-major, and strided arrays; column-major storage
 //! keeps each column contiguous for coordinate descent.
 
+pub mod cross_validation;
 pub mod datafit;
 pub mod error;
 #[cfg(feature = "experimental-block-reader")]
@@ -65,6 +66,10 @@ pub mod problem;
 pub mod screening;
 pub mod solver;
 
+pub use cross_validation::{
+    CrossValidation, CrossValidationDatafit, CrossValidationError, CrossValidationFit,
+    FoldAssignments, FoldPath, RowSubset, SelectionRule, ValidationFit, ValidationMetric,
+};
 pub use datafit::{
     Binomial, Datafit, DiagonalHessianDatafit, Gaussian, MultivariateGaussian, SmoothDatafit,
 };

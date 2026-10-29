@@ -186,6 +186,25 @@ impl PathOptions {
             diagnostics: PathDiagnostics::default(),
         })
     }
+
+    pub(crate) fn cross_validation(self, nobs: usize, nfeatures: usize) -> (Self, Vec<f64>) {
+        let ratio = self
+            .lambda_min_ratio
+            .unwrap_or(if nobs < nfeatures { 0.01 } else { 0.0001 });
+        let options = self.lambda_min_ratio(ratio).early_stopping(false);
+        let fractions = (0..self.nlambda)
+            .map(|point| {
+                if point == 0 {
+                    1.0
+                } else if point + 1 == self.nlambda {
+                    ratio
+                } else {
+                    (ratio.ln() * point as f64 / (self.nlambda - 1) as f64).exp()
+                }
+            })
+            .collect();
+        (options, fractions)
+    }
 }
 
 impl Default for PathOptions {

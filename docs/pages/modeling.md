@@ -95,6 +95,69 @@ deviance sums over responses. Binomial deviance includes the saturated-loss
 correction for fractional responses. See the [runnable path
 example](https://github.com/jolars/shrinkage/blob/main/examples/regularization_path.rs).
 
+## Cross-validation {#cross-validation}
+
+Rust cross-validation fits a complete regularization path inside each training
+fold. Create validated assignments with `FoldAssignments::new(labels)`, balanced
+shuffled folds with `FoldAssignments::kfold(nobs, nfolds, seed)`, or stratified
+binary folds with `FoldAssignments::stratified_binomial(&y, nfolds, seed)`.
+Labels start at zero and must cover at least two nonempty folds. Seeded
+assignments reproduce across platforms. Fractional binomial responses require
+ordinary shuffled or supplied folds.
+
+Configure `CrossValidation::new(folds)`, then call
+`problem.cross_validate_path_with(&solver, penalties, &cv)` for explicit
+complete penalties, or
+`problem.cross_validate_regularization_path_with(&solver, &options, &cv)` for
+automatic paths. `Lasso` exposes corresponding `cross_validate_path` and
+`cross_validate_regularization_path` methods. Gaussian and binomial compositions
+work with their existing coordinate, IRLS, proximal, and hybrid path solvers.
+Dense and CSC inputs use the enabled matrix backend; custom backends implement
+`RowSubset` to select raw observations.
+
+Each fold estimates its own preprocessing and retains it throughout its path.
+Cross-validation rejects supplied centers and scales so full-data preprocessing
+cannot enter a training fold. Explicit candidates use the same complete penalty
+in every fold, preserving independent L1 and fusion strengths, chain edge
+weights, and SLOPE profiles. Automatic candidates share decreasing fractions of
+each fold's training-only path anchor. The default endpoint ratio uses the
+smallest training fold's dimensions and remains fixed across folds. Automatic
+early stopping is disabled. A supplied `lambda_start` acts as the same fixed
+external anchor in each fold; choose it independently of held-out outcomes.
+
+The default Gaussian score is mean squared error, twice the fitting loss.
+Binomial models default to mean negative log likelihood, computed stably from
+held-out logits. Use `.metric(ValidationMetric::MeanAbsoluteError)` for Gaussian
+absolute error or `.metric(ValidationMetric::BinomialDeviance)` for mean
+binomial deviance, including the saturated-loss correction for fractional
+responses. Scores exclude the penalty. Each score averages over its held-out
+observations; the reported mean weights folds equally, including unequal folds.
+For $K$ fold scores $s_k$, the standard error is
+$\sqrt{\sum_k(s_k - \bar s)^2/[K(K - 1)]}$. It summarizes variation between
+folds without accounting for overlapping training sets.
+
+Minimum-error selection chooses the first candidate with the lowest mean loss.
+Set `.selection_rule(SelectionRule::OneStandardError)` to choose the first
+candidate within one standard error of the minimum-loss point. Order explicit
+candidates from most to least preferred for simplicity. This caller-supplied
+order defines the rule for independent strengths and profiles; Shrinkage does
+not infer a scalar complexity order for these penalties. Automatic paths use
+decreasing relative strength.
+
+Selection finishes before a fresh full-data path is fitted. For automatic paths,
+that refit computes its own full-data anchor and applies the selected fraction.
+The result's `fit()` and `penalty()` return the selected full-data model and
+complete penalty. `folds()` retains training paths, validation row indices, and
+scores; `mean_scores()`, `standard_errors()`, and `relative_strengths()` expose
+the validation curve. `refit_path()` retains all full-data fits for inspection.
+
+A binomial training fold with only zeros or only ones has no finite optimum for
+a free intercept and produces a fold-specific error. Disable the intercept to
+fit that training response when appropriate. Any solver error or nonconverged
+candidate aborts cross-validation before selection; errors retain fold context
+and backend sources. See the [runnable cross-validation
+example](https://github.com/jolars/shrinkage/blob/main/examples/cross_validation.rs).
+
 ## Examples and diagnostics
 
 The fitting examples use `faer::Mat` and, for proximal and hybrid solvers,

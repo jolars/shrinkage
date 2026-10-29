@@ -431,6 +431,7 @@ version = "0.3.0"
 dependencies = [
  "lazymatrix",
  "nalgebra",
+ "nalgebra-sparse",
 ]
 
 [[package]]

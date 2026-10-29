@@ -230,6 +230,53 @@ impl Lasso {
         }
     }
 
+    /// Cross-validate explicit lambda candidates in caller preference order.
+    ///
+    /// Each fold reuses coordinate-descent storage across its entire path.
+    /// The result retains fold paths and a fresh full-data path after selection.
+    ///
+    /// # Errors
+    /// Reject invalid folds, empty candidates, supplied preprocessing vectors,
+    /// and failed or nonconverged fits, with fold context when available.
+    pub fn cross_validate_path<M>(
+        &self,
+        x: &M,
+        y: &[f64],
+        lambdas: &[f64],
+        cv: &crate::CrossValidation,
+    ) -> Result<crate::CrossValidationFit<LassoFit, L1>, crate::CrossValidationError<M::Error>>
+    where
+        M: crate::RowSubset + ?Sized,
+    {
+        self.problem(x, y).cross_validate_path_with(
+            &self.solver(),
+            lambdas.iter().copied().map(L1::new).collect(),
+            cv,
+        )
+    }
+
+    /// Cross-validate automatic paths using training-fold anchors and preprocessing.
+    ///
+    /// Paths share relative strengths, and every fold fits the entire sequence.
+    /// The selected fraction is refitted with the full-data anchor and preprocessing.
+    ///
+    /// # Errors
+    /// Reject invalid options or folds, supplied preprocessing vectors, and any
+    /// failed or nonconverged fit. Errors identify the fold when available.
+    pub fn cross_validate_regularization_path<M>(
+        &self,
+        x: &M,
+        y: &[f64],
+        options: &crate::PathOptions,
+        cv: &crate::CrossValidation,
+    ) -> Result<crate::CrossValidationFit<LassoFit, L1>, crate::CrossValidationError<M::Error>>
+    where
+        M: crate::RowSubset + ?Sized,
+    {
+        self.problem(x, y)
+            .cross_validate_regularization_path_with(&self.solver(), options, cv)
+    }
+
     fn solver(&self) -> CoordinateDescent {
         let mut solver = CoordinateDescent::new()
             .max_iterations(self.max_iterations)

@@ -47,6 +47,7 @@ tasks:
       - cargo run --locked --example chain_fused_lasso --features faer_v0_24
       - cargo run --locked --example slope --features faer_v0_24
       - cargo run --locked --example regularization_path --features faer_v0_24
+      - cargo run --locked --example cross_validation --features faer_v0_24
       - cargo run --locked --example python_lasso_fixture --features ndarray_v0_17 -- --check
       - cargo run --locked --example zarrs_buffered --features experimental-block-reader,zarrs_v0_22
 

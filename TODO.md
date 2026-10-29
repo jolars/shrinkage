@@ -206,18 +206,18 @@ decision and concrete follow-up tasks.
   sets, and screening eligibility, and preserve inner and outer diagnostics.
   Compare with cold logistic fits, test boundary null models and failures,
   and verify original-scale predictions at every path point.
-- [ ] **Cross-validation folds and metrics:** Add validated user-supplied and
+- [x] **Cross-validation folds and metrics:** Add validated user-supplied and
   seeded fold assignments, including binomial stratification, and
   family-appropriate scoring for Gaussian and logistic models. Document
   score normalization and aggregation, and test coverage, invalid folds,
   reproducibility, and degenerate training folds.
-- [ ] **Cross-validation paths:** Fit preprocessing and any automatic path
+- [x] **Cross-validation paths:** Fit preprocessing and any automatic path
   anchors using training-fold data only. Define comparable tuning candidates
   across folds while preserving independent fusion strengths and SLOPE
   weight profiles. Reuse each fold's path workspace, verify held-out
   predictions against independent fits, and check absence of preprocessing
   and tuning-grid leakage with targeted fixtures.
-- [ ] **Cross-validation selection:** Aggregate scores and uncertainty, expose
+- [x] **Cross-validation selection:** Aggregate scores and uncertainty, expose
   minimum-error and one-standard-error selection rules, and refit the chosen
   tuning point on all training observations. Document tuning order for
   multiple strengths. Test failed and nonconverged fits, ties, independently

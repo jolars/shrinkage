@@ -103,6 +103,11 @@ cargo run --locked --example regularization_path --features faer
   fits and workspaces across all solver families. Automatic paths support
   deviance-based early stopping; explicit paths fit every supplied point. See
   the [regularization path example](examples/regularization_path.rs).
+- **Cross-validation** fits a complete path within each training fold, scores
+  held-out observations, selects by minimum error or the one-standard-error
+  rule, and refits on all observations. Gaussian and binomial models support
+  seeded folds, explicit candidates, and training-only automatic anchors. See
+  the [cross-validation example](examples/cross_validation.rs).
 
 Solvers include coordinate descent, proximal gradient, Hybrid, and iteratively
 reweighted least squares (IRLS). Supported combinations vary by loss and

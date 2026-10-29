@@ -22,6 +22,8 @@ faer = { version = "0.24", optional = true, default-features = false, features =
 ] }
 nalgebra = { version = "0.34", optional = true, default-features = false, features = ["std"] }
 ndarray = { version = "0.17.2", optional = true, default-features = false, features = ["std"] }
+nalgebra-sparse = { version = "0.11", optional = true }
+sprs = { version = "0.11.4", optional = true, default-features = false }
 zarrs = { version = "0.22.10", optional = true, default-features = false, features = ["filesystem", "gzip"] }
 
 [features]
@@ -32,11 +34,11 @@ zarrs_v0_22 = ["dep:zarrs", "lazymatrix/zarrs_v0_22"]
 faer = ["faer_v0_24"]
 faer_v0_24 = ["dep:faer", "lazymatrix/faer_v0_24"]
 nalgebra = ["nalgebra_v0_34"]
-nalgebra_v0_34 = ["dep:nalgebra", "lazymatrix/nalgebra_v0_34"]
+nalgebra_v0_34 = ["dep:nalgebra", "dep:nalgebra-sparse", "lazymatrix/nalgebra_v0_34"]
 ndarray = ["ndarray_v0_17"]
 ndarray_v0_17 = ["dep:ndarray", "lazymatrix/ndarray_v0_17"]
 sprs = ["sprs_v0_11"]
-sprs_v0_11 = ["lazymatrix/sprs_v0_11"]
+sprs_v0_11 = ["dep:sprs", "lazymatrix/sprs_v0_11"]
 
 [dev-dependencies]
 tempfile = "3"
@@ -82,6 +84,10 @@ required-features = ["faer_v0_24"]
 
 [[example]]
 name = "regularization_path"
+required-features = ["faer_v0_24"]
+
+[[example]]
+name = "cross_validation"
 required-features = ["faer_v0_24"]
 
 [[example]]
