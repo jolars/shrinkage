@@ -139,6 +139,13 @@ impl Penalty for L1 {
 /// }
 /// ```
 pub trait ProximalPenalty: Penalty<Error = FitError> {
+    /// Optional dual feasibility, safe zero screening, and exact zero restriction.
+    ///
+    /// Implementations without this capability retain ordinary proximal fitting.
+    fn gap_safe(&self) -> Option<&dyn crate::screening::GapSafePenalty> {
+        None
+    }
+
     /// Write the proximal minimizer into reusable output storage.
     ///
     /// # Errors
@@ -314,6 +321,10 @@ impl<P: Penalty + ?Sized> Penalty for Box<P> {
 }
 
 impl<P: ProximalPenalty + ?Sized> ProximalPenalty for Box<P> {
+    fn gap_safe(&self) -> Option<&dyn crate::screening::GapSafePenalty> {
+        (**self).gap_safe()
+    }
+
     fn prox(&self, input: &[f64], step: f64, output: &mut [f64]) -> Result<(), FitError> {
         (**self).prox(input, step, output)
     }

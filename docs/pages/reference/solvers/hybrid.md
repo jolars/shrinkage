@@ -53,6 +53,24 @@ for $K$ blocks. Rebuilds stage a second aggregate set, and buffers retain their
 high-water capacities. At one block per feature, each aggregate set approaches
 the size of a dense design, even when the input matrix is sparse.
 
+## Dynamic zero screening
+
+Gap Safe zero screening is enabled by default for Gaussian and binomial fits
+with clustered lasso, chain fused lasso, and SLOPE. Set `.screening(false)` to
+compare with an unscreened solve. Screening fixes only certified zeros and
+preserves the complete penalty, including fusion edges touching removed zeros.
+Returned coefficients keep their original feature order and dimension.
+
+`dual_certificate()`, `dual_objective()`, and `duality_gap()` return optional
+original-problem diagnostics. `screening_diagnostics()` reports certificate
+passes, zero tests, certified features, remaining dimensions, and rebuilds. The
+full original-loss PG mapping still controls convergence. At zero sparsity
+strength, a feasible zero certificate can give a loose gap and screening leaves
+features eligible. Fusion screening and new working sets remain deferred.
+
+Certificates run at Gaussian checks and accepted logistic outer iterates.
+Quadratic IRLS subproblem gaps never certify original logistic restrictions.
+
 API:
 [`shrinkage::Hybrid`](https://shrinkage.cc/packages/rust/reference/2a1d90805911db329d5e4ff4986bb2f7fdb00992ed6828b9cd3b3af05e3b1973),
 [`shrinkage::HybridStep`](https://shrinkage.cc/packages/rust/reference/8c2324572d804bcaf844c43f1cf5a8cfa03c0ef3439c88e54a8dcdd948cdc85e),

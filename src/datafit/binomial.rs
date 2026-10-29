@@ -106,6 +106,10 @@ impl Datafit for Binomial<'_> {
 }
 
 impl SmoothDatafit for Binomial<'_> {
+    fn gap_safe(&self) -> Option<&dyn crate::GapSafeDatafit> {
+        Some(self)
+    }
+
     fn nobs(&self) -> usize {
         self.response.len()
     }
@@ -131,6 +135,125 @@ impl SmoothDatafit for Binomial<'_> {
             *derivative = residual / predictor.len() as f64;
         }
         Ok(())
+    }
+}
+
+impl crate::GapSafeDatafit for Binomial<'_> {
+    fn dual_candidate(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError> {
+        self.gradient(predictor, output)?;
+        for u in output.iter_mut() {
+            *u = -*u;
+        }
+        if !self.fit_intercept {
+            return Ok(());
+        }
+        let n = output.len() as f64;
+        let mut lower = f64::INFINITY;
+        let mut upper = f64::NEG_INFINITY;
+        for (&q, &y) in output.iter().zip(self.response) {
+            lower = lower.min(q - y / n);
+            upper = upper.max(q - (y - 1.0) / n);
+        }
+        // Project onto the entropy box and intercept hyperplane together.
+        // Centering alone can put binary observations outside their domain.
+        for _ in 0..80 {
+            let middle = lower + (upper - lower) / 2.0;
+            if middle == lower || middle == upper {
+                break;
+            }
+            let sum: f64 = output
+                .iter()
+                .zip(self.response)
+                .map(|(&q, &y)| (q - middle).clamp((y - 1.0) / n, y / n))
+                .sum();
+            if sum > 0.0 {
+                lower = middle;
+            } else {
+                upper = middle;
+            }
+        }
+        let shift = lower + (upper - lower) / 2.0;
+        for (u, &y) in output.iter_mut().zip(self.response) {
+            *u = (*u - shift).clamp((y - 1.0) / n, y / n);
+        }
+        // Repair the last few rounding bits using available box slack.
+        for _ in 0..3 {
+            let mut correction = -output.iter().sum::<f64>();
+            for (u, &y) in output.iter_mut().zip(self.response) {
+                let delta = correction.clamp((y - 1.0) / n - *u, y / n - *u);
+                let previous = *u;
+                *u = (*u + delta).clamp((y - 1.0) / n, y / n);
+                correction -= *u - previous;
+                if correction == 0.0 {
+                    break;
+                }
+            }
+        }
+        self.finalize_dual(output)
+    }
+
+    fn finalize_dual(&self, dual: &mut [f64]) -> Result<(), FitError> {
+        if dual.len() != self.response.len() || dual.is_empty() {
+            return Err(invalid("dual dimensions must match binomial observations"));
+        }
+        if self.fit_intercept {
+            crate::screening::intercept::balance(dual, Some(self.response))?;
+        }
+        Ok(())
+    }
+
+    fn dual_objective(&self, dual: &[f64]) -> Result<f64, FitError> {
+        if dual.len() != self.response.len() || dual.is_empty() {
+            return Err(invalid("dual dimensions must match binomial observations"));
+        }
+        let n = dual.len() as f64;
+        if self.fit_intercept && dual.iter().sum::<f64>() != 0.0 {
+            return Err(invalid(
+                "binomial dual point violates the free-intercept equality",
+            ));
+        }
+        let mut value = 0.0;
+        for (&u, &y) in dual.iter().zip(self.response) {
+            if !u.is_finite() || u < (y - 1.0) / n || u > y / n {
+                return Err(invalid("binomial dual point is outside its entropy domain"));
+            }
+            let tail = (y - n * u).min((1.0 - y) + n * u).clamp(0.0, 0.5);
+            value -= negative_entropy(tail) / n;
+        }
+        Ok(finite(value, "evaluating the binomial dual", 0)?)
+    }
+
+    fn strong_concavity(&self) -> f64 {
+        4.0 * self.response.len() as f64
+    }
+
+    fn fenchel_gap(&self, predictor: &[f64], dual: &[f64]) -> Result<f64, FitError> {
+        self.validate(predictor)?;
+        self.dual_objective(dual)?;
+        let n = predictor.len() as f64;
+        let mut gap = 0.0;
+        for ((&eta, &y), &u) in predictor.iter().zip(self.response).zip(dual) {
+            // Compute both probabilities from the dual variable. Subtracting
+            // from a rounded probability of one would discard a tiny tail.
+            let p = (y - n * u).clamp(0.0, 1.0);
+            let q = ((1.0 - y) + n * u).clamp(0.0, 1.0);
+            let tail = (-eta.abs()).exp().ln_1p();
+            let cross_entropy = if eta >= 0.0 {
+                q * eta + tail
+            } else {
+                -p * eta + tail
+            };
+            gap += (cross_entropy + negative_entropy(p.min(q))) / n;
+        }
+        Ok(finite(gap, "computing the binomial Fenchel gap", 0)?)
+    }
+}
+
+fn negative_entropy(tail: f64) -> f64 {
+    if tail == 0.0 {
+        0.0
+    } else {
+        tail * tail.ln() + (1.0 - tail) * (-tail).ln_1p()
     }
 }
 

@@ -6,6 +6,7 @@ use lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, RawColumns};
 
 use crate::error::{invalid, unsupported};
 use crate::problem::{prepare_normalization, validate_matrix};
+use crate::screening::ScreeningDesign;
 use crate::solver::proximal::{NativeDesign, iterate, iterate_path};
 use crate::{
     BackendError, CoordinateDescent, FitError, LassoFit, Normalization, Preprocessing, Problem,
@@ -164,7 +165,9 @@ where
         let prepared =
             prepare_normalization(self.matrix, normalization, centers, scales, fit_intercept)
                 .map_err(FitError::erase_backend)?;
-        Ok(Box::new(ErasedDesign(NativeDesign::<_, V>::new(prepared))))
+        Ok(Box::new(ErasedDesign(
+            NativeDesign::<_, V>::new_screenable(prepared),
+        )))
     }
 }
 
@@ -204,6 +207,52 @@ where
 
     fn into_preprocessing(self: Box<Self>) -> Preprocessing {
         self.0.into_preprocessing()
+    }
+
+    fn screening_design(&mut self) -> Option<&mut dyn ScreeningDesign<Error = Self::Error>> {
+        self.0.screening_design()?;
+        Some(self)
+    }
+}
+
+impl<M, V> ScreeningDesign for ErasedDesign<M, V>
+where
+    M: MatVecInto<V> + MatTransposeVecInto<V>,
+    M::Error: Error + 'static,
+    V: ProximalVector,
+{
+    type Error = BackendError;
+
+    fn column_norms(&mut self, output: &mut [f64]) -> Result<(), FitError<Self::Error>> {
+        self.0.column_norms(output).map_err(FitError::erase_backend)
+    }
+
+    fn column_error_scales(&mut self, output: &mut [f64]) -> Result<(), FitError<Self::Error>> {
+        self.0
+            .column_error_scales(output)
+            .map_err(FitError::erase_backend)
+    }
+
+    fn forward_active(
+        &mut self,
+        input: &[f64],
+        active: &[usize],
+        output: &mut [f64],
+    ) -> Result<(), FitError<Self::Error>> {
+        self.0
+            .forward_active(input, active, output)
+            .map_err(FitError::erase_backend)
+    }
+
+    fn transpose_active(
+        &mut self,
+        input: &[f64],
+        active: &[usize],
+        output: &mut [f64],
+    ) -> Result<(), FitError<Self::Error>> {
+        self.0
+            .transpose_active(input, active, output)
+            .map_err(FitError::erase_backend)
     }
 }
 

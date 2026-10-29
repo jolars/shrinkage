@@ -40,6 +40,10 @@ impl DiagonalHessianDatafit for Gaussian<'_> {
 }
 
 impl SmoothDatafit for Gaussian<'_> {
+    fn gap_safe(&self) -> Option<&dyn crate::GapSafeDatafit> {
+        Some(self)
+    }
+
     fn nobs(&self) -> usize {
         self.response.len()
     }
@@ -64,6 +68,74 @@ impl SmoothDatafit for Gaussian<'_> {
             )?;
         }
         Ok(())
+    }
+}
+
+impl crate::GapSafeDatafit for Gaussian<'_> {
+    fn dual_candidate(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError> {
+        self.gradient(predictor, output)?;
+        for u in output.iter_mut() {
+            *u = -*u;
+        }
+        if self.fit_intercept {
+            let mean = output.iter().map(|u| u / output.len() as f64).sum::<f64>();
+            for u in output.iter_mut() {
+                *u -= mean;
+            }
+            let last = output.len() - 1;
+            output[last] = -output[..last].iter().sum::<f64>();
+        }
+        self.finalize_dual(output)
+    }
+
+    fn finalize_dual(&self, dual: &mut [f64]) -> Result<(), FitError> {
+        self.validate(dual.len())?;
+        if self.fit_intercept {
+            crate::screening::intercept::balance(dual, None)?;
+        }
+        Ok(())
+    }
+
+    fn dual_objective(&self, dual: &[f64]) -> Result<f64, FitError> {
+        self.validate(dual.len())?;
+        if self.fit_intercept && dual.iter().sum::<f64>() != 0.0 {
+            return Err(invalid(
+                "Gaussian dual point violates the free-intercept equality",
+            ));
+        }
+        let n = dual.len() as f64;
+        let reference = if self.fit_intercept {
+            self.response[0]
+        } else {
+            0.0
+        };
+        let mut value = 0.0;
+        for (&y, &u) in self.response.iter().zip(dual) {
+            value += finite(
+                ((y - reference) - 0.5 * n * u) * u,
+                "evaluating the Gaussian dual",
+                0,
+            )?;
+        }
+        Ok(finite(value, "summing the Gaussian dual", 0)?)
+    }
+
+    fn strong_concavity(&self) -> f64 {
+        self.response.len() as f64
+    }
+
+    fn fenchel_gap(&self, predictor: &[f64], dual: &[f64]) -> Result<f64, FitError> {
+        self.validate(predictor.len())?;
+        if dual.len() != predictor.len() {
+            return Err(invalid("dual dimensions must match Gaussian observations"));
+        }
+        let n = predictor.len() as f64;
+        let mut gap = 0.0;
+        for ((&y, &eta), &u) in self.response.iter().zip(predictor).zip(dual) {
+            let difference = ((y - eta) / n.sqrt()) - n.sqrt() * u;
+            gap += 0.5 * difference * difference;
+        }
+        Ok(finite(gap, "computing the Gaussian Fenchel gap", 0)?)
     }
 }
 

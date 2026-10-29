@@ -34,6 +34,7 @@ pub(super) struct State {
     sweep_order: Vec<usize>,
     knots: Vec<(f64, f64)>,
     spare: Vec<Segment>,
+    screened: Vec<bool>,
 }
 
 impl Partition<ChainFusedLasso> for State {
@@ -47,11 +48,17 @@ impl Partition<ChainFusedLasso> for State {
             sweep_order: Vec::with_capacity(p),
             knots: Vec::with_capacity(3),
             spare: Vec::new(),
+            screened: vec![false; p],
         }
     }
 
     fn set_weights(&mut self, weights: &[f64]) {
         self.weights.set(weights);
+    }
+
+    fn set_screened(&mut self, zeroed: &[bool]) {
+        self.screened.clear();
+        self.screened.extend_from_slice(zeroed);
     }
 
     fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
@@ -94,7 +101,9 @@ impl Partition<ChainFusedLasso> for State {
             };
             // Feature order fixes aggregate arithmetic independently of earlier
             // merges, including when a PG transition changes only the boundary.
-            matrix.column(j).scaled_add_to(1.0, &mut segment.column);
+            if !self.screened.get(j).copied().unwrap_or(false) {
+                matrix.column(j).scaled_add_to(1.0, &mut segment.column);
+            }
         }
         for segment in &mut self.segments {
             segment.curvature = self.weights.curvature(&segment.column, iteration)?;
@@ -121,6 +130,12 @@ impl Partition<ChainFusedLasso> for State {
                 continue;
             }
             let segment = &self.segments[index];
+            // Ordinary zeros remain eligible for splitting at the next PG
+            // transition, while this sweep retains certified zero members.
+            if (segment.start..segment.end).any(|j| self.screened.get(j).copied().unwrap_or(false))
+            {
+                continue;
+            }
             let linear =
                 self.weights
                     .linear(&segment.column, &self.residual, segment.value, iteration)?;

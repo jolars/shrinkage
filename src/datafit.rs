@@ -30,6 +30,13 @@ pub trait Datafit {
 /// Proximal gradient uses this derivative with forward and transposed design
 /// products. Implementations must use the same normalization in both methods.
 pub trait SmoothDatafit: Datafit<Error = FitError> {
+    /// Borrow an optional original-loss dual certificate capability.
+    ///
+    /// Existing external losses can fit without implementing safe screening.
+    fn gap_safe(&self) -> Option<&dyn crate::GapSafeDatafit> {
+        None
+    }
+
     /// Number of training observations.
     fn nobs(&self) -> usize;
 

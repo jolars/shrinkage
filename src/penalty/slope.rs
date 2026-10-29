@@ -40,6 +40,7 @@ pub struct Slope {
 struct Workspace {
     order: Vec<usize>,
     blocks: Vec<Block>,
+    thresholds: Vec<f64>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -58,6 +59,7 @@ impl Slope {
             scratch: RefCell::new(Workspace {
                 order: (0..length).collect(),
                 blocks: Vec::with_capacity(length),
+                thresholds: Vec::new(),
             }),
         }
     }
@@ -65,6 +67,43 @@ impl Slope {
     /// Configured rank weights, including the penalty strength.
     pub fn weights(&self) -> &[f64] {
         &self.weights
+    }
+
+    pub(crate) fn sorted_bound_indices<T>(
+        &self,
+        length: usize,
+        bound: impl Fn(usize) -> f64,
+        inspect: impl FnOnce(&[usize]) -> T,
+    ) -> T {
+        let mut scratch = self.scratch.borrow_mut();
+        scratch.order.clear();
+        scratch.order.extend(0..length);
+        scratch
+            .order
+            .sort_unstable_by(|&a, &b| bound(b).total_cmp(&bound(a)).then(a.cmp(&b)));
+        inspect(&scratch.order)
+    }
+
+    pub(crate) fn with_screening_order<T>(
+        &self,
+        zeroed: &mut [bool],
+        bound: impl Fn(usize) -> f64,
+        inspect: impl FnOnce(&[usize], &mut [f64], &mut [bool]) -> T,
+    ) -> T {
+        let mut scratch = self.scratch.borrow_mut();
+        scratch.order.clear();
+        scratch
+            .order
+            .extend((0..zeroed.len()).filter(|&j| !zeroed[j]));
+        scratch
+            .order
+            .sort_unstable_by(|&a, &b| bound(b).total_cmp(&bound(a)).then(a.cmp(&b)));
+        let length = scratch.order.len();
+        scratch.thresholds.resize(length, 0.0);
+        let Workspace {
+            order, thresholds, ..
+        } = &mut *scratch;
+        inspect(order, thresholds, zeroed)
     }
 
     fn validate(&self, input: &[f64]) -> Result<(), FitError> {
@@ -90,6 +129,8 @@ impl Slope {
 
 impl Workspace {
     fn sort(&mut self, input: &[f64]) {
+        self.order.clear();
+        self.order.extend(0..input.len());
         self.order
             .sort_unstable_by(|&a, &b| input[b].abs().total_cmp(&input[a].abs()).then(a.cmp(&b)));
     }
@@ -117,7 +158,36 @@ impl Penalty for Slope {
 }
 
 impl ProximalPenalty for Slope {
+    fn gap_safe(&self) -> Option<&dyn crate::screening::GapSafePenalty> {
+        Some(self)
+    }
+
     fn prox(&self, input: &[f64], step: f64, output: &mut [f64]) -> Result<(), FitError> {
+        self.prox_impl(input, None, step, output)
+    }
+}
+
+impl Slope {
+    pub(crate) fn prox_screened(
+        &self,
+        input: &[f64],
+        zeroed: &[bool],
+        step: f64,
+        output: &mut [f64],
+    ) -> Result<(), FitError> {
+        if input.len() != zeroed.len() {
+            return Err(invalid("zero mask length must match the coefficients"));
+        }
+        self.prox_impl(input, Some(zeroed), step, output)
+    }
+
+    fn prox_impl(
+        &self,
+        input: &[f64],
+        zeroed: Option<&[bool]>,
+        step: f64,
+        output: &mut [f64],
+    ) -> Result<(), FitError> {
         self.validate(input)?;
         if output.len() != input.len() {
             return Err(invalid("proximal input and output lengths must match"));
@@ -129,7 +199,11 @@ impl ProximalPenalty for Slope {
         }
         let mut scratch = self.scratch.borrow_mut();
         scratch.sort(input);
-        let Workspace { order, blocks } = &mut *scratch;
+        if let Some(mask) = zeroed {
+            scratch.order.retain(|&index| !mask[index]);
+        }
+        output.fill(0.0);
+        let Workspace { order, blocks, .. } = &mut *scratch;
         blocks.clear();
         for (rank, (&index, &weight)) in order.iter().zip(&self.weights).enumerate() {
             let threshold = finite(step * weight, "computing a SLOPE proximal threshold", 0)?;

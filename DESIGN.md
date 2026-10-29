@@ -4,13 +4,13 @@ Status: Gaussian lasso convenience API, typed Gaussian/L1 coordinate descent,
 and typed and runtime proximal gradient with Gaussian and binomial datafits,
 ridge, elastic net, SLOPE, disjoint Group LASSO, clustered lasso, chain fused
 lasso, and multivariate Gaussian fitting with explicit penalty axes,
-regularization paths, and lasso path screening are implemented. Dense Gaussian
-clustered lasso also has a hybrid of full proximal-gradient steps and exact
-signed-cluster coordinate sweeps; weighted chain fused lasso and SLOPE share its
-driver with contiguous segment and signed magnitude-cluster sweeps. This hybrid
-also fits binomial models through weighted IRLS subproblems. This document
-records commitments and an implementation sequence; illustrative API names are
-not frozen interfaces.
+regularization paths, lasso path screening, and dynamic Gap Safe zero screening
+for the three MVP penalties are implemented. Dense Gaussian clustered lasso also
+has a hybrid of full proximal-gradient steps and exact signed-cluster coordinate
+sweeps; weighted chain fused lasso and SLOPE share its driver with contiguous
+segment and signed magnitude-cluster sweeps. This hybrid also fits binomial
+models through weighted IRLS subproblems. This document records commitments and
+an implementation sequence; illustrative API names are not frozen interfaces.
 
 The next goal is an MVP that the clustered-lasso paper can use and cite through
 a public Rust and Python release. The uniform clustered-lasso penalty and dense
@@ -129,9 +129,10 @@ forward-product input clone.
 `ProximalFit` owns original-scale parameters, preprocessing, objective, final
 step, and stopping diagnostics. The absolute proximal-gradient criterion uses
 the mapping's infinity norm and the absolute free-intercept derivative at the
-returned iterate. It reports no duality gap. Unsupported criteria are rejected,
-line-search exhaustion returns a distinct error, and iteration limits remain
-finite unconverged results. `ProximalGradient::solve_path` and
+returned iterate. Supported Gaussian and binomial MVP fits additionally report
+original-problem certificates when screening is enabled. Unsupported criteria
+are rejected, line-search exhaustion returns a distinct error, and iteration
+limits remain finite unconverged results. `ProximalGradient::solve_path` and
 `solve_runtime_path` prepare the design once and retain native product buffers
 and slice storage across penalty points. Each point starts from the preceding
 optimization-scale coefficients and intercept, including after an iteration
@@ -576,10 +577,11 @@ accepted curvature. Unchanged sweeps never establish convergence.
 `HybridFit` reports the final objective, mapping and threshold, step policy,
 step size, termination reason, cluster labels and values, PG steps, coordinate
 sweeps, diagnostic checks, and backtracks. Finite budget exhaustion reports
-`IterationLimit`. There is no implemented clustered-lasso duality gap. Typed
-Gaussian problems use the dense hybrid; runtime proximal oracles support the
-penalty through PG and reject hybrid selection before preparation. Hybrid paths,
-screening, and sparse-specific extensions remain later milestones.
+`IterationLimit`. Screening-enabled fits report an original-problem duality gap
+independently of the stopping criterion. Typed Gaussian problems use the dense
+hybrid; runtime proximal oracles support the penalty through PG and reject
+hybrid selection before preparation. Hybrid paths, fusion screening, and
+sparse-specific extensions remain later milestones.
 
 Dense aggregate storage is `O(nK + p + n)` per state. Staging retains both
 committed and candidate aggregates, with buffers kept at their high-water
@@ -674,8 +676,8 @@ segment sweeps exactly minimize restrictions of this convex objective.
 `HybridFit::cluster_labels()` indexes segment values in feature order for this
 penalty. `cluster_values()` may repeat and is not sorted. Clustered lasso
 retains its strictly increasing value order. PG supports typed and runtime
-problems; runtime hybrid selection remains unsupported. There is no implemented
-chain duality gap.
+problems; runtime hybrid selection remains unsupported. Screening-enabled fits
+report original-problem dual certificates and gaps.
 
 Each dense aggregate set uses `O(nK + p + n)` storage for `K` segments, with
 committed and staged sets retaining high-water capacities. Full PG transitions
@@ -691,8 +693,9 @@ includes nonuniform weights, a cut, normalization, and a free intercept.
 `task bench:chain` compares proximal operations and complete solves at matched
 accuracy; bounded runs include setup, first PG, and subsequent rebuild work.
 `task bench:chain:heap` checks warmed scratch reuse and complete-solve storage
-for strongly fused and nearly singleton partitions. Hybrid paths, screening,
-Python exposure, and sparse-specific optimizations remain later milestones.
+for strongly fused and nearly singleton partitions. Hybrid paths, fusion
+screening, Python exposure, and sparse-specific optimizations remain later
+milestones.
 
 ## 7. Specialized SLOPE support
 
@@ -811,7 +814,7 @@ complete PG and hybrid solves on constructed distinct, tied, and highly
 clustered optima at matched accuracy. Bounded runs include setup, the first PG,
 and a subsequent rebuild. `task bench:slope:heap` measures warmed proximal
 allocations and complete-solve peak storage at low, high, and changing block
-counts. Hybrid paths, screening, Python exposure, and sparse-specific
+counts. Hybrid paths, fusion screening, Python exposure, and sparse-specific
 optimization remain later milestones.
 
 ### Logistic hybrid IRLS
@@ -1051,6 +1054,124 @@ convergence and at iteration limits. Screening eligibility is rebuilt at each
 strength and disabled at zero penalty. Single fits retain complete cyclic
 sweeps. Proximal and multivariate paths reuse native products and iteration
 storage with complete mapping checks, including all unpenalized intercepts.
+
+### Dynamic Gap Safe zero screening
+
+`Hybrid` and `ProximalGradient` enable zero screening by default for Gaussian
+and binomial losses with `ClusteredLasso`, `ChainFusedLasso`, and `Slope`.
+`.screening(false)` disables certificates and reductions. Optional
+`GapSafeDatafit`, `GapSafePenalty`, and `ScreeningDesign` capabilities preserve
+external components and runtime composition without additional solver bounds.
+`Box` forwards capabilities. Other wrappers, multivariate layouts, and
+product-only designs retain ordinary fitting. This does not add working sets,
+fusion screening, Hybrid paths, or screening to the separable `Irls` solver.
+
+Let $u$ be an observation-scale feasible dual point and $G$ its original-problem
+gap. The dual has strong concavity $n$ for Gaussian loss and at least $4n$ for
+binomial loss. The radii are therefore $\sqrt{2G/n}$ and $\sqrt{G/(2n)}$,
+respectively, following the [Gap Safe
+framework](https://www.jmlr.org/papers/v18/16-577.html). Gaussian candidates
+start from residuals divided by $n$. Binomial candidates start from the negative
+original-loss gradient. A free intercept requires $\mathbf1^\mathsf{T}u = 0$;
+binomial candidates also require $(y_i - 1)/n \leq u_i \leq y_i/n$. A scalar
+clipped-shift projection enforces the box and intercept constraint together.
+Mean-centering alone would be invalid. Radial scaling then enforces the complete
+penalty's polar constraints.
+
+Clustered-lasso feasibility uses sorted signed subset sums. A subset of size $k$
+has capacity $ak + bk(p - k)$ for L1 strength $a$ and fusion strength $b$. SLOPE
+uses sorted absolute prefix sums bounded by cumulative rank weights. Chain
+feasibility uses reachable edge-flow intervals for $g_j = s_j + t_{j-1} - t_j$,
+with $|s_j| \leq a$, $|t_j| \leq c_j$, and endpoint flows zero. A bracketed
+search retains a feasible scaling divisor. All checks verify correlations at the
+actual scaled certificate, rather than assuming that floating-point products
+commute with scaling.
+
+After scaling, free-intercept certificates share a dyadic grid with a bounded
+integer absolute sum. Integer balancing enforces the intercept equality exactly
+for the stored values while retaining binomial box feasibility. Correlations are
+then recomputed and checked again.
+
+For zero L1 or entirely zero SLOPE weights, zero screening is inactive and the
+certificate is the universally feasible $u = 0$. Its gap can remain loose even
+at an optimum. For binomial proportions, $D(0)$ is mean response entropy, not
+necessarily zero. No rank decision or nullspace projection is required for this
+fallback. Convergence continues to use the original-space PG mapping.
+
+Gaps use the loss Fenchel gap plus $P(\beta) - \beta^\mathsf{T}X^\mathsf{T}u$,
+avoiding subtraction of complete objectives. Rounding allowances cover dot
+products, normalization cancellation, and intercept equality. Norms use stable
+accumulation; bounds for raw centered products also account for magnitudes
+before cancellation. Directed rounding and strict inequalities retain uncertain
+boundary features. These are floating-point numerical certificates, not an
+interval-arithmetic proof. A materially negative gap is a numerical failure.
+
+**Zero rules.** Write $g = X^\mathsf{T}u$ and $e_j = R\|x_j\|$ plus product
+uncertainty. Clustered lasso certifies zero when $|g_j| + e_j < a - b(p - 1)$,
+using the original feature count. The rule follows from bounding every incident
+fusion subgradient; the ordinary lasso threshold is unsafe for this coupled
+penalty. A nonpositive threshold certifies nothing.
+
+For chain screening, forward reachable intervals $F_j$ describe $t_j$ using
+nodes through $j$, and backward intervals $B_j$ describe it using later nodes.
+The implementation propagates upper bounds on lower endpoints and lower bounds
+on upper endpoints over the entire correlation-error box. With these robust
+endpoints $F^L,F^U,B^L,B^U$, zero is certified only if
+
+$$
+  g_j + e_j - F^U_{j-1} + B^L_j < a,\qquad g_j - e_j - F^L_{j-1} + B^U_j > -a.
+$$
+
+For every possible optimal correlation, these inequalities provide a feasible
+decomposition with an interior $s_j$. Fenchel support equality forces
+$\beta_j = 0$ for every minimizer. This chain specialization follows from the
+joint dual constraints; it does not assume that an interior decomposition at the
+sphere center remains valid at the optimum.
+
+SLOPE uses the complete prefix screening inequalities of [Elvira and
+Herzet](https://arxiv.org/abs/2110.11784), with individual upper bounds
+$U_j = |g_j| + e_j$. Sort remaining bounds decreasingly. Initialize $E = 0$ and
+$A = \infty$; at rank $q$, save $A_q = \min(A,w_q + E)$, replace $A$ by $A_q$,
+and set $E = \max(0,E + w_q - U_q)$. Starting at the smallest bound, remove the
+tail while $U_r < A_r$. This recurrence evaluates the prefix/suffix tests in
+linear time after sorting and supports repeated or trailing zero weights.
+Exhaustive prefix tests independently validate the optimized recurrence.
+
+**Exact restrictions.** Only currently zero coefficients receive new fixed-zero
+constraints, preserving accepted objective descent. Removing $m_0$ clustered
+lasso zeros changes surviving L1 strength to $a + bm_0$. Retain all fusion terms
+between survivors. SLOPE retains the first $m$ rank weights for $m$ survivors.
+Chain removal splits active runs and adds each edge touching a removed zero to
+its surviving endpoint's unary L1 weight. Never join across a removed node. For
+weighted TV $T$ and nonnegative node weights $\alpha$, the exact prox is
+
+$$
+  \operatorname{prox}_{\tau(T+\sum_j\alpha_j|\cdot_j|)}(v)
+  = [\operatorname{prox}_{\tau T}(v - \tau\alpha)]_+ + [\operatorname{prox}_{\tau T}(v + \tau\alpha)]_-.
+$$
+
+TV's prox preserves order, and clipping preserves its edge subgradients. The
+positive and negative constrained minimizers therefore have disjoint supports.
+Both the quadratic objective and TV split over those supports, proving the
+formula. Two existing taut-string calls suffice; uniform weights retain the
+one-call fast path. This restriction is separate from `Masked`, which excludes
+coordinates from penalization instead of fixing them to zero.
+
+Screening runs initially and every ten PG updates, at Gaussian Hybrid checks,
+and at accepted logistic outer iterates. Logistic surrogate gaps never establish
+restrictions. Selected column products and aggregate rebuilds skip screened
+columns. A zero block containing certified features stays fixed during Hybrid
+sweeps; PG may split and reactivate its unscreened members. Stopping and final
+labels remain in the original space, and observers never trigger certificates.
+Every existing proximal path point resets restrictions while retaining scratch
+capacity and warm-start coefficients. Thus features can reactivate as strengths
+change. Returned vectors always retain the original feature dimension.
+
+Fit diagnostics separate certificate passes, zero tests, certified features,
+active dimensions, rebuilds, and fallback certificates. Optional gaps do not
+change the stopping rule. `task bench:screening` compares complete enabled and
+disabled solves at matched independently checked original-space accuracy,
+including certificates, allocations, and peak memory. Speedups are not assumed.
 
 IRLS paths reuse preprocessing, weighted summaries, residual buffers, and
 working-set storage across strengths. Working sets apply to both standalone fits

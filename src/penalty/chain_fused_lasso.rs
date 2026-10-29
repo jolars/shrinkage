@@ -89,6 +89,10 @@ struct Workspace {
     upper: VecDeque<Piece>,
     lower: VecDeque<Piece>,
     widths: Vec<f64>,
+    shifted: Vec<f64>,
+    negative: Vec<f64>,
+    screening_lower: Vec<f64>,
+    screening_upper: Vec<f64>,
 }
 
 impl ChainFusedLasso {
@@ -125,6 +129,22 @@ impl ChainFusedLasso {
 
     pub(crate) fn weight(&self, edge: usize) -> f64 {
         self.weights.as_ref().map_or(1.0, |weights| weights[edge])
+    }
+
+    pub(crate) fn with_screening_bounds<T>(
+        &self,
+        length: usize,
+        inspect: impl FnOnce(&mut [f64], &mut [f64]) -> T,
+    ) -> T {
+        let mut scratch = self.scratch.borrow_mut();
+        scratch.screening_lower.resize(length, 0.0);
+        scratch.screening_upper.resize(length, 0.0);
+        let Workspace {
+            screening_lower,
+            screening_upper,
+            ..
+        } = &mut *scratch;
+        inspect(screening_lower, screening_upper)
     }
 }
 
@@ -184,6 +204,10 @@ fn threshold(strength: f64, step: f64) -> Result<f64, FitError> {
 }
 
 impl ProximalPenalty for ChainFusedLasso {
+    fn gap_safe(&self) -> Option<&dyn crate::screening::GapSafePenalty> {
+        Some(self)
+    }
+
     fn prox(&self, input: &[f64], step: f64, output: &mut [f64]) -> Result<(), FitError> {
         self.validate_input(input)?;
         if input.len() != output.len() {
@@ -213,6 +237,7 @@ impl ProximalPenalty for ChainFusedLasso {
             upper,
             lower,
             widths,
+            ..
         } = &mut *scratch;
         let mut start = 0;
         for end in 1..=input.len() {
@@ -237,6 +262,124 @@ impl ProximalPenalty for ChainFusedLasso {
         }
         Ok(())
     }
+}
+
+impl ChainFusedLasso {
+    pub(crate) fn prox_screened(
+        &self,
+        input: &[f64],
+        zeroed: &[bool],
+        step: f64,
+        output: &mut [f64],
+    ) -> Result<(), FitError> {
+        self.validate_input(input)?;
+        if input.len() != output.len() || input.len() != zeroed.len() {
+            return Err(invalid(
+                "zero restriction dimensions must match the coefficients",
+            ));
+        }
+        if !step.is_finite() || step <= 0.0 {
+            return Err(invalid(
+                "proximal step must be finite and strictly positive",
+            ));
+        }
+        if !zeroed.iter().any(|&zero| zero) {
+            return self.prox(input, step, output);
+        }
+        output.fill(0.0);
+        if zeroed.iter().all(|&zero| zero) {
+            return Ok(());
+        }
+        let l1 = threshold(self.l1, step)?;
+        let mut scratch = self.scratch.borrow_mut();
+        scratch.widths.clear();
+        for edge in 0..input.len().saturating_sub(1) {
+            let weight = self.weight(edge);
+            let width = if self.fusion == 0.0 || weight == 0.0 {
+                0.0
+            } else {
+                threshold(threshold(self.fusion, weight)?, step)?
+            };
+            scratch.widths.push(width);
+        }
+        scratch.shifted.resize(input.len(), 0.0);
+        scratch.negative.resize(input.len(), 0.0);
+        let Workspace {
+            upper,
+            lower,
+            widths,
+            shifted,
+            negative,
+            ..
+        } = &mut *scratch;
+        let mut start = 0;
+        while start < input.len() {
+            if zeroed[start] {
+                start += 1;
+                continue;
+            }
+            let mut end = start + 1;
+            while end < input.len() && !zeroed[end] && widths[end - 1] != 0.0 {
+                end += 1;
+            }
+            for j in start..end {
+                let unary = restricted_threshold(l1, widths, zeroed, j)?;
+                shifted[j] = finite(
+                    input[j] - unary,
+                    "shifting a restricted chain proximal input",
+                    0,
+                )?;
+            }
+            taut_string(
+                &shifted[start..end],
+                &widths[start..end - 1],
+                &mut output[start..end],
+                upper,
+                lower,
+            )?;
+            for j in start..end {
+                let unary = restricted_threshold(l1, widths, zeroed, j)?;
+                shifted[j] = finite(
+                    input[j] + unary,
+                    "shifting a restricted chain proximal input",
+                    0,
+                )?;
+            }
+            taut_string(
+                &shifted[start..end],
+                &widths[start..end - 1],
+                &mut negative[start..end],
+                upper,
+                lower,
+            )?;
+            // TV separates across positive and negative parts. Its proximal
+            // comparison principle makes these two clipped parts disjoint.
+            for j in start..end {
+                output[j] = output[j].max(0.0) + negative[j].min(0.0);
+            }
+            start = end;
+        }
+        Ok(())
+    }
+}
+
+fn restricted_threshold(
+    l1: f64,
+    widths: &[f64],
+    zeroed: &[bool],
+    index: usize,
+) -> Result<f64, FitError> {
+    let left = if index > 0 && zeroed[index - 1] {
+        widths[index - 1]
+    } else {
+        0.0
+    };
+    let right = if index + 1 < zeroed.len() && zeroed[index + 1] {
+        widths[index]
+    } else {
+        0.0
+    };
+    finite(l1 + left + right, "forming a restricted chain threshold", 0).map_err(Into::into)
 }
 
 fn append(queue: &mut VecDeque<Piece>, mut piece: Piece, upper: bool) -> Result<(), FitError> {

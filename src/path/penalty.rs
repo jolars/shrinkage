@@ -248,6 +248,10 @@ impl<P: ProximalPenalty> Penalty for ErasedPathPenalty<P> {
     }
 }
 impl<P: ProximalPenalty> ProximalPenalty for ErasedPathPenalty<P> {
+    fn gap_safe(&self) -> Option<&dyn crate::GapSafePenalty> {
+        self.0.gap_safe()
+    }
+
     fn prox(&self, input: &[f64], step: f64, output: &mut [f64]) -> Result<(), FitError> {
         self.0.prox(input, step, output)
     }

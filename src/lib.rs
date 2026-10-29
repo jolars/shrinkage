@@ -62,6 +62,7 @@ pub mod normalization;
 pub mod path;
 pub mod penalty;
 pub mod problem;
+pub mod screening;
 pub mod solver;
 
 pub use datafit::{
@@ -87,6 +88,9 @@ pub use penalty::{
 pub use problem::{
     MatrixDesign, Problem, RuntimeDesign, RuntimeMultivariateProblem, RuntimePathProblem,
     RuntimeProblem,
+};
+pub use screening::{
+    DualCertificate, GapSafeDatafit, GapSafePenalty, ScreeningDesign, ScreeningDiagnostics,
 };
 pub use solver::{
     CoordinateDescent, Hybrid, HybridStep, InitialPoint, Irls, ObservedSolver, ProximalDesign,

@@ -36,7 +36,7 @@ where
             .validate_input(&inner.coefficients)
             .map_err(|e| FitError::from_component(e, 0))?;
         let prepared = problem.prepare(datafit.fits_intercept())?;
-        let mut design = NativeDesign::<_, V>::new(prepared);
+        let mut design = NativeDesign::<_, V>::new_screenable(prepared);
         let solution = iterate(
             &mut design,
             datafit,
@@ -84,7 +84,7 @@ where
             .validate_input(&inner.coefficients)
             .map_err(|e| FitError::from_component(e, 0))?;
         let prepared = problem.prepare(datafit.fits_intercept())?;
-        let mut design = NativeDesign::<_, V>::new(prepared);
+        let mut design = NativeDesign::<_, V>::new_screenable(prepared);
         if let Some(initial) = initial {
             initial.apply(
                 &mut inner.coefficients,
@@ -155,6 +155,9 @@ where
     V: ProximalVector,
     P: HybridPenalty,
 {
+    inner.screening.reset();
+    inner.state.set_screened(&inner.screening.zeroed);
+    inner.pending.set_screened(&inner.screening.zeroed);
     let n = design.nrows();
     let mut outer = Outer {
         coefficients: inner.coefficients.clone(),
@@ -182,6 +185,7 @@ where
     inner_options.cluster_sweeps = options.cluster_sweeps;
     inner_options.check_every = options.check_every;
     inner_options.step = options.step;
+    inner_options.screening = false;
     let mut total = Progress {
         iterations: 0,
         objective: 0.0,
@@ -204,7 +208,9 @@ where
     loop {
         inner.coefficients.copy_from_slice(&outer.coefficients);
         inner.intercept = outer.intercept;
-        design.forward(&outer.coefficients, &mut outer.eta)?;
+        inner
+            .screening
+            .forward(design, &outer.coefficients, &mut outer.eta)?;
         for eta in &mut outer.eta {
             *eta = finite(
                 *eta + outer.intercept,
@@ -247,6 +253,23 @@ where
                 )?
                 .abs(),
             );
+        }
+        if options.screening
+            && inner.screening.check(
+                design,
+                &datafit,
+                penalty,
+                &outer.coefficients,
+                &outer.eta,
+                objective,
+                outer_iterations,
+                mapping > threshold
+                    && outer_iterations < options.max_outer_iterations
+                    && total.iterations < options.max_iterations,
+            )?
+        {
+            inner.state.set_screened(&inner.screening.zeroed);
+            inner.pending.set_screened(&inner.screening.zeroed);
         }
         if mapping <= threshold
             || outer_iterations == options.max_outer_iterations
@@ -338,7 +361,9 @@ where
                 step: 0.0,
             });
         }
-        design.forward(&inner.direction, &mut outer.direction_eta)?;
+        inner
+            .screening
+            .forward(design, &inner.direction, &mut outer.direction_eta)?;
         let (mut linear, mut quadratic) = (0.0, 0.0);
         for ((d, &g), &w) in outer
             .direction_eta

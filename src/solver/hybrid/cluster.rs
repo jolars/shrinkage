@@ -55,6 +55,11 @@ impl super::Partition<ClusteredLasso> for State {
         self.weights.set(weights);
     }
 
+    fn set_screened(&mut self, zeroed: &[bool]) {
+        self.screened.clear();
+        self.screened.extend_from_slice(zeroed);
+    }
+
     fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
         &mut self,
         matrix: &LazyMatrix<M>,
@@ -182,6 +187,7 @@ pub(super) struct State {
     sweep_order: Vec<usize>,
     knots: Vec<(f64, f64)>,
     spare: Vec<Block>,
+    screened: Vec<bool>,
 }
 
 impl State {
@@ -196,6 +202,7 @@ impl State {
             sweep_order: Vec::with_capacity(p),
             knots: Vec::with_capacity(p + 1),
             spare: Vec::new(),
+            screened: vec![false; p],
         }
     }
 
@@ -246,6 +253,9 @@ impl State {
         // Canonical feature order makes rebuild arithmetic independent of the
         // previous sequence of crossings and aggregate additions.
         for j in 0..coefficients.len() {
+            if self.screened.get(j).copied().unwrap_or(false) {
+                continue;
+            }
             matrix
                 .column(j)
                 .scaled_add_to(1.0, &mut self.blocks[self.labels[j]].column);
@@ -300,6 +310,15 @@ impl State {
                 continue;
             }
             let block = &self.blocks[index];
+            // A full PG transition can split ordinary zeros away from a
+            // certified zero block without moving its fixed members.
+            if block
+                .members
+                .iter()
+                .any(|&j| self.screened.get(j).copied().unwrap_or(false))
+            {
+                continue;
+            }
             let b = self
                 .weights
                 .linear(&block.column, &self.residual, block.value, iteration)?;

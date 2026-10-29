@@ -131,6 +131,11 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench chain_fused_lasso_heap
 
+  bench:screening:
+    desc: Compare dynamic screening time and heap at matched original accuracy
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench screening -- {{.CLI_ARGS}}
+
   bench:scaled:
     desc: Compare scaled penalty values and proximal maps with built-in strengths
     cmds:

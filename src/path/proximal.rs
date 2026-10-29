@@ -41,7 +41,7 @@ where
         self.validate()?;
         validate_rows(problem.design().nrows(), problem.datafit())?;
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
-        let mut design = NativeDesign::<_, V>::new(prepared);
+        let mut design = NativeDesign::<_, V>::new_screenable(prepared);
         let (_, gradient) = null_state(&mut design, problem.datafit())?;
         problem
             .penalty()
@@ -57,7 +57,7 @@ where
         let threshold = self.validate()?;
         validate_rows(problem.design().nrows(), problem.datafit())?;
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
-        let design = NativeDesign::<_, V>::new(prepared);
+        let design = NativeDesign::<_, V>::new_screenable(prepared);
         automatic(
             design,
             problem.datafit(),

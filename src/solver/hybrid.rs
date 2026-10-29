@@ -3,6 +3,8 @@
 mod cluster;
 mod irls;
 mod quadratic;
+#[cfg(test)]
+mod screening_tests;
 mod segment;
 mod slope;
 #[cfg(test)]
@@ -17,6 +19,7 @@ use quadratic::{Model, Weights};
 use lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, MatrixShape, RawColumns};
 
 use crate::error::{finite, invalid, unsupported};
+use crate::screening::ScreeningWorkspace;
 use crate::solver::proximal::{NativeDesign, Solution as ProximalSolution};
 use crate::{
     BackendError, ChainFusedLasso, ClusteredLasso, FitError, Gaussian, HybridFit, Problem,
@@ -31,6 +34,7 @@ trait HybridPenalty: ProximalPenalty + Sized {
 trait Partition<P>: Sized {
     fn new(n: usize, p: usize) -> Self;
     fn set_weights(&mut self, weights: &[f64]);
+    fn set_screened(&mut self, zeroed: &[bool]);
     fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
         &mut self,
         matrix: &lazymatrix::LazyMatrix<M>,
@@ -122,6 +126,9 @@ impl Default for HybridStep {
 /// Binomial problems use IRLS with weighted hybrid inner solves and Armijo
 /// backtracking on the original objective. Only the original-loss mapping
 /// certifies logistic convergence. Predictions remain linear predictors.
+/// Dynamic Gap Safe zero screening is enabled by default. Restrictions retain
+/// the complete original penalty, and certificates always use the original
+/// loss. Disable screening with [`Self::screening`] for complete matrix sweeps.
 ///
 /// `V` is the backend's native vector, as for [`crate::ProximalGradient`].
 /// Aggregates use dense storage: `O(n * K + p + n)` for `K` clusters, retaining
@@ -149,13 +156,15 @@ pub struct Hybrid<V = Vec<f64>> {
     max_outer_backtracks: usize,
     cluster_sweeps: usize,
     check_every: usize,
+    screening: bool,
     step: HybridStep,
     vector: PhantomData<V>,
 }
 
 impl<V> Hybrid<V> {
     /// Use mapping tolerance `1e-6`, 10,000 iterations, five sweeps per PG,
-    /// checks every ten iterations, and backtracking. Logistic fits allow 100
+    /// checks every ten iterations, backtracking, and safe zero screening.
+    /// Logistic fits allow 100
     /// outer steps, 1,000 inner iterations per model, and 100 step halvings.
     pub fn new() -> Self {
         Self {
@@ -166,6 +175,7 @@ impl<V> Hybrid<V> {
             max_outer_backtracks: 100,
             cluster_sweeps: 5,
             check_every: 10,
+            screening: true,
             step: HybridStep::default(),
             vector: PhantomData,
         }
@@ -220,6 +230,14 @@ impl<V> Hybrid<V> {
     /// Check every positive number of iterations, also initially and at budget.
     pub fn check_every(mut self, count: usize) -> Self {
         self.check_every = count;
+        self
+    }
+
+    /// Enable dynamic Gap Safe zero screening, enabled by default.
+    /// Certificates and stopping checks use the original loss and full design.
+    /// Logistic quadratic models retain restrictions certified at outer iterates.
+    pub fn screening(mut self, enabled: bool) -> Self {
+        self.screening = enabled;
         self
     }
 
@@ -390,7 +408,7 @@ where
         .validate_input(&work.coefficients)
         .map_err(|e| FitError::from_component(e, 0))?;
     let prepared = problem.prepare(problem.datafit().fit_intercept)?;
-    let mut design = NativeDesign::<_, V>::new(prepared);
+    let mut design = NativeDesign::<_, V>::new_screenable(prepared);
     if problem.datafit().fit_intercept {
         work.intercept = finite(
             problem
@@ -463,6 +481,7 @@ struct Workspace<P: HybridPenalty = ClusteredLasso> {
     weights: Weights,
     loss: f64,
     reference_curvature: Option<f64>,
+    screening: ScreeningWorkspace,
 }
 
 impl<P: HybridPenalty> Workspace<P> {
@@ -482,6 +501,7 @@ impl<P: HybridPenalty> Workspace<P> {
             weights: Weights::default(),
             loss: 0.0,
             reference_curvature: None,
+            screening: ScreeningWorkspace::new(n, p),
         }
     }
 
@@ -491,15 +511,44 @@ impl<P: HybridPenalty> Workspace<P> {
         datafit: impl Into<Model<'a>>,
         iteration: usize,
     ) -> Result<f64, FitError<O::Error>> {
-        design.forward(&self.coefficients, &mut self.residual)?;
+        self.prepare_with_selection(design, datafit, iteration, false)
+    }
+
+    fn prepare_with_selection<'a, O: ProximalDesign>(
+        &mut self,
+        design: &mut O,
+        datafit: impl Into<Model<'a>>,
+        iteration: usize,
+        full: bool,
+    ) -> Result<f64, FitError<O::Error>> {
+        if full {
+            design.forward(&self.coefficients, &mut self.residual)?;
+        } else {
+            self.screening
+                .forward(design, &self.coefficients, &mut self.residual)?;
+        }
         let datafit = datafit.into();
+        if full && matches!(datafit, Model::Gaussian(_)) {
+            for (eta, &prediction) in self.product.iter_mut().zip(&self.residual) {
+                *eta = finite(
+                    prediction + self.intercept,
+                    "refreshing screening predictors",
+                    iteration,
+                )?;
+            }
+        }
         self.loss = datafit.refresh(
             &mut self.residual,
             self.intercept,
             &mut self.derivative,
             iteration,
         )?;
-        design.transpose(&self.derivative, &mut self.gradient)?;
+        if full {
+            design.transpose(&self.derivative, &mut self.gradient)?;
+        } else {
+            self.screening
+                .transpose(design, &self.derivative, &mut self.gradient)?;
+        }
         for &g in &self.gradient {
             finite(g, "computing the full hybrid gradient", iteration)?;
         }
@@ -521,6 +570,17 @@ impl<P: HybridPenalty> Workspace<P> {
         intercept_gradient: f64,
         iteration: usize,
     ) -> Result<f64, FitError<E>> {
+        self.trial_with_restriction(penalty, curvature, intercept_gradient, iteration, false)
+    }
+
+    fn trial_with_restriction<E>(
+        &mut self,
+        penalty: &P,
+        curvature: f64,
+        intercept_gradient: f64,
+        iteration: usize,
+        restricted: bool,
+    ) -> Result<f64, FitError<E>> {
         let step = finite(
             1.0 / curvature,
             "computing a hybrid PG step size",
@@ -538,9 +598,15 @@ impl<P: HybridPenalty> Workspace<P> {
                 iteration,
             )?;
         }
-        penalty
-            .prox(&self.input, step, &mut self.candidate)
-            .map_err(|e| FitError::from_component(e, iteration))?;
+        if restricted {
+            self.screening
+                .prox(penalty, &self.input, step, &mut self.candidate)
+                .map_err(|e| FitError::from_component(e, iteration))?;
+        } else {
+            penalty
+                .prox(&self.input, step, &mut self.candidate)
+                .map_err(|e| FitError::from_component(e, iteration))?;
+        }
         Ok(finite(
             self.intercept - step * intercept_gradient,
             "taking a hybrid intercept step",
@@ -579,7 +645,8 @@ impl<P: HybridPenalty> Workspace<P> {
             *d /= scale;
             norm = norm.hypot(*d);
         }
-        design.forward(&self.direction, &mut self.product)?;
+        self.screening
+            .forward(design, &self.direction, &mut self.product)?;
         let image_norm = self
             .weights
             .image_norm(&self.product, intercept, iteration)?;
@@ -594,9 +661,17 @@ impl<P: HybridPenalty> Workspace<P> {
         curvature: f64,
         iteration: usize,
     ) -> Result<(f64, f64), FitError<O::Error>> {
+        let datafit = datafit.into();
+        let full = matches!(datafit, Model::Gaussian(_));
         let curvature = self.reference_curvature.unwrap_or(curvature);
-        let intercept_gradient = self.prepare(design, datafit, iteration)?;
-        self.trial::<O::Error>(penalty, curvature, intercept_gradient, iteration)?;
+        let intercept_gradient = self.prepare_with_selection(design, datafit, iteration, full)?;
+        self.trial_with_restriction::<O::Error>(
+            penalty,
+            curvature,
+            intercept_gradient,
+            iteration,
+            !full,
+        )?;
         let mut mapping = intercept_gradient.abs();
         for (&current, &candidate) in self.coefficients.iter().zip(&self.candidate) {
             mapping = mapping.max(
@@ -720,6 +795,23 @@ where
             let (objective, mapping) =
                 work.diagnostics(design, datafit, penalty, curvature, iteration)?;
             diagnostic_checks += 1;
+            if options.screening
+                && let Model::Gaussian(original) = datafit
+                && work.screening.check(
+                    design,
+                    &original,
+                    penalty,
+                    &work.coefficients,
+                    &work.product,
+                    objective,
+                    iteration,
+                    mapping > threshold && iteration < options.max_iterations,
+                )?
+            {
+                work.state.set_screened(&work.screening.zeroed);
+                work.pending.set_screened(&work.screening.zeroed);
+                since_pg = options.cluster_sweeps;
+            }
             if mapping <= threshold || iteration == options.max_iterations {
                 // A final canonical scan also covers an initially optimal
                 // start and records signed values before back-transformation.
@@ -767,8 +859,13 @@ where
             let mut trial_curvature = curvature;
             let mut accepted = None;
             for attempt in 0..=max_backtracks {
-                let trial =
-                    work.trial::<M::Error>(penalty, trial_curvature, intercept_gradient, iteration);
+                let trial = work.trial_with_restriction::<M::Error>(
+                    penalty,
+                    trial_curvature,
+                    intercept_gradient,
+                    iteration,
+                    true,
+                );
                 match trial {
                     Ok(candidate_intercept) => {
                         if matches!(options.step, HybridStep::FixedBound)
@@ -806,7 +903,8 @@ where
                     step: 1.0 / trial_curvature,
                 });
             };
-            design.forward(&work.candidate, &mut work.product)?;
+            work.screening
+                .forward(design, &work.candidate, &mut work.product)?;
             datafit.refresh(
                 &mut work.product,
                 candidate_intercept,
@@ -886,6 +984,8 @@ impl Progress {
                 stopping_value: self.mapping,
                 stopping_threshold: threshold,
                 step: 1.0 / self.curvature,
+                certificate: work.screening.certificate_owned(),
+                screening: work.screening.diagnostics(),
             },
             labels: work.pending.labels().to_vec(),
             values: work.pending.values(),
@@ -940,6 +1040,9 @@ where
     V: ProximalVector,
     P: HybridPenalty,
 {
+    work.screening.reset();
+    work.state.set_screened(&work.screening.zeroed);
+    work.pending.set_screened(&work.screening.zeroed);
     Ok(iterate_quadratic_observed(
         design,
         datafit.into(),

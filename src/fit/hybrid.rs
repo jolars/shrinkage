@@ -10,8 +10,9 @@ use crate::{FitError, HybridStep, Preprocessing, ProximalFit, StoppingCriterion,
 /// SLOPE orders equal-magnitude blocks decreasingly and retains individual
 /// signs in [`Self::coefficient_signs`].
 /// Scaling can change equalities among the reported original-scale parameters.
-/// No duality gap is reported. A sweep that leaves all blocks unchanged does
-/// not certify convergence; check [`Self::termination`] and the full mapping.
+/// Gap Safe certificates refer to the original loss and full design. A sweep
+/// that leaves all blocks unchanged does not certify convergence; check
+/// [`Self::termination`] and the full mapping.
 #[derive(Clone, Debug)]
 #[must_use]
 pub struct HybridFit {
@@ -53,6 +54,28 @@ impl HybridFit {
     pub fn objective(&self) -> f64 {
         self.fit.objective()
     }
+
+    /// Original-space feasible dual vector from the latest certificate check.
+    /// Screening-disabled fits do not construct a certificate.
+    pub fn dual_certificate(&self) -> Option<&[f64]> {
+        self.fit.dual_certificate()
+    }
+
+    /// Original-loss dual lower bound, when a certificate is available.
+    pub fn dual_objective(&self) -> Option<f64> {
+        self.fit.dual_objective()
+    }
+
+    /// Original objective minus its feasible dual lower bound.
+    /// This diagnostic does not replace the full mapping stopping rule.
+    pub fn duality_gap(&self) -> Option<f64> {
+        self.fit.duality_gap()
+    }
+
+    /// Work and certified zero restrictions in the original feature space.
+    pub fn screening_diagnostics(&self) -> &crate::screening::ScreeningDiagnostics {
+        self.fit.screening_diagnostics()
+    }
     /// Selected full-space convergence criterion.
     pub fn stopping_criterion(&self) -> StoppingCriterion {
         self.fit.stopping_criterion()
@@ -76,7 +99,7 @@ impl HybridFit {
     pub fn step_policy(&self) -> HybridStep {
         self.step_policy
     }
-    /// Number of committed full PG transitions, excluding diagnostic proxes.
+    /// Number of committed PG transitions, excluding diagnostic proxes.
     pub fn pg_steps(&self) -> usize {
         self.pg_steps
     }
@@ -84,9 +107,9 @@ impl HybridFit {
     pub fn coordinate_sweeps(&self) -> usize {
         self.coordinate_sweeps
     }
-    /// Number of independently refreshed full-space inner diagnostic checks.
-    /// Logistic fits count quadratic checks here; original-loss checks also run
-    /// initially and after every accepted outer step.
+    /// Number of refreshed inner diagnostic checks. Logistic checks use the
+    /// fixed-zero quadratic subproblem; original-loss checks also run initially
+    /// and after every accepted outer step.
     pub fn diagnostic_checks(&self) -> usize {
         self.diagnostic_checks
     }

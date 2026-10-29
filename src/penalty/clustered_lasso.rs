@@ -67,6 +67,21 @@ impl ClusteredLasso {
     pub fn fusion(&self) -> f64 {
         self.fusion
     }
+
+    pub(crate) fn sorted_bound_indices<T>(
+        &self,
+        length: usize,
+        bound: impl Fn(usize) -> f64,
+        inspect: impl FnOnce(&[usize]) -> T,
+    ) -> T {
+        let mut scratch = self.scratch.borrow_mut();
+        scratch.order.clear();
+        scratch.order.extend(0..length);
+        scratch
+            .order
+            .sort_unstable_by(|&a, &b| bound(b).total_cmp(&bound(a)).then(a.cmp(&b)));
+        inspect(&scratch.order)
+    }
 }
 
 impl Workspace {
@@ -116,7 +131,36 @@ impl Penalty for ClusteredLasso {
 }
 
 impl ProximalPenalty for ClusteredLasso {
+    fn gap_safe(&self) -> Option<&dyn crate::screening::GapSafePenalty> {
+        Some(self)
+    }
+
     fn prox(&self, input: &[f64], step: f64, output: &mut [f64]) -> Result<(), FitError> {
+        self.prox_impl(input, None, step, output)
+    }
+}
+
+impl ClusteredLasso {
+    pub(crate) fn prox_screened(
+        &self,
+        input: &[f64],
+        zeroed: &[bool],
+        step: f64,
+        output: &mut [f64],
+    ) -> Result<(), FitError> {
+        if input.len() != zeroed.len() {
+            return Err(invalid("zero mask length must match the coefficients"));
+        }
+        self.prox_impl(input, Some(zeroed), step, output)
+    }
+
+    fn prox_impl(
+        &self,
+        input: &[f64],
+        zeroed: Option<&[bool]>,
+        step: f64,
+        output: &mut [f64],
+    ) -> Result<(), FitError> {
         self.validate_input(input)?;
         if input.len() != output.len() {
             return Err(invalid("proximal input and output lengths must match"));
@@ -129,13 +173,29 @@ impl ProximalPenalty for ClusteredLasso {
         if input.is_empty() {
             return Ok(());
         }
-        let l1 = finite(step * self.l1, "scaling the clustered-lasso L1 strength", 0)?;
+        let fixed = zeroed.map_or(0, |mask| mask.iter().filter(|&&value| value).count());
+        output.fill(0.0);
+        if fixed == input.len() {
+            return Ok(());
+        }
+        // Each pair between a retained coefficient and a fixed zero becomes
+        // an additional absolute-value term on the retained coefficient.
+        let l1_strength = finite(
+            self.l1 + self.fusion * fixed as f64,
+            "restricting the clustered-lasso L1 strength",
+            0,
+        )?;
+        let l1 = finite(
+            step * l1_strength,
+            "scaling the clustered-lasso L1 strength",
+            0,
+        )?;
         let fusion = finite(
             step * self.fusion,
             "scaling the clustered-lasso fusion strength",
             0,
         )?;
-        if (self.l1 > 0.0 && l1 == 0.0) || (self.fusion > 0.0 && fusion == 0.0) {
+        if (l1_strength > 0.0 && l1 == 0.0) || (self.fusion > 0.0 && fusion == 0.0) {
             return Err(FitError::NumericalFailure {
                 operation: "scaling clustered-lasso strengths without underflow",
                 iteration: 0,
@@ -143,11 +203,14 @@ impl ProximalPenalty for ClusteredLasso {
         }
         let mut scratch = self.scratch.borrow_mut();
         scratch.sort(input);
+        if let Some(mask) = zeroed {
+            scratch.order.retain(|&index| !mask[index]);
+        }
         let Workspace { order, blocks } = &mut *scratch;
         blocks.clear();
         for (rank, &index) in order.iter().enumerate() {
             let shift = finite(
-                fusion * (input.len() as f64 - 1.0 - 2.0 * rank as f64),
+                fusion * (order.len() as f64 - 1.0 - 2.0 * rank as f64),
                 "computing a clustered-lasso rank shift",
                 0,
             )?;

@@ -184,3 +184,8 @@ required-features = ["faer_v0_24"]
 name = "chain_fused_lasso_heap"
 harness = false
 required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "screening"
+harness = false
+required-features = ["faer_v0_24"]

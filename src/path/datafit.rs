@@ -81,6 +81,10 @@ impl<D: Datafit + ?Sized> Datafit for Box<D> {
     }
 }
 impl<D: SmoothDatafit + ?Sized> SmoothDatafit for Box<D> {
+    fn gap_safe(&self) -> Option<&dyn crate::GapSafeDatafit> {
+        (**self).gap_safe()
+    }
+
     fn nobs(&self) -> usize {
         (**self).nobs()
     }

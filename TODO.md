@@ -161,18 +161,23 @@ decision and concrete follow-up tasks.
 
 ### 5. Screening rules and working sets
 
-- [ ] **Screening certificates:** Establish valid certificates and safe bounds
-  for the complete MVP penalties under Gaussian and binomial losses. Account
-  for normalization, free intercepts, zero strengths, and SLOPE weights.
-  Check feasibility and gap calculations independently, including
-  rank-deficient cases, before using certificates to remove variables or
-  impose equalities.
-- [ ] **Screening rules:** Implement penalty- and family-specific safe rules,
-  including zero and fusion screening for clustered lasso where certified.
-  Document the restrictions each rule certifies and preserve the exact
-  reduced objective. Test strict boundaries, conservative rounding, lifted
-  coefficients and predictions, and agreement with unscreened fits. Rebuild
-  certificates at each path point, and check stopping in the original space.
+- [x] **Screening certificates:** Add original-problem certificates and safe
+  spheres for Gaussian and binomial losses with the complete MVP penalties.
+  Validate normalization, free intercepts, rank deficiency, SLOPE weights,
+  and zero-strength fallbacks independently. Keep original-space mapping
+  stopping; the feasible zero certificate can remain loose in degenerate
+  cases.
+- [x] **Dynamic zero screening:** Enable Gap Safe zero restrictions by default
+  in Hybrid and proximal gradient, including existing proximal paths and
+  runtime composition. Preserve every removed-zero interaction in the exact
+  objective, skip screened matrix work, and expose controls and diagnostics.
+  Validate strict boundaries, conservative rounding, original-space results,
+  path resets, and agreement with unscreened fits. Benchmark complete
+  enabled and disabled solves, allocations, and memory at matched accuracy.
+- [ ] **Fusion screening:** Add certified equality restrictions, including
+  clustered-lasso fusion where safe. Preserve original feature masses and
+  the exact reduced penalty, validate lifting and strict boundaries
+  independently, and rebuild certificates at every path point.
 - [ ] **Hybrid working sets:** Extend existing working-set machinery to select
   coefficients or clusters using full optimality violations. Permit excluded
   coordinates to reactivate and clusters to split. Refresh eligibility after

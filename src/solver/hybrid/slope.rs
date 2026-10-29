@@ -116,6 +116,11 @@ impl Partition<Slope> for State {
         self.weights.set(weights);
     }
 
+    fn set_screened(&mut self, _: &[bool]) {
+        // The zero block already has no aggregate column and stays fixed
+        // during SLOPE sweeps; PG alone can reactivate ordinary zero members.
+    }
+
     fn rebuild<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
         &mut self,
         matrix: &LazyMatrix<M>,

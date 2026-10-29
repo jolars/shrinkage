@@ -7,8 +7,8 @@ use crate::{LassoError, StoppingCriterion};
 
 /// Owned original-scale parameters and proximal-gradient diagnostics.
 ///
-/// The objective and mapping use optimization-scale coefficients. No duality
-/// gap is reported because this solver has no implemented dual certificate.
+/// The objective and mapping use optimization-scale coefficients. Supported
+/// screened fits additionally report an original-problem dual certificate.
 #[derive(Clone, Debug)]
 #[must_use]
 pub struct ProximalFit {
@@ -22,9 +22,37 @@ pub struct ProximalFit {
     stopping_value: f64,
     stopping_threshold: f64,
     step: f64,
+    certificate: Option<crate::DualCertificate>,
+    screening: crate::ScreeningDiagnostics,
 }
 
 impl ProximalFit {
+    /// Feasible observation-scale dual vector, when screening was supported.
+    pub fn dual_certificate(&self) -> Option<&[f64]> {
+        self.certificate
+            .as_ref()
+            .map(crate::DualCertificate::dual_vector)
+    }
+
+    /// Original-problem dual objective, when a certificate was constructed.
+    pub fn dual_objective(&self) -> Option<f64> {
+        self.certificate
+            .as_ref()
+            .map(crate::DualCertificate::dual_objective)
+    }
+
+    /// Padded original-problem duality gap, independently of stopping choice.
+    pub fn duality_gap(&self) -> Option<f64> {
+        self.certificate
+            .as_ref()
+            .map(crate::DualCertificate::duality_gap)
+    }
+
+    /// Work and dimension reductions certified by Gap Safe screening.
+    pub fn screening_diagnostics(&self) -> &crate::ScreeningDiagnostics {
+        &self.screening
+    }
+
     /// Original-scale coefficients, in training-column order.
     pub fn coefficients(&self) -> &[f64] {
         &self.coefficients
@@ -97,6 +125,8 @@ impl ProximalFit {
             stopping_value: solution.stopping_value,
             stopping_threshold: solution.stopping_threshold,
             step: solution.step,
+            certificate: solution.certificate,
+            screening: solution.screening,
         })
     }
 }

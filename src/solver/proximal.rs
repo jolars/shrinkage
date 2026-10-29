@@ -121,6 +121,7 @@ pub struct ProximalGradient<V = Vec<f64>> {
     max_iterations: usize,
     initial_step: f64,
     max_backtracks: usize,
+    screening: bool,
     vector: PhantomData<V>,
 }
 
@@ -133,6 +134,7 @@ impl<V> ProximalGradient<V> {
             max_iterations: 10_000,
             initial_step: 1.0,
             max_backtracks: 100,
+            screening: true,
             vector: PhantomData,
         }
     }
@@ -165,6 +167,15 @@ impl<V> ProximalGradient<V> {
     /// Set the maximum number of step halvings for each line search.
     pub fn max_backtracks(mut self, count: usize) -> Self {
         self.max_backtracks = count;
+        self
+    }
+
+    /// Enable dynamic Gap Safe zero screening when every component supports it.
+    ///
+    /// Enabled by default. Certificates use the original loss and penalty;
+    /// unsupported compositions retain ordinary proximal-gradient fitting.
+    pub fn screening(mut self, enabled: bool) -> Self {
+        self.screening = enabled;
         self
     }
 
@@ -201,7 +212,7 @@ impl<V> ProximalGradient<V> {
             return Ok(Vec::new());
         }
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
-        let mut design = NativeDesign::<_, V>::new(prepared);
+        let mut design = NativeDesign::<_, V>::new_screenable(prepared);
         let solutions = iterate_path(&mut design, problem.datafit(), penalties, self, threshold)?;
         let preprocessing = design.into_preprocessing();
         solutions
@@ -252,6 +263,8 @@ pub(crate) struct Solution {
     pub stopping_value: f64,
     pub stopping_threshold: f64,
     pub step: f64,
+    pub certificate: Option<crate::DualCertificate>,
+    pub screening: crate::ScreeningDiagnostics,
 }
 
 impl<M, D, P, V> Solver<Problem<&M, D, P>> for ProximalGradient<V>
@@ -272,7 +285,7 @@ where
             ));
         }
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
-        let mut design = NativeDesign::<_, V>::new(prepared);
+        let mut design = NativeDesign::<_, V>::new_screenable(prepared);
         let solution = iterate(
             &mut design,
             problem.datafit(),
@@ -304,7 +317,7 @@ where
             ));
         }
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
-        let mut design = NativeDesign::<_, V>::new(prepared);
+        let mut design = NativeDesign::<_, V>::new_screenable(prepared);
         let mut work = Workspace::new(design.nrows(), design.ncols());
         if let Some(initial) = initial {
             initial.apply(
@@ -336,6 +349,8 @@ pub(crate) struct Workspace {
     gradient: Vec<f64>,
     input: Vec<f64>,
     candidate: Vec<f64>,
+    full_candidate: Vec<f64>,
+    screening: crate::screening::ScreeningWorkspace,
 }
 
 impl Workspace {
@@ -348,6 +363,8 @@ impl Workspace {
             gradient: vec![0.0; p],
             input: vec![0.0; p],
             candidate: vec![0.0; p],
+            full_candidate: Vec::new(),
+            screening: crate::screening::ScreeningWorkspace::new(n, p),
         }
     }
 
@@ -358,7 +375,8 @@ impl Workspace {
         intercept: f64,
         iteration: usize,
     ) -> Result<(), FitError<O::Error>> {
-        design.forward(coefficients, &mut self.eta)?;
+        self.screening
+            .forward(design, coefficients, &mut self.eta)?;
         for value in &mut self.eta {
             *value = finite(
                 *value + intercept,
@@ -473,6 +491,7 @@ where
     P: ProximalPenalty + ?Sized,
 {
     let mut coefficients = std::mem::take(&mut work.coefficients);
+    work.screening.reset();
     let mut intercept = work.intercept;
     let mut step = options.initial_step;
     let mut iteration = 0;
@@ -482,20 +501,33 @@ where
         let loss = datafit
             .value(&work.eta)
             .map_err(|error| FitError::from_component(error, iteration))?;
-        let objective = finite(
+        let mut objective = finite(
             loss + penalty
                 .value(&coefficients)
                 .map_err(|error| FitError::from_component(error, iteration))?,
             "computing the objective",
             iteration,
         )?;
+        if options.screening && iteration % 10 == 0 {
+            work.screening.check(
+                design,
+                datafit,
+                penalty,
+                &coefficients,
+                &work.eta,
+                objective,
+                iteration,
+                true,
+            )?;
+        }
         datafit
             .gradient(&work.eta, &mut work.predictor_gradient)
             .map_err(|error| FitError::from_component(error, iteration))?;
         for &value in &work.predictor_gradient {
             finite(value, "checking the predictor gradient", iteration)?;
         }
-        design.transpose(&work.predictor_gradient, &mut work.gradient)?;
+        work.screening
+            .transpose(design, &work.predictor_gradient, &mut work.gradient)?;
         let intercept_gradient = if datafit.fits_intercept() {
             finite(
                 work.predictor_gradient.iter().sum(),
@@ -514,8 +546,8 @@ where
                     iteration,
                 )?;
             }
-            penalty
-                .prox(&work.input, step, &mut work.candidate)
+            work.screening
+                .prox(penalty, &work.input, step, &mut work.candidate)
                 .map_err(|error| FitError::from_component(error, iteration))?;
             let candidate_intercept = finite(
                 intercept - step * intercept_gradient,
@@ -570,12 +602,65 @@ where
                 }
             }
         }
-        let Some((candidate_intercept, mapping)) = accepted else {
+        let Some((candidate_intercept, mut mapping)) = accepted else {
             return Err(FitError::LineSearchFailure { iteration, step });
         };
         // The mapping belongs to the current coefficients, not the trial
         // point. Check it before accepting the next update, including at budget.
+        if (mapping <= threshold || iteration == options.max_iterations)
+            && work.screening.diagnostics().screened_features > 0
+        {
+            // A restricted fixed point must also pass the original mapping.
+            design.forward(&coefficients, &mut work.eta)?;
+            for value in &mut work.eta {
+                *value += intercept;
+            }
+            datafit
+                .gradient(&work.eta, &mut work.predictor_gradient)
+                .map_err(|e| FitError::from_component(e, iteration))?;
+            design.transpose(&work.predictor_gradient, &mut work.gradient)?;
+            for ((input, &coefficient), &gradient) in
+                work.input.iter_mut().zip(&coefficients).zip(&work.gradient)
+            {
+                *input = coefficient - step * gradient;
+            }
+            work.full_candidate.resize(coefficients.len(), 0.0);
+            penalty
+                .prox(&work.input, step, &mut work.full_candidate)
+                .map_err(|e| FitError::from_component(e, iteration))?;
+            mapping = if datafit.fits_intercept() {
+                work.predictor_gradient.iter().sum::<f64>().abs()
+            } else {
+                0.0
+            };
+            for (&current, &candidate) in coefficients.iter().zip(&work.full_candidate) {
+                mapping = mapping.max(((current - candidate) / step).abs());
+            }
+            objective = datafit
+                .value(&work.eta)
+                .map_err(|e| FitError::from_component(e, iteration))?
+                + penalty
+                    .value(&coefficients)
+                    .map_err(|e| FitError::from_component(e, iteration))?;
+        }
         if mapping <= threshold || iteration == options.max_iterations {
+            if options.screening {
+                // The line search leaves predictor storage at its trial point.
+                design.forward(&coefficients, &mut work.eta)?;
+                for value in &mut work.eta {
+                    *value += intercept;
+                }
+                work.screening.check(
+                    design,
+                    datafit,
+                    penalty,
+                    &coefficients,
+                    &work.eta,
+                    objective,
+                    iteration,
+                    false,
+                )?;
+            }
             notify(
                 observer,
                 &coefficients,
@@ -603,6 +688,8 @@ where
                 stopping_value: mapping,
                 stopping_threshold: threshold,
                 step,
+                certificate: work.screening.certificate_owned(),
+                screening: work.screening.diagnostics(),
             });
         }
         std::mem::swap(&mut coefficients, &mut work.candidate);
