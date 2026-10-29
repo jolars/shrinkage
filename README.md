@@ -3,6 +3,8 @@
 [![CI](https://github.com/jolars/shrinkage/actions/workflows/ci.yml/badge.svg)](https://github.com/jolars/shrinkage/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/shrinkage.svg)](https://crates.io/crates/shrinkage)
 [![docs.rs](https://img.shields.io/docsrs/shrinkage)](https://docs.rs/shrinkage)
+[![Software
+DOI](https://img.shields.io/badge/Software_DOI-10.5281%2Fzenodo.23613100-blue)](https://doi.org/10.5281/zenodo.23613100)
 
 Shrinkage is a Rust library for fitting regression models with penalties that
 shrink coefficients, select features, or encourage structure. It supports linear
@@ -134,6 +136,15 @@ experimental file-backed input through Zarr.
 - [Design](DESIGN.md)—architecture, statistical conventions, and extension
   contracts.
 - [Python package](packages/python/README.md)—binding status and installation.
+
+## Citation
+
+If you use Shrinkage in your research, please cite the release you used. Select
+that release in the [Zenodo archive](https://doi.org/10.5281/zenodo.23613100)
+and export its citation. To cite Shrinkage generally, use the concept DOI
+`10.5281/zenodo.23613100`.
+
+Machine-readable metadata is available in [CITATION.cff](CITATION.cff).
 
 ## Contributing
 
