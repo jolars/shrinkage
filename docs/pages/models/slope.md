@@ -63,7 +63,7 @@ disable the intercept to fit an unnormalized, intercept-free objective.
 
 ## Control and inspect fitting
 
-The hybrid starts with a full PG transition, then alternates five complete
+The hybrid starts with a PG transition on the working set, then alternates five
 cluster sweeps with another PG by default. Exact scalar updates can cross ranks,
 flip every sign in a cluster, and merge exact magnitude ties. The zero block
 stays fixed during sweeps. Full PG transitions rebuild the partition, split

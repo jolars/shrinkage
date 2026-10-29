@@ -1,6 +1,7 @@
 //! Quadratic loss models solved by cyclic coordinate descent.
 
 use super::observer::{NoObserver, notify, notify_inner};
+use super::working_set::{WorkingSetPolicy, Workspace as WorkingSet};
 use super::{ObservedSolver, SolverObserver, StepKind};
 
 use lazymatrix::{ColumnStats, LazyMatrix, MatrixErrorType, RawColumn, RawColumns};
@@ -17,7 +18,8 @@ use crate::{
 /// penalties. Backtracking evaluates the original penalized objective. The
 /// quadratic model floors predictor curvature at `1e-12 / nobs`, leaving the
 /// original loss, gradient, and convergence check unchanged. Working sets use
-/// complete KKT checks; no safe screening or dual certificate is provided.
+/// restricted checks between complete KKT checks. No safe screening or dual
+/// certificate is provided.
 ///
 /// Solver workspace is `O(nobs + nfeatures)`. Weighted column norms use
 /// LazyMatrix's `O(nobs + nnz)` operation once per column per outer iteration.
@@ -42,7 +44,7 @@ pub struct Irls {
     max_iterations: usize,
     max_inner_iterations: usize,
     max_backtracks: usize,
-    working_sets: bool,
+    working_set_policy: WorkingSetPolicy,
 }
 
 impl Irls {
@@ -54,7 +56,7 @@ impl Irls {
             max_iterations: 100,
             max_inner_iterations: 1_000,
             max_backtracks: 100,
-            working_sets: true,
+            working_set_policy: WorkingSetPolicy::Auto,
         }
     }
 
@@ -89,14 +91,21 @@ impl Irls {
         self
     }
 
-    /// Restrict single-fit and path sweeps to nonzero or KKT-violating features.
-    /// Complete quadratic KKT checks after each sweep restore excluded violators.
+    /// Enable automatic working sets, or disable heuristic restrictions.
+    /// The last working-set setter wins.
     pub fn working_sets(mut self, enabled: bool) -> Self {
-        self.working_sets = enabled;
+        self.working_set_policy = WorkingSetPolicy::enabled(enabled);
+        self
+    }
+
+    /// Select the working-set policy. The last working-set setter wins.
+    pub fn working_set_policy(mut self, policy: WorkingSetPolicy) -> Self {
+        self.working_set_policy = policy;
         self
     }
 
     pub(crate) fn validate<E>(&self) -> Result<f64, FitError<E>> {
+        self.working_set_policy.validate()?;
         let StoppingCriterion::KktViolation { absolute } = self.criterion else {
             return Err(unsupported(
                 "Irls",
@@ -205,6 +214,7 @@ pub(crate) struct Solution {
     pub kkt_violation: f64,
     pub threshold: f64,
     pub termination: Termination,
+    pub working_set: crate::WorkingSetDiagnostics,
 }
 
 pub(crate) struct Workspace {
@@ -220,7 +230,8 @@ pub(crate) struct Workspace {
     trial_eta: Vec<f64>,
     curvatures: Vec<f64>,
     weighted_sums: Vec<f64>,
-    working: Vec<bool>,
+    working: WorkingSet,
+    pub(crate) path: bool,
     residual: WeightedResidual,
 }
 
@@ -239,7 +250,8 @@ impl Workspace {
             trial_eta: vec![0.0; n],
             curvatures: vec![0.0; p],
             weighted_sums: vec![0.0; p],
-            working: vec![true; p],
+            working: WorkingSet::new(p),
+            path: false,
             residual: WeightedResidual {
                 base: vec![0.0; n],
                 sum: 0.0,
@@ -301,14 +313,11 @@ impl Workspace {
                 "computing the coefficient gradient",
                 iteration,
             )?;
-            violation = violation.max(checked_violation(
-                penalty,
-                j,
-                self.coefficients[j],
-                *gradient,
-                iteration,
-            )?);
+            self.working.scores[j] =
+                checked_violation(penalty, j, self.coefficients[j], *gradient, iteration)?;
+            violation = violation.max(self.working.scores[j]);
         }
+        self.working.diagnostics.full_checks += 1;
         Ok((objective, violation))
     }
 
@@ -368,12 +377,19 @@ impl Workspace {
             iteration,
         )?;
         self.residual.offset = 0.0;
-        self.select(matrix, penalty, options, target, iteration)?;
+        self.working.begin_model(&self.inner);
+        let mut maximum = self.check_quadratic(matrix, penalty, iteration, true)?;
+        if datafit.fits_intercept() {
+            maximum = maximum.max(self.residual.sum.abs());
+        }
+        self.working.select(&self.inner, &[], false, false, target);
+        let mut inner_target = target.max(0.1 * maximum);
+        let mut moved = false;
+        let mut since_full = 0;
         for sweep in 1..=options.max_inner_iterations {
-            for j in 0..self.inner.len() {
-                if !self.working[j] {
-                    continue;
-                }
+            since_full += 1;
+            for &j in &self.working.active {
+                self.working.diagnostics.feature_visits += 1;
                 // Positive row weights make a zero norm a logically zero
                 // column. Its exact correlation is zero, even if subtracting
                 // raw centered products leaves a small rounding remainder.
@@ -401,6 +417,7 @@ impl Workspace {
                     self.residual
                         .subtract(matrix, j, delta, &self.weights, iteration)?;
                     self.inner[j] = updated;
+                    moved = true;
                     notify_inner(
                         observer,
                         &self.inner,
@@ -424,6 +441,7 @@ impl Workspace {
                     iteration,
                 )?;
                 if delta != 0.0 {
+                    moved = true;
                     notify_inner(
                         observer,
                         &self.inner,
@@ -434,51 +452,81 @@ impl Workspace {
                     );
                 }
             }
-            // Sparse updates carry sums algebraically. Refresh the full model
-            // gradient before every check so accumulated error cannot certify it.
-            predictor(
-                matrix,
-                self.inner
-                    .iter()
-                    .zip(&self.coefficients)
-                    .map(|(a, b)| a - b),
-                intercept - self.intercept,
-                &mut self.direction_eta,
-                iteration,
-            )?;
-            for ((r, &g), (&h, &d)) in self
-                .residual
-                .base
-                .iter_mut()
-                .zip(&self.derivative)
-                .zip(self.weights.iter().zip(&self.direction_eta))
+            self.working.record(&self.inner);
+            let disabled = self.working.diagnostics.policy == WorkingSetPolicy::Disabled;
+            let local = if disabled {
+                f64::INFINITY
+            } else {
+                let mut local = self.check_quadratic(matrix, penalty, iteration, false)?;
+                if datafit.fits_intercept() {
+                    local =
+                        local.max((self.residual.sum + self.residual.offset * weight_sum).abs());
+                }
+                local
+            };
+            let discover =
+                sweep == 1 && self.working.diagnostics.policy == WorkingSetPolicy::EverActive;
+            if local <= inner_target
+                || !moved
+                || since_full == 10
+                || disabled
+                || discover
+                || sweep == options.max_inner_iterations
             {
-                *r = finite(-g - h * d, "refreshing quadratic residuals", iteration)?;
-            }
-            self.residual.sum = finite(
-                self.residual.base.iter().sum(),
-                "refreshing the quadratic residual sum",
-                iteration,
-            )?;
-            self.residual.offset = 0.0;
-            let mut violation = self.select(matrix, penalty, options, target, iteration)?;
-            if datafit.fits_intercept() {
-                violation = violation.max(self.residual.sum.abs());
-            }
-            if violation <= target {
-                return Ok((intercept, sweep));
+                // Only a reconstructed model can accept a quadratic solution.
+                predictor(
+                    matrix,
+                    self.inner
+                        .iter()
+                        .zip(&self.coefficients)
+                        .map(|(a, b)| a - b),
+                    intercept - self.intercept,
+                    &mut self.direction_eta,
+                    iteration,
+                )?;
+                for ((r, &g), (&h, &d)) in self
+                    .residual
+                    .base
+                    .iter_mut()
+                    .zip(&self.derivative)
+                    .zip(self.weights.iter().zip(&self.direction_eta))
+                {
+                    *r = finite(-g - h * d, "refreshing quadratic residuals", iteration)?;
+                }
+                self.residual.sum = finite(
+                    self.residual.base.iter().sum(),
+                    "refreshing the quadratic residual sum",
+                    iteration,
+                )?;
+                self.residual.offset = 0.0;
+                let mut violation = self.check_quadratic(matrix, penalty, iteration, true)?;
+                if datafit.fits_intercept() {
+                    violation = violation.max(self.residual.sum.abs());
+                }
+                self.working.select(
+                    &self.inner,
+                    &[],
+                    local <= inner_target || !moved,
+                    !moved,
+                    target,
+                );
+                if violation <= target {
+                    return Ok((intercept, sweep));
+                }
+                inner_target = target.max(0.1 * violation);
+                since_full = 0;
+                moved = false;
             }
         }
         Ok((intercept, options.max_inner_iterations))
     }
 
-    fn select<M, P, E>(
+    fn check_quadratic<M, P, E>(
         &mut self,
         matrix: &LazyMatrix<M>,
         penalty: &P,
-        options: &Irls,
-        target: f64,
         iteration: usize,
+        full: bool,
     ) -> Result<f64, FitError<E>>
     where
         M: RawColumns<f64>,
@@ -486,6 +534,9 @@ impl Workspace {
     {
         let mut maximum: f64 = 0.0;
         for j in 0..self.inner.len() {
+            if !full && !self.working.selected[j] {
+                continue;
+            }
             let gradient = if self.curvatures[j] == 0.0 {
                 0.0
             } else {
@@ -494,8 +545,13 @@ impl Workspace {
                     .dot(matrix, j, self.weighted_sums[j], iteration)?
             };
             let violation = checked_violation(penalty, j, self.inner[j], gradient, iteration)?;
+            self.working.scores[j] = violation;
             maximum = maximum.max(violation);
-            self.working[j] = !options.working_sets || self.inner[j] != 0.0 || violation > target;
+        }
+        if full {
+            self.working.diagnostics.full_checks += 1;
+        } else {
+            self.working.diagnostics.restricted_checks += 1;
         }
         Ok(maximum)
     }
@@ -647,6 +703,8 @@ where
     P: CoordinatePenalty,
 {
     let threshold = options.validate()?;
+    work.working
+        .begin(options.working_set_policy, work.path, &work.coefficients);
     penalty
         .validate_input(&work.coefficients)
         .map_err(|e| FitError::from_component(e, 0))?;
@@ -662,6 +720,8 @@ where
     loop {
         let (objective, violation) = work.evaluate(matrix, datafit, penalty, iterations)?;
         if violation <= threshold || iterations == options.max_iterations {
+            work.working
+                .select(&work.coefficients, &[], false, false, threshold);
             notify(
                 observer,
                 &work.coefficients,
@@ -678,6 +738,7 @@ where
                 intercept: work.intercept,
                 iterations,
                 coordinate_sweeps,
+                working_set: work.working.diagnostics.clone(),
                 objective,
                 kkt_violation: violation,
                 threshold,
@@ -787,6 +848,7 @@ where
                 step,
             });
         }
+        work.working.record(&work.coefficients);
         iterations = next;
         notify(
             observer,

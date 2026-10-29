@@ -189,3 +189,8 @@ required-features = ["faer_v0_24"]
 name = "screening"
 harness = false
 required-features = ["faer_v0_24"]
+
+[[bench]]
+name = "working_sets"
+harness = false
+required-features = ["faer_v0_24"]

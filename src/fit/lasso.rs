@@ -13,6 +13,8 @@ use crate::{LassoError, StoppingCriterion};
 #[derive(Clone, Debug)]
 #[must_use]
 pub struct LassoFit {
+    working_set: crate::WorkingSetDiagnostics,
+
     coefficients: Vec<f64>,
     intercept: f64,
     preprocessing: Preprocessing,
@@ -30,6 +32,11 @@ pub struct LassoFit {
 }
 
 impl LassoFit {
+    /// Work performed by heuristic feature selection, separate from safe screening.
+    pub fn working_set_diagnostics(&self) -> &crate::WorkingSetDiagnostics {
+        &self.working_set
+    }
+
     /// Original-scale coefficients, in training-column order.
     pub fn coefficients(&self) -> &[f64] {
         &self.coefficients
@@ -50,7 +57,7 @@ impl LassoFit {
         self.termination
     }
 
-    /// Number of complete coordinate sweeps performed.
+    /// Number of coordinate sweeps over the current working set performed.
     pub fn iterations(&self) -> usize {
         self.iterations
     }
@@ -127,6 +134,7 @@ impl LassoFit {
             solution.iterations,
         )?;
         Ok(LassoFit {
+            working_set: solution.working_set,
             coefficients,
             intercept,
             preprocessing,

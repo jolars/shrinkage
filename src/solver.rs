@@ -1,7 +1,9 @@
 //! Solver capabilities, configuration, and stopping rules.
 
 mod observer;
+pub(crate) mod working_set;
 pub use observer::{InitialPoint, ObservedSolver, SolverObserver, SolverStep, StepKind};
+pub use working_set::{WorkingSetDiagnostics, WorkingSetPolicy};
 
 pub(crate) mod coordinate;
 pub(crate) mod hybrid;
@@ -40,7 +42,7 @@ pub struct CoordinateDescent {
     stopping_criterion: Option<StoppingCriterion>,
     max_iterations: usize,
     screening: bool,
-    working_sets: bool,
+    working_set_policy: WorkingSetPolicy,
 }
 
 impl CoordinateDescent {
@@ -51,7 +53,7 @@ impl CoordinateDescent {
             stopping_criterion: None,
             max_iterations: 10_000,
             screening: true,
-            working_sets: true,
+            working_set_policy: WorkingSetPolicy::Auto,
         }
     }
 
@@ -67,23 +69,28 @@ impl CoordinateDescent {
         self
     }
 
-    /// Set the maximum number of complete sweeps, checked when fitting.
+    /// Set the maximum number of sweeps over the current working set, checked when fitting.
     pub fn max_iterations(mut self, max_iterations: usize) -> Self {
         self.max_iterations = max_iterations;
         self
     }
 
     /// Enable Gap Safe screening in paths. Disabled at zero penalty.
-    /// Single fits retain their complete cyclic sweeps.
+    /// Single fits do not construct screening certificates.
     pub fn screening(mut self, enabled: bool) -> Self {
         self.screening = enabled;
         self
     }
 
-    /// Restrict path sweeps to active or KKT-violating features, with full
-    /// checks after every sweep. Single fits retain complete cyclic sweeps.
+    /// Enable automatic working sets, or disable heuristic restrictions.
+    /// The last working-set setter wins.
     pub fn working_sets(mut self, enabled: bool) -> Self {
-        self.working_sets = enabled;
+        self.working_set_policy = WorkingSetPolicy::enabled(enabled);
+        self
+    }
+    /// Select the working-set policy for single fits and paths.
+    pub fn working_set_policy(mut self, policy: WorkingSetPolicy) -> Self {
+        self.working_set_policy = policy;
         self
     }
 }
@@ -150,6 +157,7 @@ impl CoordinateDescent {
     }
 
     pub(crate) fn validate<E>(&self, criterion: StoppingCriterion) -> Result<(), FitError<E>> {
+        self.working_set_policy.validate()?;
         match criterion {
             StoppingCriterion::ProximalGradientMapping { .. } => {
                 return Err(unsupported(

@@ -131,6 +131,11 @@ tasks:
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench chain_fused_lasso_heap
 
+  bench:working-sets:
+    desc: Compare working-set policies on complete fits and paths
+    cmds:
+      - cargo bench --locked --no-default-features --features faer_v0_24 --bench working_sets -- {{.CLI_ARGS}}
+
   bench:screening:
     desc: Compare dynamic screening time and heap at matched original accuracy
     cmds:

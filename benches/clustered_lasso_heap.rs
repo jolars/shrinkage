@@ -45,7 +45,12 @@ fn main() {
             // Both staged aggregate sets are dense. In the weak-fusion case
             // their storage approaches a second and third copy of the design.
             let maximum_clusters = if label == "fused" { 1 } else { p };
-            dhat::assert!(stats.max_bytes <= 128 * (n * maximum_clusters + n + p));
+            // Selection keeps three byte masks and three feature-sized arrays,
+            // independently of the number of aggregate columns.
+            let selection_budget = 32 * p;
+            dhat::assert!(
+                stats.max_bytes <= 128 * (n * maximum_clusters + n + p) + selection_budget
+            );
             if label == "fused" {
                 assert_eq!(fit.termination(), Termination::Converged);
                 assert_eq!(clusters, 1);

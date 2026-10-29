@@ -1,4 +1,5 @@
 use super::observer::{NoObserver, notify};
+use super::working_set::{WorkingSetPolicy, Workspace as WorkingSet};
 use super::{SolverObserver, StepKind};
 use lazymatrix::{LazyColumn, LazyMatrix, RawColumn, RawColumns};
 
@@ -165,6 +166,7 @@ pub(crate) struct Solution {
     pub stopping_criterion: StoppingCriterion,
     pub stopping_value: f64,
     pub stopping_threshold: f64,
+    pub working_set: crate::WorkingSetDiagnostics,
 }
 
 struct Diagnostics {
@@ -342,6 +344,14 @@ fn kkt_violation<M: RawColumns<f64>>(
     Ok(violation)
 }
 
+fn coordinate_violation(coefficient: f64, correlation: f64, lambda: f64) -> f64 {
+    if coefficient == 0.0 {
+        (correlation.abs() - lambda).max(0.0)
+    } else {
+        (correlation - lambda * coefficient.signum()).abs()
+    }
+}
+
 pub(crate) struct Workspace {
     summaries: Vec<ColumnSummary>,
     coefficients: Vec<f64>,
@@ -351,7 +361,8 @@ pub(crate) struct Workspace {
     dual_certificate: Vec<f64>,
     dual_correlations: Vec<f64>,
     correlations: Vec<f64>,
-    working_set: Vec<bool>,
+    working: WorkingSet,
+    path: bool,
     screened: Vec<bool>,
 }
 
@@ -383,12 +394,13 @@ impl Workspace {
             dual_certificate: vec![0.0; matrix.nrows()],
             dual_correlations: vec![0.0; matrix.ncols()],
             correlations: vec![0.0; matrix.ncols()],
-            working_set: vec![true; matrix.ncols()],
+            working: WorkingSet::new(matrix.ncols()),
+            path: false,
             screened: vec![false; matrix.ncols()],
         })
     }
 
-    fn select(&mut self, penalty: L1, options: &CoordinateDescent, check: &Diagnostics) {
+    fn screen(&mut self, penalty: L1, options: &CoordinateDescent, check: &Diagnostics) {
         // The dual objective is n-strongly concave in the unscaled certificate.
         // Inflate the gap and the strict screening bound to retain borderline
         // columns under floating-point rounding.
@@ -411,9 +423,41 @@ impl Workspace {
             if violation {
                 self.screened[j] = false;
             }
-            self.working_set[j] =
-                !self.screened[j] && (!options.working_sets || nonzero || violation);
+            self.working.scores[j] =
+                coordinate_violation(self.coefficients[j], self.correlations[j], penalty.lambda);
         }
+    }
+    fn diagnose<M: RawColumns<f64>>(
+        &mut self,
+        matrix: &LazyMatrix<M>,
+        datafit: Gaussian<'_>,
+        penalty: L1,
+        iteration: usize,
+    ) -> Result<Diagnostics, NumericalFailure> {
+        self.residual.refresh(
+            matrix,
+            datafit.response,
+            &self.coefficients,
+            self.intercept,
+            &self.summaries,
+            iteration,
+        )?;
+        self.working.diagnostics.full_checks += 1;
+        diagnostics(
+            matrix,
+            datafit.response,
+            (
+                &self.coefficients,
+                self.intercept,
+                &mut self.dual_certificate,
+                &mut self.dual_correlations,
+                &mut self.correlations,
+            ),
+            &self.residual,
+            &self.summaries,
+            (datafit, penalty),
+            iteration,
+        )
     }
 }
 
@@ -450,7 +494,6 @@ pub(crate) fn solve_observed<M: RawColumns<f64>, T: SolverObserver + ?Sized>(
     }
     let full = CoordinateDescent {
         screening: false,
-        working_sets: false,
         ..*options
     };
     solve_with_workspace_observed(matrix, datafit, penalty, &full, &mut work, observer)
@@ -463,6 +506,7 @@ pub(crate) fn solve_with_workspace<M: RawColumns<f64>>(
     options: &CoordinateDescent,
     work: &mut Workspace,
 ) -> Result<Solution, NumericalFailure> {
+    work.path = true;
     solve_with_workspace_observed(matrix, datafit, penalty, options, work, &mut NoObserver)
 }
 
@@ -474,22 +518,9 @@ pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserve
     work: &mut Workspace,
     observer: &mut T,
 ) -> Result<Solution, NumericalFailure> {
-    let y = datafit.response;
     let criterion = options.criterion(penalty);
     let n = matrix.nrows() as f64;
-    let Workspace {
-        summaries,
-        coefficients,
-        intercept,
-        residual,
-        reference_loss,
-        dual_certificate,
-        dual_correlations,
-        correlations,
-        working_set: _,
-        screened: _,
-    } = work;
-    let reference_loss = *reference_loss;
+    let reference_loss = work.reference_loss;
     let threshold = match criterion {
         StoppingCriterion::DualityGap { absolute, relative } => finite(
             absolute + relative * reference_loss,
@@ -497,27 +528,27 @@ pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserve
             0,
         )?,
         StoppingCriterion::KktViolation { absolute } => absolute,
-        StoppingCriterion::ProximalGradientMapping { .. } => {
-            unreachable!("criterion was validated before iteration")
-        }
+        StoppingCriterion::ProximalGradientMapping { .. } => unreachable!("validated criterion"),
     };
-    let mut check = diagnostics(
-        matrix,
-        y,
-        (
-            coefficients,
-            *intercept,
-            dual_certificate,
-            dual_correlations,
-            correlations,
-        ),
-        residual,
-        summaries,
-        (datafit, penalty),
-        0,
-    )?;
-    work.select(penalty, options, &check);
+    let stationarity_tolerance = match criterion {
+        StoppingCriterion::KktViolation { absolute } => absolute,
+        _ => 0.0,
+    };
+    work.working
+        .begin(options.working_set_policy, work.path, &work.coefficients);
+    let mut check = work.diagnose(matrix, datafit, penalty, 0)?;
+    work.screen(penalty, options, &check);
+    work.working.select(
+        &work.coefficients,
+        &work.screened,
+        false,
+        false,
+        stationarity_tolerance,
+    );
+    let mut target = stationarity_tolerance.max(0.1 * check.kkt_violation);
     let mut iterations = 0;
+    let mut since_full = 0;
+    let mut moved = false;
     notify(
         observer,
         &work.coefficients,
@@ -527,30 +558,18 @@ pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserve
     );
     while stopping_value(&check, criterion) > threshold && iterations < options.max_iterations {
         iterations += 1;
-        let Workspace {
-            summaries,
-            coefficients,
-            intercept,
-            residual,
-            reference_loss: _,
-            dual_certificate,
-            dual_correlations,
-            correlations,
-            working_set,
-            screened: _,
-        } = work;
-        for j in 0..coefficients.len() {
-            if !working_set[j] {
-                continue;
-            }
-            let summary = &summaries[j];
+        since_full += 1;
+        for &j in &work.working.active {
+            work.working.diagnostics.feature_visits += 1;
+            let summary = &work.summaries[j];
             if summary.norm_squared == 0.0 {
                 continue;
             }
             let column = matrix.column(j);
             let curvature = summary.norm_squared / n;
             let partial = finite(
-                residual.dot(&column, summary, iterations)? / n + curvature * coefficients[j],
+                work.residual.dot(&column, summary, iterations)? / n
+                    + curvature * work.coefficients[j],
                 "computing a coordinate update",
                 iterations,
             )?;
@@ -560,78 +579,97 @@ pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserve
                 iterations,
             )?;
             let delta = finite(
-                updated - coefficients[j],
+                updated - work.coefficients[j],
                 "computing a coefficient change",
                 iterations,
             )?;
             if delta != 0.0 {
-                residual.subtract_column(&column, summary, delta, iterations)?;
-                coefficients[j] = updated;
+                work.residual
+                    .subtract_column(&column, summary, delta, iterations)?;
+                work.coefficients[j] = updated;
+                moved = true;
                 notify(
                     observer,
-                    coefficients,
-                    *intercept,
+                    &work.coefficients,
+                    work.intercept,
                     iterations,
                     StepKind::Coordinate { index: j },
                 );
             }
         }
         if datafit.fit_intercept {
-            let delta = residual.mean(iterations)?;
-            *intercept = finite(*intercept + delta, "updating the intercept", iterations)?;
-            residual.offset = finite(
-                residual.offset - delta,
+            let delta = work.residual.mean(iterations)?;
+            work.intercept = finite(work.intercept + delta, "updating the intercept", iterations)?;
+            work.residual.offset = finite(
+                work.residual.offset - delta,
                 "updating the intercept residual",
                 iterations,
             )?;
-        }
-        if datafit.fit_intercept {
+            moved |= delta != 0.0;
             notify(
                 observer,
-                coefficients,
-                *intercept,
+                &work.coefficients,
+                work.intercept,
                 iterations,
                 StepKind::Intercept,
             );
         }
-        let refreshed = iterations % REFRESH_INTERVAL == 0 || iterations == options.max_iterations;
-        if refreshed {
-            residual.refresh(matrix, y, coefficients, *intercept, summaries, iterations)?;
-        }
-        check = diagnostics(
-            matrix,
-            y,
-            (
-                coefficients,
-                *intercept,
-                dual_certificate,
-                dual_correlations,
-                correlations,
-            ),
-            residual,
-            summaries,
-            (datafit, penalty),
-            iterations,
-        )?;
-        if stopping_value(&check, criterion) <= threshold && !refreshed {
-            residual.refresh(matrix, y, coefficients, *intercept, summaries, iterations)?;
-            check = diagnostics(
+        work.working.record(&work.coefficients);
+        if iterations % REFRESH_INTERVAL == 0 {
+            work.residual.refresh(
                 matrix,
-                y,
-                (
-                    coefficients,
-                    *intercept,
-                    dual_certificate,
-                    dual_correlations,
-                    correlations,
-                ),
-                residual,
-                summaries,
-                (datafit, penalty),
+                datafit.response,
+                &work.coefficients,
+                work.intercept,
+                &work.summaries,
                 iterations,
             )?;
         }
-        work.select(penalty, options, &check);
+        let disabled = work.working.diagnostics.policy == WorkingSetPolicy::Disabled;
+        let local = if disabled {
+            f64::INFINITY
+        } else {
+            let mut local = if datafit.fit_intercept {
+                work.residual.mean(iterations)?.abs()
+            } else {
+                0.0
+            };
+            for &j in &work.working.active {
+                let correlation =
+                    work.residual
+                        .dot(&matrix.column(j), &work.summaries[j], iterations)?
+                        / n;
+                local = local.max(coordinate_violation(
+                    work.coefficients[j],
+                    correlation,
+                    penalty.lambda,
+                ));
+            }
+            work.working.diagnostics.restricted_checks += 1;
+            local
+        };
+        let discover =
+            iterations == 1 && work.working.diagnostics.policy == WorkingSetPolicy::EverActive;
+        if local <= target
+            || !moved
+            || since_full == 10
+            || disabled
+            || discover
+            || iterations == options.max_iterations
+        {
+            check = work.diagnose(matrix, datafit, penalty, iterations)?;
+            work.screen(penalty, options, &check);
+            work.working.select(
+                &work.coefficients,
+                &work.screened,
+                local <= target || !moved,
+                !moved,
+                stationarity_tolerance,
+            );
+            target = stationarity_tolerance.max(0.1 * check.kkt_violation);
+            since_full = 0;
+            moved = false;
+        }
     }
     let Workspace {
         coefficients,
@@ -669,5 +707,6 @@ pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserve
         stopping_criterion: criterion,
         stopping_value: final_value,
         stopping_threshold: threshold,
+        working_set: work.working.diagnostics.clone(),
     })
 }

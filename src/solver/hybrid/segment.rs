@@ -35,11 +35,13 @@ pub(super) struct State {
     knots: Vec<(f64, f64)>,
     spare: Vec<Segment>,
     screened: Vec<bool>,
+    visits: (usize, usize),
 }
 
 impl Partition<ChainFusedLasso> for State {
     fn new(n: usize, p: usize) -> Self {
         Self {
+            visits: (0, 0),
             segments: Vec::new(),
             labels: vec![usize::MAX; p],
             residual: vec![0.0; n],
@@ -121,6 +123,7 @@ impl Partition<ChainFusedLasso> for State {
         iteration: usize,
         observer: &mut T,
     ) -> Result<(), FitError<E>> {
+        self.visits = (0, 0);
         self.sweep_order.clear();
         self.sweep_order
             .extend(self.segments.iter().map(|segment| segment.id));
@@ -136,6 +139,8 @@ impl Partition<ChainFusedLasso> for State {
             {
                 continue;
             }
+            self.visits.0 += segment.end - segment.start;
+            self.visits.1 += 1;
             let linear =
                 self.weights
                     .linear(&segment.column, &self.residual, segment.value, iteration)?;
@@ -197,6 +202,10 @@ impl Partition<ChainFusedLasso> for State {
             }
         }
         Ok(())
+    }
+
+    fn sweep_visits(&self) -> (usize, usize) {
+        self.visits
     }
 
     fn labels(&self) -> &[usize] {

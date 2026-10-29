@@ -1,6 +1,6 @@
 //! Gaussian lasso convenience configuration.
 
-use crate::{CoordinateDescent, Gaussian, L1, Normalization, Problem};
+use crate::{CoordinateDescent, Gaussian, L1, Normalization, Problem, WorkingSetPolicy};
 pub use crate::{
     error::FitError as LassoError,
     fit::{LassoFit, Preprocessing, Termination},
@@ -44,13 +44,14 @@ pub struct Lasso {
     supplied_scales: Option<Vec<f64>>,
     stopping_criterion: Option<StoppingCriterion>,
     max_iterations: usize,
+    working_set_policy: WorkingSetPolicy,
 }
 
 impl Lasso {
     /// Configure a fit with a finite, nonnegative penalty strength.
     ///
     /// Defaults to an intercept, [`Normalization::Auto`], a relative duality
-    /// gap tolerance of `1e-6`, and at most `10_000` complete coordinate sweeps.
+    /// gap tolerance of `1e-6`, and at most `10_000` coordinate sweeps over the current working set.
     /// At zero penalty, the default is absolute KKT tolerance `1e-6`: scaling
     /// a residual cannot generally construct a useful zero-penalty dual vector.
     pub fn new(lambda: f64) -> Self {
@@ -62,6 +63,7 @@ impl Lasso {
             supplied_scales: None,
             stopping_criterion: None,
             max_iterations: 10_000,
+            working_set_policy: WorkingSetPolicy::Auto,
         }
     }
 
@@ -132,12 +134,25 @@ impl Lasso {
         self
     }
 
-    /// Set a strictly positive limit on complete coordinate sweeps.
+    /// Set a strictly positive limit on coordinate sweeps over the current working set.
     ///
     /// An initially optimal fit takes zero sweeps. Reaching the limit returns
     /// a finite fit with [`Termination::IterationLimit`], not convergence.
     pub fn max_iterations(mut self, max_iterations: usize) -> Self {
         self.max_iterations = max_iterations;
+        self
+    }
+
+    /// Enable automatic working sets, or disable heuristic restrictions.
+    /// The last working-set setter wins.
+    pub fn working_sets(mut self, enabled: bool) -> Self {
+        self.working_set_policy = WorkingSetPolicy::enabled(enabled);
+        self
+    }
+
+    /// Select the working-set policy for single fits and paths.
+    pub fn working_set_policy(mut self, policy: WorkingSetPolicy) -> Self {
+        self.working_set_policy = policy;
         self
     }
 
@@ -216,7 +231,9 @@ impl Lasso {
     }
 
     fn solver(&self) -> CoordinateDescent {
-        let mut solver = CoordinateDescent::new().max_iterations(self.max_iterations);
+        let mut solver = CoordinateDescent::new()
+            .max_iterations(self.max_iterations)
+            .working_set_policy(self.working_set_policy);
         if let Some(criterion) = self.stopping_criterion {
             solver = solver.terminate_on(criterion);
         }

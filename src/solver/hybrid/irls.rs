@@ -155,6 +155,9 @@ where
     V: ProximalVector,
     P: HybridPenalty,
 {
+    inner
+        .working
+        .begin(options.working_set_policy, false, &inner.coefficients);
     inner.screening.reset();
     inner.state.set_screened(&inner.screening.zeroed);
     inner.pending.set_screened(&inner.screening.zeroed);
@@ -186,6 +189,7 @@ where
     inner_options.check_every = options.check_every;
     inner_options.step = options.step;
     inner_options.screening = false;
+    inner_options.working_set_policy = options.working_set_policy.resolve(false);
     let mut total = Progress {
         iterations: 0,
         objective: 0.0,
@@ -244,7 +248,13 @@ where
         };
         inner.trial::<M::Error>(penalty, curvature, intercept_gradient, outer_iterations)?;
         let mut mapping = intercept_gradient.abs();
-        for (&b, &z) in outer.coefficients.iter().zip(&inner.candidate) {
+        for (j, (&b, &z)) in outer.coefficients.iter().zip(&inner.candidate).enumerate() {
+            inner.working.scores[j] = finite(
+                (b - z) * curvature,
+                "checking logistic working-set scores",
+                outer_iterations,
+            )?
+            .abs();
             mapping = mapping.max(
                 finite(
                     (b - z) * curvature,
@@ -254,6 +264,7 @@ where
                 .abs(),
             );
         }
+        inner.working.diagnostics.full_checks += 1;
         if options.screening
             && inner.screening.check(
                 design,
@@ -275,6 +286,14 @@ where
             || outer_iterations == options.max_outer_iterations
             || total.iterations == options.max_iterations
         {
+            inner.working.select(
+                &inner.coefficients,
+                &inner.screening.zeroed,
+                false,
+                false,
+                threshold,
+            );
+            inner.pending.set_screened(&inner.working.zeroed);
             for (r, &g) in inner.residual.iter_mut().zip(&outer.derivative) {
                 *r = -(n as f64) * g;
             }

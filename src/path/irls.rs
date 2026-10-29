@@ -38,6 +38,7 @@ where
         }
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
         let mut work = Workspace::new(prepared.matrix.nrows(), prepared.matrix.ncols());
+        work.path = true;
         let solutions = penalties
             .iter()
             .map(|penalty| {
@@ -100,6 +101,7 @@ where
             )
             .map_err(|e| FitError::from_component(e, 0))?;
         let mut work = Workspace::new(prepared.matrix.nrows(), prepared.matrix.ncols());
+        work.path = true;
         work.intercept = intercept;
         let solutions = sequence
             .penalties

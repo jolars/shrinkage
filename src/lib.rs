@@ -95,7 +95,7 @@ pub use screening::{
 pub use solver::{
     CoordinateDescent, Hybrid, HybridStep, InitialPoint, Irls, ObservedSolver, ProximalDesign,
     ProximalGradient, ProximalVector, Solver, SolverObserver, SolverStep, StepKind,
-    StoppingCriterion,
+    StoppingCriterion, WorkingSetDiagnostics, WorkingSetPolicy,
 };
 
 /// Matrix capabilities, borrowed columns, and lazy normalization.

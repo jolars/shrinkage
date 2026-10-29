@@ -16,6 +16,8 @@ use crate::{FitError, HybridStep, Preprocessing, ProximalFit, StoppingCriterion,
 #[derive(Clone, Debug)]
 #[must_use]
 pub struct HybridFit {
+    working_set: crate::WorkingSetDiagnostics,
+
     fit: ProximalFit,
     labels: Vec<usize>,
     values: Vec<f64>,
@@ -30,6 +32,11 @@ pub struct HybridFit {
 }
 
 impl HybridFit {
+    /// Work performed by heuristic feature selection, separate from safe screening.
+    pub fn working_set_diagnostics(&self) -> &crate::WorkingSetDiagnostics {
+        &self.working_set
+    }
+
     /// Original-scale coefficients in training-column order.
     pub fn coefficients(&self) -> &[f64] {
         self.fit.coefficients()
@@ -46,7 +53,7 @@ impl HybridFit {
     pub fn termination(&self) -> Termination {
         self.fit.termination()
     }
-    /// Total committed PG transitions plus complete coordinate sweeps.
+    /// Total committed PG transitions plus coordinate sweeps over the current working set.
     pub fn iterations(&self) -> usize {
         self.fit.iterations()
     }
@@ -103,7 +110,7 @@ impl HybridFit {
     pub fn pg_steps(&self) -> usize {
         self.pg_steps
     }
-    /// Number of complete cluster-coordinate sweeps.
+    /// Number of cluster-coordinate sweeps over the current working set.
     pub fn coordinate_sweeps(&self) -> usize {
         self.coordinate_sweeps
     }
@@ -167,6 +174,7 @@ impl HybridFit {
             .map(|&value| if value == 0.0 { 0.0 } else { value.signum() })
             .collect();
         Ok(Self {
+            working_set: solution.working_set,
             fit: ProximalFit::from_solution(solution.proximal, preprocessing)?,
             labels: solution.labels,
             values: solution.values,

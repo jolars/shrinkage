@@ -38,6 +38,50 @@ derivative. Solvers refresh the state used for final checks. Iteration limits
 remain independent work budgets and report `IterationLimit`, not convergence.
 Check frequencies and iteration units depend on the solver.
 
+## Working sets {#working-sets}
+
+`CoordinateDescent`, `Irls`, `Hybrid`, and the `Lasso` builder enable working
+sets by default. `WorkingSetPolicy::Auto` uses adaptive sets for single fits and
+`EverActive` for existing paths. Override it with `.working_set_policy(...)`, or
+use `.working_sets(false)` to disable heuristic restrictions. Calling
+`.working_sets(true)` restores `Auto`; the last setter wins.
+
+```rust
+use shrinkage::{CoordinateDescent, WorkingSetPolicy};
+
+let solver = CoordinateDescent::new().working_set_policy(
+    WorkingSetPolicy::Adaptive { initial_size: 10, prune: true },
+);
+```
+
+`EverActive` retains features that become nonzero at accepted iterates,
+including previous path points. It discovers activity with a full eligible sweep
+or PG transition on a cold start. Complete checks add excluded optimality
+violators.
+
+`Adaptive` always retains current nonzeros and fills its budget with the largest
+optimality violations, breaking ties by feature index. Separable penalties use
+coordinate KKT violations; Hybrid uses full PG mapping components. With
+`prune: false`, unsuccessful restricted solves retain and double the set. With
+`prune: true`, they rebuild around twice the current support, with the initial
+size as a floor. Stalled solves increase a persistent minimum budget, eventually
+allowing the full problem. The default initial size is ten; it must be positive.
+This combines Celer-inspired growth with general optimality scoring rather than
+Celer's dual-distance ranking.
+
+Full checks refresh excluded features, and only original-loss checks certify
+convergence. IRLS rebuilds selection for each quadratic model while retaining
+activation history. Path points reset certificates and scores, retaining
+EverActive history even for increasing or repeated strengths. Screening controls
+remain independent of working-set policy.
+
+`working_set_diagnostics()` reports the resolved policy, full and restricted
+checks, rebuilds, budget expansions, feature reactivations, eligible dimensions,
+and feature and block visits. Counts refer to one fitted model, including its
+quadratic subproblems. `task bench:working-sets` compares complete fits and
+paths, including starting sizes 10, 100, and 200, at independently checked
+accuracy.
+
 ## Paths and storage
 
 `Problem::fit_path_with` accepts explicit penalties in caller order and reuses

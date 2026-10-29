@@ -30,8 +30,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Defaults are 100 accepted outer steps, 1,000 coordinate sweeps per quadratic
 model, at most 100 outer step halvings, working sets enabled, and absolute KKT
 tolerance `1e-6`. Configure `.max_iterations(...)`,
-`.max_inner_iterations(...)`, `.max_backtracks(...)`, `.working_sets(...)`, and
-`.tolerance(...)`.
+`.max_inner_iterations(...)`, `.max_backtracks(...)`,
+`.working_set_policy(...)`, and `.tolerance(...)`.
+
+The default [working-set policy](index.md#working-sets) uses adaptive sets for
+single fits and ever-active sets for paths. Scores refresh whenever the
+quadratic model changes. Restricted checks run between complete quadratic
+checks, with a full check at least every ten sweeps and before accepting an
+inner solution.
 
 Only a complete KKT check on the original loss certifies convergence. An inexact
 inner solve can still provide a descent direction; meeting an inner budget does

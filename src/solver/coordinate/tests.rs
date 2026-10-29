@@ -191,13 +191,13 @@ fn path_workspace_retains_storage_and_rebuilds_screening_at_each_strength() {
         work.dual_certificate.as_ptr(),
         work.dual_correlations.as_ptr(),
         work.correlations.as_ptr(),
-        work.working_set.as_ptr(),
+        work.working.selected.as_ptr(),
         work.screened.as_ptr(),
     );
     let first = solve_with_workspace(&matrix, datafit, L1::new(1.0), &options, &mut work).unwrap();
     assert_eq!(first.termination, Termination::Converged);
     assert!(work.screened[1]);
-    assert!(!work.working_set[1]);
+    assert!(!work.working.selected[1]);
     let repeated =
         solve_with_workspace(&matrix, datafit, L1::new(1.0), &options, &mut work).unwrap();
     assert_eq!(repeated.iterations, 0);
@@ -206,7 +206,7 @@ fn path_workspace_retains_storage_and_rebuilds_screening_at_each_strength() {
     assert_eq!(weaker.termination, Termination::Converged);
     close(weaker.coefficients[1], 0.09);
     assert!(!work.screened[1]);
-    assert!(work.working_set[1]);
+    assert!(work.working.selected[1]);
     assert_eq!(
         pointers,
         (
@@ -216,7 +216,7 @@ fn path_workspace_retains_storage_and_rebuilds_screening_at_each_strength() {
             work.dual_certificate.as_ptr(),
             work.dual_correlations.as_ptr(),
             work.correlations.as_ptr(),
-            work.working_set.as_ptr(),
+            work.working.selected.as_ptr(),
             work.screened.as_ptr(),
         )
     );

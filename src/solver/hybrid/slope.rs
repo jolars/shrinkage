@@ -33,6 +33,7 @@ pub(super) struct State {
     sweep_order: Vec<usize>,
     others: Vec<(f64, usize)>,
     spare: Vec<Block>,
+    visits: (usize, usize),
 }
 
 /// Minimize the complete scalar restriction, including rank changes.
@@ -99,6 +100,7 @@ fn scalar_minimum(
 impl Partition<Slope> for State {
     fn new(n: usize, p: usize) -> Self {
         Self {
+            visits: (0, 0),
             blocks: Vec::new(),
             labels: vec![usize::MAX; p],
             signs: vec![0.0; p],
@@ -187,6 +189,7 @@ impl Partition<Slope> for State {
         iteration: usize,
         observer: &mut T,
     ) -> Result<(), FitError<E>> {
+        self.visits = (0, 0);
         self.sweep_order.clear();
         self.sweep_order.extend(
             self.blocks
@@ -200,6 +203,8 @@ impl Partition<Slope> for State {
                 continue;
             }
             let block = &self.blocks[index];
+            self.visits.0 += block.members.len();
+            self.visits.1 += 1;
             let linear =
                 self.weights
                     .linear(&block.column, &self.residual, block.value, iteration)?;
@@ -260,6 +265,10 @@ impl Partition<Slope> for State {
             }
         }
         Ok(())
+    }
+
+    fn sweep_visits(&self) -> (usize, usize) {
+        self.visits
     }
 
     fn labels(&self) -> &[usize] {

@@ -39,8 +39,8 @@ when the strength is positive and absolute KKT tolerance `1e-6` at zero.
 preprocessing and solver storage with warm starts.
 `fit_regularization_path(&x, &y, &PathOptions::new())` constructs a decreasing
 sequence from the zero-coefficient threshold; `lambda_max(&x, &y)` returns that
-threshold. Gap Safe screening and working sets accelerate paths and can be
-controlled separately.
+threshold. Gap Safe screening accelerates paths. Working sets are enabled for
+single fits and paths and can be controlled separately.
 
 Dense and sparse CSC designs use the same statistical conventions. For backend
 requirements, see [installation](../installation.md). Use typed [linear

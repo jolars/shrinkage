@@ -90,6 +90,10 @@ impl super::Partition<ClusteredLasso> for State {
         )
     }
 
+    fn sweep_visits(&self) -> (usize, usize) {
+        self.visits
+    }
+
     fn labels(&self) -> &[usize] {
         &self.labels
     }
@@ -188,11 +192,13 @@ pub(super) struct State {
     knots: Vec<(f64, f64)>,
     spare: Vec<Block>,
     screened: Vec<bool>,
+    visits: (usize, usize),
 }
 
 impl State {
     pub(super) fn new(n: usize, p: usize) -> Self {
         Self {
+            visits: (0, 0),
             blocks: Vec::new(),
             labels: vec![usize::MAX; p],
             residual: vec![0.0; n],
@@ -301,6 +307,7 @@ impl State {
         iteration: usize,
         observer: &mut T,
     ) -> Result<(), FitError<E>> {
+        self.visits = (0, 0);
         self.sweep_order.clear();
         self.sweep_order
             .extend(self.blocks.iter().map(|block| block.id));
@@ -319,6 +326,8 @@ impl State {
             {
                 continue;
             }
+            self.visits.0 += block.members.len();
+            self.visits.1 += 1;
             let b = self
                 .weights
                 .linear(&block.column, &self.residual, block.value, iteration)?;

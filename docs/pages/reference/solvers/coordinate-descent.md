@@ -23,17 +23,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Controls and convergence
 
-The default budget is 10,000 complete coordinate sweeps. For positive strength,
-the default relative duality-gap tolerance is `1e-6`; zero-strength problems
-instead use absolute KKT tolerance `1e-6`. `.tolerance(value)` selects absolute
-KKT stopping. `.terminate_on(...)` selects a supported criterion explicitly. At
-zero strength, the solver's dual construction can yield a loose gap, so absolute
-KKT stopping is the default.
+The default budget is 10,000 coordinate sweeps. For positive strength, the
+default relative duality-gap tolerance is `1e-6`; zero-strength problems instead
+use absolute KKT tolerance `1e-6`. `.tolerance(value)` selects absolute KKT
+stopping. `.terminate_on(...)` selects a supported criterion explicitly. At zero
+strength, the solver's dual construction can yield a loose gap, so absolute KKT
+stopping is the default.
 
 Explicit and automatic regularization paths reuse preprocessing and residual
-storage. Gap Safe screening and working sets are enabled for paths by default;
-single fits retain complete cyclic sweeps. Control them with `.screening(...)`
-and `.working_sets(...)`.
+storage. Gap Safe screening is enabled for paths by default and controlled with
+`.screening(...)`. Working sets are enabled for single fits and paths; see
+[working sets](index.md#working-sets) for policy selection and diagnostics. A
+sweep visits the current working set. Full checks run at least every ten sweeps
+and before returning.
 
 Dense and CSC input use column access and $O(n + p)$ solver storage. Sparse
 coordinate updates operate on stored column entries. The solver requires

@@ -776,10 +776,10 @@ intercept after each sweep. These are exact restrictions of the complete convex
 objective, so the common hybrid descent and convergence argument applies,
 including repeated and zero weights.
 
-Begin with a full PG transition, then perform five sweeps per PG by default.
-Rebuild ordering, signs, memberships, and aggregates after every accepted PG
-transition. PG can split nonzero blocks and reactivate individual zero
-coordinates, including after unchanged restricted sweeps. Only a fresh
+Begin with a PG transition on the working set, then perform five sweeps per PG
+by default. Rebuild ordering, signs, memberships, and aggregates after every
+accepted PG transition. PG can split nonzero blocks and reactivate individual
+zero coordinates, including after unchanged restricted sweeps. Only a fresh
 full-space PG mapping, including the free-intercept derivative, establishes
 convergence. Checks do not alter the maintained partition, residuals, curvature,
 or schedule. `HybridFit` retains the common budget and diagnostic semantics.
@@ -979,10 +979,10 @@ LazyMatrix constructors: the matrix library deliberately preserves nonfinite
 statistics and does not supply the statistical fit's validation policy.
 
 The implemented `Lasso` builder defaults to a relative duality-gap tolerance of
-`1e-6` and at most 10,000 complete cyclic sweeps. At zero penalty, the default
-uses absolute KKT tolerance `1e-6`, because a residual-scaled feasible dual
-vector can give a loose lower bound. For `c_j = X_tilde_j' r / n`, use
-`|c_j - lambda sign(theta_j)|` on active coordinates and
+`1e-6` and at most 10,000 sweeps over the current working set. At zero penalty,
+the default uses absolute KKT tolerance `1e-6`, because a residual-scaled
+feasible dual vector can give a loose lower bound. For `c_j = X_tilde_j' r / n`,
+use `|c_j - lambda sign(theta_j)|` on active coordinates and
 `max(|c_j| - lambda, 0)` on zero coordinates, together with `|mean(r)|` when
 fitting an intercept. Check the maximum violation after each sweep. Reconstruct
 residuals every 50 sweeps, at the iteration limit, and before accepting
@@ -1048,12 +1048,59 @@ certificate storage, and working-set masks across points. Gap Safe screening
 uses the existing feasible dual vector `u` and radius `sqrt(2 * gap / n)`. A
 zero coordinate is screened when its absolute dual correlation plus column norm
 times the radius lies strictly below lambda, with conservative rounding guards.
-Working sets include nonzero coefficients and KKT violators. Full checks after
-sweeps restore excluded violators; residuals are refreshed before accepting
-convergence and at iteration limits. Screening eligibility is rebuilt at each
-strength and disabled at zero penalty. Single fits retain complete cyclic
-sweeps. Proximal and multivariate paths reuse native products and iteration
-storage with complete mapping checks, including all unpenalized intercepts.
+Working sets retain current nonzeros and restore excluded violators through full
+checks. Residuals refresh before complete checks, including convergence and
+iteration limits. Screening eligibility is rebuilt at each strength and disabled
+at zero penalty. Single fits use adaptive working sets by default. Proximal and
+multivariate paths reuse native products and iteration storage with complete
+mapping checks, including all unpenalized intercepts.
+
+### Working-set policies
+
+`WorkingSetPolicy::Auto` resolves to
+`Adaptive { initial_size: 10, prune: true }` for single fits and `EverActive`
+for existing coordinate and IRLS paths. The three solvers and the `Lasso`
+builder expose `.working_set_policy(...)` and `.working_sets(...)`; the last
+setter wins, and enabling restores `Auto`. Current nonzeros always remain
+eligible. EverActive retains activation history across path points. Adaptive
+ranks coordinate KKT violations or full Hybrid PG mapping components, with
+deterministic index ordering at tied scores.
+
+Adaptive starts with the larger of the requested initial size and the support.
+Unsuccessful restricted solves either retain and double the previous set or
+prune to the larger of the initial size and twice the support. A stalled solve
+doubles a persistent minimum budget, allowing jointly necessary coefficients to
+enter. Scores and budgets refresh for each IRLS model and path strength, while
+EverActive history survives. Partial selection and all membership storage reuse
+workspace capacity.
+
+Full checks run initially, at most ten inner updates apart by default, when a
+restricted solve converges or stalls, and before returning. Hybrid retains its
+configurable check interval. Inner stationarity targets use the larger of the
+required absolute tolerance and one tenth of the current full violation. Gap
+stopping uses relative stationarity reduction only to trigger a full gap check.
+Only a refreshed original-loss check, including the intercept, accepts final
+convergence. Safe screening stays independent: numerical restrictions combine
+certified zeros with heuristic exclusions, and exact fixed-zero proxes retain
+every original penalty interaction. Restricted Hybrid PG can split clusters.
+
+`WorkingSetDiagnostics` separates full and restricted checks, set rebuilds,
+expansions, reactivations, current and peak dimensions, and feature and block
+visits. Diagnostics count quadratic subproblems within their parent fit. Sweep
+budgets count restricted sweeps as one sweep, and checks do not consume updates.
+`task bench:working-sets` measures complete fits and existing paths, including
+preprocessing, scans, rebuilds, allocations, and memory at matched original-loss
+accuracy. Python inherits the default without new policy options.
+
+An initial quick comparison on October 29, 2026, validated 544 configurations on
+a synthetic design with 160 observations and 256 features, stored densely and as
+CSC. All original-loss mappings met `1e-8`, and policy objectives agreed within
+`1e-8 * (1 + abs(reference_objective))`. Each configuration had one timed
+repetition and a separate heap pass. The selected defaults improved several
+coordinate and IRLS cases, while some Gaussian Hybrid cases and weak-penalty
+logistic chain fits took longer. These results establish correctness and expose
+tradeoffs; the defaults remain provisional. The ordinary benchmark command uses
+five timed repetitions per configuration.
 
 ### Dynamic Gap Safe zero screening
 
@@ -1063,8 +1110,9 @@ and binomial losses with `ClusteredLasso`, `ChainFusedLasso`, and `Slope`.
 `GapSafeDatafit`, `GapSafePenalty`, and `ScreeningDesign` capabilities preserve
 external components and runtime composition without additional solver bounds.
 `Box` forwards capabilities. Other wrappers, multivariate layouts, and
-product-only designs retain ordinary fitting. This does not add working sets,
-fusion screening, Hybrid paths, or screening to the separable `Irls` solver.
+product-only designs retain ordinary fitting. Working sets have independent
+controls. Fusion screening, Hybrid paths, and screening in the separable `Irls`
+solver remain separate capabilities.
 
 Let $u$ be an observation-scale feasible dual point and $G$ its original-problem
 gap. The dual has strong concavity $n$ for Gaussian loss and at least $4n$ for
@@ -1175,13 +1223,13 @@ including certificates, allocations, and peak memory. Speedups are not assumed.
 
 IRLS paths reuse preprocessing, weighted summaries, residual buffers, and
 working-set storage across strengths. Working sets apply to both standalone fits
-and paths; every inner sweep checks the complete quadratic KKT conditions and
-restores excluded violators. Eligibility is rebuilt for every quadratic model,
-and only a full original-loss check certifies convergence. IRLS does not provide
-safe screening or a dual certificate. Automatic paths reuse `NullModelDatafit`
-and `PathPenalty`, including binomial null-intercept errors and ridge path
-anchors. Standalone fits and explicit paths start at zero; automatic paths start
-at the optimized null intercept.
+and paths; restricted checks run between complete quadratic checks, at most ten
+sweeps apart. Complete checks restore excluded violators. Eligibility is rebuilt
+for every quadratic model, and only a full original-loss check certifies
+convergence. IRLS does not provide safe screening or a dual certificate.
+Automatic paths reuse `NullModelDatafit` and `PathPenalty`, including binomial
+null-intercept errors and ridge path anchors. Standalone fits and explicit paths
+start at zero; automatic paths start at the optimized null intercept.
 
 IRLS workspace is linear in observations and features, in addition to stored
 path results. LazyMatrix 0.6.0 computes each weighted column norm in

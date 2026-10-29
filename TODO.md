@@ -178,17 +178,19 @@ decision and concrete follow-up tasks.
   clustered-lasso fusion where safe. Preserve original feature masses and
   the exact reduced penalty, validate lifting and strict boundaries
   independently, and rebuild certificates at every path point.
-- [ ] **Hybrid working sets:** Extend existing working-set machinery to select
+- [x] **Hybrid working sets:** Extend existing working-set machinery to select
   coefficients or clusters using full optimality violations. Permit excluded
   coordinates to reactivate and clusters to split. Refresh eligibility after
   PG transitions, IRLS weight changes, and path-strength changes. Test
   deliberately omitted violators, compare with full sweeps, and require a
   full original-loss check before accepting convergence.
-- [ ] **Screening and working-set integration:** Expose independent controls and
-  diagnostics for screening and working sets across MVP fits and paths.
-  Compare enabled and disabled combinations at matched accuracy, including
-  warm starts and IRLS. Benchmark complete solve time, certificate passes,
-  rebuilds, active dimensions, allocations, and memory.
+- [x] **Screening and working-set integration:** Expose independent controls and
+  diagnostics for supported screening and working sets in coordinate
+  descent, separable IRLS, and Hybrid, including existing coordinate and
+  IRLS paths. Compare policies and enabled and disabled combinations at
+  matched accuracy, including warm starts and IRLS. Benchmark complete solve
+  time, certificate passes, rebuilds, active dimensions, allocations, and
+  memory.
 
 ### 6. Paths, cross-validation, and plotting
 

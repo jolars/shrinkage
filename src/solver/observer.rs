@@ -22,7 +22,7 @@ pub enum StepKind {
     },
     /// An unpenalized intercept update.
     Intercept,
-    /// An accepted full proximal-gradient update.
+    /// An accepted proximal-gradient update on the current eligible features.
     ProximalGradient,
     /// One complete cluster or segment sweep in a hybrid solve.
     CoordinateSweep,

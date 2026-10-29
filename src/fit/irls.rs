@@ -19,6 +19,8 @@ pub struct IrlsFit {
 
 #[derive(Clone, Debug)]
 struct Diagnostics {
+    working_set: crate::WorkingSetDiagnostics,
+
     iterations: usize,
     coordinate_sweeps: usize,
     objective: f64,
@@ -28,6 +30,11 @@ struct Diagnostics {
 }
 
 impl IrlsFit {
+    /// Work performed by heuristic feature selection, separate from safe screening.
+    pub fn working_set_diagnostics(&self) -> &crate::WorkingSetDiagnostics {
+        &self.solution.working_set
+    }
+
     /// Original-scale coefficients in training-column order.
     pub fn coefficients(&self) -> &[f64] {
         &self.coefficients
@@ -96,6 +103,7 @@ impl IrlsFit {
             intercept,
             preprocessing,
             solution: Diagnostics {
+                working_set: solution.working_set,
                 iterations: solution.iterations,
                 coordinate_sweeps: solution.coordinate_sweeps,
                 objective: solution.objective,
