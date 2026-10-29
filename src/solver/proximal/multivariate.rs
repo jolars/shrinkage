@@ -364,17 +364,42 @@ where
         intercepts,
         gradient,
     } = joint_null(design, datafit)?;
-    let sequence = options
+    let mut sequence = options
         .sequence(penalty, &gradient, design.nrows(), design.ncols())
         .map_err(|e| FitError::from_component(e, 0))?;
-    let solutions = joint_path(
-        design,
-        datafit,
-        &sequence.penalties,
-        solver,
-        threshold,
-        &intercepts,
-    )?;
+    let layout = penalty.layout();
+    for point in &sequence.penalties {
+        validate_layout(design.ncols(), datafit, point)?;
+    }
+    let null = crate::path::null_deviance(datafit, design.nrows())?;
+    let mut stacked = StackedDesign::new(design, layout, datafit.fits_intercept())?;
+    let mut work = Workspace::new(stacked.nrows(), stacked.ncols());
+    if datafit.fits_intercept() {
+        work.coefficients[layout.len()..].copy_from_slice(&intercepts);
+    }
+    let solutions = sequence.fit(options, null, |point| {
+        let term = WithIntercepts {
+            penalty: point,
+            nintercepts: if datafit.fits_intercept() {
+                layout.nresponses()
+            } else {
+                0
+            },
+        };
+        let solution = iterate_with_workspace(
+            &mut stacked,
+            &StackedGaussian(datafit),
+            &term,
+            solver,
+            threshold,
+            &mut work,
+        )?;
+        let deviance = datafit
+            .deviance(&work.eta)
+            .map_err(|e| FitError::from_component(e, 0))?;
+        let termination = solution.termination;
+        Ok((solution, deviance, termination))
+    })?;
     Ok((solutions, sequence))
 }
 

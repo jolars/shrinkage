@@ -220,7 +220,7 @@ pub(crate) struct Solution {
 pub(crate) struct Workspace {
     pub coefficients: Vec<f64>,
     pub intercept: f64,
-    eta: Vec<f64>,
+    pub(crate) eta: Vec<f64>,
     derivative: Vec<f64>,
     weights: Vec<f64>,
     gradient: Vec<f64>,

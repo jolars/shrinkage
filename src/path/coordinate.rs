@@ -80,7 +80,7 @@ where
         problem.datafit().validate(problem.design().nrows())?;
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
         let gradient = null_gradient(&prepared.matrix, *problem.datafit())?;
-        let sequence = options
+        let mut sequence = options
             .sequence(
                 problem.penalty(),
                 &gradient,
@@ -89,19 +89,19 @@ where
             )
             .map_err(|e| FitError::from_component(e, 0))?;
         let mut work = Workspace::new(&prepared.matrix, *problem.datafit())?;
-        let solutions = sequence
-            .penalties
-            .iter()
-            .map(|&penalty| {
-                solve_with_workspace(
-                    &prepared.matrix,
-                    *problem.datafit(),
-                    penalty,
-                    self,
-                    &mut work,
-                )
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let null = super::null_deviance(problem.datafit(), prepared.matrix.nrows())?;
+        let solutions = sequence.fit(options, null, |&penalty| {
+            let solution = solve_with_workspace(
+                &prepared.matrix,
+                *problem.datafit(),
+                penalty,
+                self,
+                &mut work,
+            )?;
+            let deviance = Some(work.deviance()?);
+            let termination = solution.termination;
+            Ok((solution, deviance, termination))
+        })?;
         let preprocessing = prepared.into_preprocessing();
         let fits = solutions
             .into_iter()

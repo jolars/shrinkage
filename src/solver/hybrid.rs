@@ -3,6 +3,7 @@
 use super::working_set::{WorkingSetPolicy, Workspace as WorkingSet};
 mod cluster;
 mod irls;
+mod path;
 mod quadratic;
 #[cfg(test)]
 mod screening_tests;
@@ -508,6 +509,7 @@ struct Workspace<P: HybridPenalty = ClusteredLasso> {
     reference_curvature: Option<f64>,
     screening: ScreeningWorkspace,
     working: WorkingSet,
+    path: bool,
 }
 
 impl<P: HybridPenalty> Workspace<P> {
@@ -529,6 +531,7 @@ impl<P: HybridPenalty> Workspace<P> {
             reference_curvature: None,
             screening: ScreeningWorkspace::new(n, p),
             working: WorkingSet::new(p),
+            path: false,
         }
     }
 
@@ -1235,7 +1238,7 @@ where
     P: HybridPenalty,
 {
     work.working
-        .begin(options.working_set_policy, false, &work.coefficients);
+        .begin(options.working_set_policy, work.path, &work.coefficients);
     work.screening.reset();
     work.state.set_screened(&work.screening.zeroed);
     work.pending.set_screened(&work.screening.zeroed);

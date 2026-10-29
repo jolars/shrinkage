@@ -92,7 +92,7 @@ where
         validate_rows(problem.design().nrows(), problem.datafit())?;
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
         let (intercept, gradient) = null_state(&prepared.matrix, problem.datafit())?;
-        let sequence = options
+        let mut sequence = options
             .sequence(
                 problem.penalty(),
                 &gradient,
@@ -103,19 +103,22 @@ where
         let mut work = Workspace::new(prepared.matrix.nrows(), prepared.matrix.ncols());
         work.path = true;
         work.intercept = intercept;
-        let solutions = sequence
-            .penalties
-            .iter()
-            .map(|penalty| {
-                iterate(
-                    &prepared.matrix,
-                    problem.datafit(),
-                    penalty,
-                    self,
-                    &mut work,
-                )
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let null = super::null_deviance(problem.datafit(), prepared.matrix.nrows())?;
+        let solutions = sequence.fit(options, null, |penalty| {
+            let solution = iterate(
+                &prepared.matrix,
+                problem.datafit(),
+                penalty,
+                self,
+                &mut work,
+            )?;
+            let deviance = problem
+                .datafit()
+                .deviance(&work.eta)
+                .map_err(|e| FitError::from_component(e, 0))?;
+            let termination = solution.termination;
+            Ok((solution, deviance, termination))
+        })?;
         let preprocessing = prepared.into_preprocessing();
         let fits = solutions
             .into_iter()

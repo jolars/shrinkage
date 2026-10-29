@@ -138,6 +138,7 @@ regression through hybrid IRLS. See the [logistic fitting
 controls](clustered-lasso.md) for budgets, diagnostics, and benchmarks.
 Predictions remain logits.
 
-Runtime problems support SLOPE through proximal gradient. Python exposure,
-hybrid paths, screening, and sparse-specific optimization follow later roadmap
-milestones.
+Runtime problems support SLOPE through proximal gradient. Gaussian and binomial
+[hybrid paths](../modeling.md#regularization-paths) scale the supplied weight
+profile. Python exposure, fusion screening, and sparse-specific optimization
+follow later roadmap milestones.

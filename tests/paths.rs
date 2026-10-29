@@ -366,7 +366,7 @@ fn dimension_defaults_and_numerical_failures_are_explicit() {
         ),
     ] {
         let path = Lasso::new(1.0)
-            .fit_regularization_path(&x, &[-1.0, 1.0], &PathOptions::new())
+            .fit_regularization_path(&x, &[-1.0, 1.0], &PathOptions::new().early_stopping(false))
             .unwrap();
         assert_eq!(path.len(), 100);
         close(

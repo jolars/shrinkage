@@ -48,8 +48,8 @@ meanings and the returned diagnostics. The [SLOPE](../../models/slope.md) and
 [chain fused lasso](../../models/chain-fused-lasso.md) guides cover their block
 semantics.
 
-Typed Gaussian and binomial problems are supported; runtime hybrid fits and
-hybrid paths are unavailable. Dense aggregates require $O(nK + p + n)$ storage
+Typed Gaussian and binomial fits and paths are supported; runtime hybrid
+selection remains unavailable. Dense aggregates require $O(nK + p + n)$ storage
 for $K$ blocks. Rebuilds stage a second aggregate set, and buffers retain their
 high-water capacities. At one block per feature, each aggregate set approaches
 the size of a dense design, even when the input matrix is sparse.
@@ -57,11 +57,17 @@ the size of a dense design, even when the input matrix is sparse.
 ## Working sets
 
 [Working sets](index.md#working-sets) are enabled independently of screening.
-The default adaptive policy starts with ten features and ranks candidates by
-components of the full PG mapping. Current nonzeros remain eligible. Restricted
-PG transitions can split clusters and reactivate selected zero coefficients. If
-excluded coefficients must enter together, a stalled restricted solve grows the
-minimum feature budget until progress resumes.
+For single fits, the default adaptive policy starts with ten features and ranks
+candidates by components of the full PG mapping. Current nonzeros remain
+eligible. Restricted PG transitions can split clusters and reactivate selected
+zero coefficients. If excluded coefficients must enter together, a stalled
+restricted solve grows the minimum feature budget until progress resumes.
+
+Paths use `EverActive` by default, retaining activation history across tuning
+points. Screening restrictions and partition state refresh for each penalty, and
+logistic paths reuse both inner and outer IRLS buffers. See [regularization
+paths](../../modeling.md#regularization-paths) for automatic sequences and
+explicit independent strengths.
 
 Exact restrictions retain clustered-lasso interactions with omitted zeros, chain
 boundaries, and SLOPE rank weights. A heuristic exclusion never establishes a

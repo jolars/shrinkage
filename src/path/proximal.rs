@@ -151,25 +151,28 @@ where
             problem.datafit().fits_intercept(),
         )?;
         let (intercept, gradient) = null_state(design.as_mut(), problem.datafit())?;
-        let sequence = options
+        let mut sequence = options
             .sequence(problem.penalty(), &gradient, design.nrows(), design.ncols())
             .map_err(|e| FitError::from_component(e, 0))?;
         let mut work = Workspace::new(design.nrows(), design.ncols());
         work.intercept = intercept;
-        let solutions = sequence
-            .penalties
-            .iter()
-            .map(|penalty| {
-                iterate_with_workspace(
-                    design.as_mut(),
-                    problem.datafit(),
-                    penalty,
-                    self,
-                    threshold,
-                    &mut work,
-                )
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+        let null = super::null_deviance(problem.datafit(), design.nrows())?;
+        let solutions = sequence.fit(options, null, |penalty| {
+            let solution = iterate_with_workspace(
+                design.as_mut(),
+                problem.datafit(),
+                penalty,
+                self,
+                threshold,
+                &mut work,
+            )?;
+            let deviance = problem
+                .datafit()
+                .deviance(&work.eta)
+                .map_err(|e| FitError::from_component(e, 0))?;
+            let termination = solution.termination;
+            Ok((solution, deviance, termination))
+        })?;
         let preprocessing = design.into_preprocessing();
         let fits = solutions
             .into_iter()
@@ -188,7 +191,10 @@ fn validate_rows<D: SmoothDatafit, E>(nrows: usize, datafit: &D) -> Result<(), F
     Ok(())
 }
 
-fn null_state<O, D>(design: &mut O, datafit: &D) -> Result<(f64, Vec<f64>), FitError<O::Error>>
+pub(crate) fn null_state<O, D>(
+    design: &mut O,
+    datafit: &D,
+) -> Result<(f64, Vec<f64>), FitError<O::Error>>
 where
     O: ProximalDesign + ?Sized,
     D: SmoothDatafit + NullModelDatafit,
@@ -232,18 +238,21 @@ where
     V: ProximalVector,
 {
     let (intercept, gradient) = null_state(&mut design, datafit)?;
-    let sequence = options
+    let mut sequence = options
         .sequence(penalty, &gradient, design.nrows(), design.ncols())
         .map_err(|e| FitError::from_component(e, 0))?;
     let mut work = Workspace::new(design.nrows(), design.ncols());
     work.intercept = intercept;
-    let solutions = sequence
-        .penalties
-        .iter()
-        .map(|penalty| {
-            iterate_with_workspace(&mut design, datafit, penalty, solver, threshold, &mut work)
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let null = super::null_deviance(datafit, design.nrows())?;
+    let solutions = sequence.fit(options, null, |penalty| {
+        let solution =
+            iterate_with_workspace(&mut design, datafit, penalty, solver, threshold, &mut work)?;
+        let deviance = datafit
+            .deviance(&work.eta)
+            .map_err(|e| FitError::from_component(e, 0))?;
+        let termination = solution.termination;
+        Ok((solution, deviance, termination))
+    })?;
     let preprocessing = design.into_preprocessing();
     let fits = solutions
         .into_iter()

@@ -105,15 +105,30 @@ where
     }
 }
 
-struct Outer {
+pub(super) struct Outer {
     coefficients: Vec<f64>,
     intercept: f64,
-    eta: Vec<f64>,
+    pub(super) eta: Vec<f64>,
     derivative: Vec<f64>,
     weights: Vec<f64>,
     direction_eta: Vec<f64>,
     trial_eta: Vec<f64>,
     trial: Vec<f64>,
+}
+
+impl Outer {
+    pub(super) fn new(n: usize, p: usize) -> Self {
+        Self {
+            coefficients: vec![0.0; p],
+            intercept: 0.0,
+            eta: vec![0.0; n],
+            derivative: vec![0.0; n],
+            weights: vec![0.0; n],
+            direction_eta: vec![0.0; n],
+            trial_eta: vec![0.0; n],
+            trial: vec![0.0; p],
+        }
+    }
 }
 
 fn iterate<M, V, W, P>(
@@ -155,23 +170,43 @@ where
     V: ProximalVector,
     P: HybridPenalty,
 {
+    let mut outer = Outer::new(design.nrows(), design.ncols());
+    iterate_with_workspace_observed(
+        design,
+        datafit,
+        penalty,
+        options,
+        threshold,
+        (inner, &mut outer),
+        observer,
+    )
+}
+
+pub(super) fn iterate_with_workspace_observed<M, V, W, P, T>(
+    design: &mut NativeDesign<M, V>,
+    datafit: Binomial<'_>,
+    penalty: &P,
+    options: &Hybrid<W>,
+    threshold: f64,
+    work: (&mut Workspace<P>, &mut Outer),
+    observer: &mut T,
+) -> Result<Solution, FitError<M::Error>>
+where
+    T: SolverObserver + ?Sized,
+    M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+    V: ProximalVector,
+    P: HybridPenalty,
+{
+    let (inner, outer) = work;
     inner
         .working
-        .begin(options.working_set_policy, false, &inner.coefficients);
+        .begin(options.working_set_policy, inner.path, &inner.coefficients);
     inner.screening.reset();
     inner.state.set_screened(&inner.screening.zeroed);
     inner.pending.set_screened(&inner.screening.zeroed);
     let n = design.nrows();
-    let mut outer = Outer {
-        coefficients: inner.coefficients.clone(),
-        intercept: inner.intercept,
-        eta: vec![0.0; n],
-        derivative: vec![0.0; n],
-        weights: vec![0.0; n],
-        direction_eta: vec![0.0; n],
-        trial_eta: vec![0.0; n],
-        trial: vec![0.0; design.ncols()],
-    };
+    outer.coefficients.copy_from_slice(&inner.coefficients);
+    outer.intercept = inner.intercept;
     let mut inner_options = Hybrid::<()>::new().step_policy(HybridStep::FixedBound);
     let curvature = finite(
         0.25 * initial_curvature(
@@ -189,7 +224,7 @@ where
     inner_options.check_every = options.check_every;
     inner_options.step = options.step;
     inner_options.screening = false;
-    inner_options.working_set_policy = options.working_set_policy.resolve(false);
+    inner_options.working_set_policy = options.working_set_policy.resolve(inner.path);
     let mut total = Progress {
         iterations: 0,
         objective: 0.0,

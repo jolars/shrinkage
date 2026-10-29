@@ -163,5 +163,6 @@ the existing PG and sweep counters report inner work. Predictions are logits.
 Run `task bench:hybrid:irls` for complete-fit comparisons with PG and
 `task bench:hybrid:irls:heap` for weighted workspace storage checks.
 
-Python exposure, hybrid paths, screening, and sparse-specific extensions follow
-in later roadmap milestones.
+Gaussian and binomial [hybrid paths](../modeling.md#regularization-paths) reuse
+the solver's workspaces across tuning points. Python exposure, fusion screening,
+and sparse-specific extensions follow in later roadmap milestones.

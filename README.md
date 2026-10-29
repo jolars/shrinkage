@@ -99,9 +99,11 @@ cargo run --locked --example regularization_path --features faer
   lasso](https://shrinkage.cc/models/chain-fused-lasso/) encourages neighboring
   coefficients to be equal.
 - **Regularization paths** fit a sequence of penalty strengths, reusing previous
-  fits to speed up computation.
+  fits and workspaces across all solver families. Automatic paths support
+  deviance-based early stopping; explicit paths fit every supplied point. See
+  the [regularization path example](examples/regularization_path.rs).
 
-Solvers include coordinate descent, proximal gradient, and iteratively
+Solvers include coordinate descent, proximal gradient, Hybrid, and iteratively
 reweighted least squares (IRLS). Supported combinations vary by loss and
 penalty. The [Rust API reference](https://shrinkage.cc/packages/rust/) covers
 these combinations and how to add custom losses and penalties. See the [binomial

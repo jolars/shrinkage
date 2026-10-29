@@ -299,4 +299,14 @@ fn incompatible_runtime_path_solver_rejects_before_preparation() {
         Err(FitError::UnsupportedCombination { .. })
     ));
     assert_eq!(preparations.get(), 0);
+    let solver = shrinkage::Hybrid::<Vec<f64>>::new();
+    assert!(matches!(
+        problem.fit_path_with(&solver, vec![L1::new(1.0)]),
+        Err(FitError::UnsupportedCombination { .. })
+    ));
+    assert!(matches!(
+        problem.fit_regularization_path_with(&solver, &PathOptions::new()),
+        Err(FitError::UnsupportedCombination { .. })
+    ));
+    assert_eq!(preparations.get(), 0);
 }

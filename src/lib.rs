@@ -78,7 +78,7 @@ pub use model::{Lasso, lasso};
 pub use normalization::{Centering, Normalization, Scaling};
 pub use path::{
     ErasedPathPenalty, NullModelDatafit, PathDatafit, PathFit, PathOptions, PathPenalty,
-    PathSolver, PenaltyMaximum, RegularizationPathSolver,
+    PathSolver, PathTermination, PenaltyMaximum, RegularizationPathSolver,
 };
 pub use penalty::{
     AxisPenalty, ChainFusedLasso, ClusteredLasso, CoordinatePenalty, DisjointGroups, ElasticNet,

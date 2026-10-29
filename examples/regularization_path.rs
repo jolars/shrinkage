@@ -1,9 +1,10 @@
-//! Automatic lasso, elastic-net, and runtime binomial regularization paths.
+//! Automatic paths across solvers and explicit independent fusion strengths.
 
 use faer::{Col, Mat};
 use shrinkage::{
-    Binomial, ElasticNet, ErasedPathPenalty, Gaussian, L1, Lasso, MatrixDesign, PathOptions,
-    Problem, ProximalGradient, RuntimePathProblem, Termination,
+    Binomial, ChainFusedLasso, ClusteredLasso, ElasticNet, ErasedPathPenalty, Gaussian, Hybrid, L1,
+    Lasso, MatrixDesign, PathOptions, Problem, ProximalGradient, RuntimePathProblem, Slope,
+    Termination,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -45,5 +46,70 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fit.intercept()
         );
     }
+    let hybrid = Hybrid::<Col<f64>>::new();
+    macro_rules! show_hybrid {
+        ($family:literal, $datafit:expr, $name:literal, $penalty:expr) => {{
+            let path = Problem::new(&x, $datafit, $penalty)
+                .fit_regularization_path_with(&hybrid, &PathOptions::new())?;
+            assert!(
+                path.fits()
+                    .iter()
+                    .all(|fit| fit.termination() == Termination::Converged)
+            );
+            println!(
+                "{} {}: {} points, {:?}, null deviance={:.4}",
+                $family,
+                $name,
+                path.len(),
+                path.termination(),
+                path.null_deviance().unwrap()
+            );
+        }};
+    }
+    show_hybrid!(
+        "Gaussian",
+        Gaussian::new(&y),
+        "clustered lasso",
+        ClusteredLasso::new(1.0, 0.2)
+    );
+    show_hybrid!(
+        "Gaussian",
+        Gaussian::new(&y),
+        "chain fused lasso",
+        ChainFusedLasso::new(1.0, 0.2)
+    );
+    show_hybrid!(
+        "Gaussian",
+        Gaussian::new(&y),
+        "SLOPE",
+        Slope::new(vec![1.0, 0.5])
+    );
+    show_hybrid!(
+        "Binomial",
+        Binomial::new(&binary),
+        "clustered lasso",
+        ClusteredLasso::new(1.0, 0.2)
+    );
+    show_hybrid!(
+        "Binomial",
+        Binomial::new(&binary),
+        "chain fused lasso",
+        ChainFusedLasso::new(1.0, 0.2)
+    );
+    show_hybrid!(
+        "Binomial",
+        Binomial::new(&binary),
+        "SLOPE",
+        Slope::new(vec![1.0, 0.5])
+    );
+    let paired = Problem::new(&x, Gaussian::new(&y), ClusteredLasso::new(1.0, 1.0)).fit_path_with(
+        &hybrid,
+        vec![
+            ClusteredLasso::new(0.1, 0.3),
+            ClusteredLasso::new(0.01, 0.05),
+            ClusteredLasso::new(0.02, 0.1),
+        ],
+    )?;
+    assert_eq!(paired.len(), 3);
     Ok(())
 }

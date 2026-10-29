@@ -367,6 +367,14 @@ pub(crate) struct Workspace {
 }
 
 impl Workspace {
+    pub(crate) fn deviance(&self) -> Result<f64, NumericalFailure> {
+        finite(
+            2.0 * self.residual.loss(0)?,
+            "computing Gaussian path deviance",
+            0,
+        )
+    }
+
     pub(crate) fn new<M: RawColumns<f64>>(
         matrix: &LazyMatrix<M>,
         datafit: Gaussian<'_>,

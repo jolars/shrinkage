@@ -344,7 +344,7 @@ where
 pub(crate) struct Workspace {
     pub(crate) coefficients: Vec<f64>,
     pub(crate) intercept: f64,
-    eta: Vec<f64>,
+    pub(crate) eta: Vec<f64>,
     predictor_gradient: Vec<f64>,
     gradient: Vec<f64>,
     input: Vec<f64>,

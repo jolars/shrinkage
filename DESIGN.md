@@ -9,14 +9,16 @@ for the three MVP penalties are implemented. Dense Gaussian clustered lasso also
 has a hybrid of full proximal-gradient steps and exact signed-cluster coordinate
 sweeps; weighted chain fused lasso and SLOPE share its driver with contiguous
 segment and signed magnitude-cluster sweeps. This hybrid also fits binomial
-models through weighted IRLS subproblems. This document records commitments and
-an implementation sequence; illustrative API names are not frozen interfaces.
+models through weighted IRLS subproblems. All solver families expose warm-start
+paths for their supported compositions, with shared automatic deviance stopping.
+This document records commitments and an implementation sequence; illustrative
+API names are not frozen interfaces.
 
 The next goal is an MVP that the clustered-lasso paper can use and cite through
 a public Rust and Python release. The uniform clustered-lasso penalty and dense
 Gaussian hybrid from `~/research/clustlasso-cd` are available in Rust.
-[TODO.md](TODO.md) tracks hybrid paths, screening, cross-validation, Python API,
-and release acceptance checks.
+[TODO.md](TODO.md) tracks screening, cross-validation, Python API, and release
+acceptance checks.
 
 ## 1. Purpose
 
@@ -580,8 +582,8 @@ sweeps, diagnostic checks, and backtracks. Finite budget exhaustion reports
 `IterationLimit`. Screening-enabled fits report an original-problem duality gap
 independently of the stopping criterion. Typed Gaussian problems use the dense
 hybrid; runtime proximal oracles support the penalty through PG and reject
-hybrid selection before preparation. Hybrid paths, fusion screening, and
-sparse-specific extensions remain later milestones.
+hybrid selection before preparation. Fusion screening and sparse-specific
+extensions remain later milestones.
 
 Dense aggregate storage is `O(nK + p + n)` per state. Staging retains both
 committed and candidate aggregates, with buffers kept at their high-water
@@ -693,9 +695,8 @@ includes nonuniform weights, a cut, normalization, and a free intercept.
 `task bench:chain` compares proximal operations and complete solves at matched
 accuracy; bounded runs include setup, first PG, and subsequent rebuild work.
 `task bench:chain:heap` checks warmed scratch reuse and complete-solve storage
-for strongly fused and nearly singleton partitions. Hybrid paths, fusion
-screening, Python exposure, and sparse-specific optimizations remain later
-milestones.
+for strongly fused and nearly singleton partitions. Fusion screening, Python
+exposure, and sparse-specific optimizations remain later milestones.
 
 ## 7. Specialized SLOPE support
 
@@ -814,8 +815,8 @@ complete PG and hybrid solves on constructed distinct, tied, and highly
 clustered optima at matched accuracy. Bounded runs include setup, the first PG,
 and a subsequent rebuild. `task bench:slope:heap` measures warmed proximal
 allocations and complete-solve peak storage at low, high, and changing block
-counts. Hybrid paths, fusion screening, Python exposure, and sparse-specific
-optimization remain later milestones.
+counts. Fusion screening, Python exposure, and sparse-specific optimization
+remain later milestones.
 
 ### Logistic hybrid IRLS
 
@@ -873,7 +874,8 @@ penalties with original-loss PG and independently recompute final objectives and
 mappings. They also cover damping, limits, normalization, and separated data.
 `task bench:hybrid:irls` measures complete solves and bounded setup/rebuild
 work; `task bench:hybrid:irls:heap` checks allocation and peak-storage behavior
-across repeated quadratic models. Logistic hybrid paths remain a later step.
+across repeated quadratic models. Logistic paths retain both inner and outer
+workspaces across tuning points.
 
 ## 8. Statistical semantics
 
@@ -1010,7 +1012,7 @@ prepared fit. `Lasso` supplies corresponding convenience methods. `PathFit`
 retains ordered fitted models, complete penalty settings, and automatic sequence
 metadata. Existing proximal path methods retain their vector return types.
 Explicit points preserve caller order, including repeated, increasing, and mixed
-penalties. All requested points are fitted, iteration-limit points warm the next
+penalties. Every explicit point is fitted, iteration-limit points warm the next
 fit, and errors return no partial path. Results own independent original-scale
 parameters and preprocessing.
 
@@ -1025,11 +1027,11 @@ scalar loops.
 Automatic sequences use 100 log-spaced points by default. Their endpoint ratio
 is `0.01` when observations are fewer than features, or `0.0001` otherwise.
 `PathOptions` overrides length, ratio, or starting strength. A zero start yields
-the requested number of zero values. Thresholds use the optimization-scale
-gradient at zero coefficients with enabled intercepts optimized. Gaussian null
-intercepts are response means, including one per multivariate response. Binomial
-uses the log odds of the response totals and rejects boundary responses for
-automatic free-intercept paths because their null optimum is not finite.
+a sequence of zero values. Thresholds use the optimization-scale gradient at
+zero coefficients with enabled intercepts optimized. Gaussian null intercepts
+are response means, including one per multivariate response. Binomial uses the
+log odds of the response totals and rejects boundary responses for automatic
+free-intercept paths because their null optimum is not finite.
 
 L1 uses the null gradient's infinity norm. Elastic net follows glmnet's mixing
 parameterization: `l1 = lambda * alpha` and `l2 = lambda * (1 - alpha)`.
@@ -1042,6 +1044,41 @@ threshold. SLOPE's threshold is the maximum cumulative sorted gradient magnitude
 divided by the corresponding cumulative base weight. Axis penalties take the
 maximum group threshold, preserving the `1/nobs` loss scale and explicit penalty
 axis.
+
+Clustered and chain fused lasso scale their complete supplied L1/fusion pair by
+lambda, retaining the ratio and any chain edge weights. Their maximum penalties
+use the complete penalty's dual constraints. For clustered lasso, maximize
+signed cumulative gradient sums divided by `l1 * k + fusion * k * (p - k)`,
+checking both signs. For chain fused lasso, use a bracketed search with
+linear-time dual feasibility checks. Pure fusion uses component gradient sums
+and edge fluxes directly, including cuts at zero weights. A nonzero gradient in
+a penalty-nullspace direction gives `PenaltyMaximum::Unbounded`; automatic paths
+then require `lambda_start` or an explicit sequence. No fused-null-model anchor
+is inferred.
+
+Automatic paths stop early by default after at least five points when the
+fractional decrease in consecutive deviances falls below `1e-5` or explained
+null deviance reaches `0.999`. `PathOptions` exposes both tolerances, the
+minimum number of points, and `early_stopping(false)`. Only converged fits can
+trigger stopping, and change comparisons require consecutive converged fits with
+nonincreasing deviance. Zero null deviance disables both criteria.
+`NullModelDatafit::deviance` is optional and defaults to unavailable, preserving
+full paths for external losses without this capability. Built-in deviance is
+twice the loss above saturation, averaged over observations; multivariate
+Gaussian sums over responses, and binomial includes fractional-response entropy.
+`PathFit` retains the fitted prefix, optional null and per-point deviances, and
+a `PathTermination` separate from model convergence.
+
+Hybrid paths return `PathFit<HybridFit, P>` for Gaussian and binomial datafits
+with all three hybrid penalties. Each path prepares the design once, retains
+optimization-scale coefficients and intercepts, and reuses native products,
+partition buffers, and logistic IRLS buffers. Budgets and diagnostic counters
+reset per point. Screening restrictions reset, partitions rebuild for the new
+penalty, and weighted summaries refresh for each quadratic model. Automatic
+working sets resolve to `EverActive` and retain activation history. Full
+original-loss checks certify every returned point. `task bench:paths` compares
+complete warm paths and cold fits at identical strengths and tolerances,
+including allocations and peak live storage.
 
 Coordinate paths cache column summaries, residual offsets, correlations, dual
 certificate storage, and working-set masks across points. Gap Safe screening
@@ -1111,8 +1148,8 @@ and binomial losses with `ClusteredLasso`, `ChainFusedLasso`, and `Slope`.
 external components and runtime composition without additional solver bounds.
 `Box` forwards capabilities. Other wrappers, multivariate layouts, and
 product-only designs retain ordinary fitting. Working sets have independent
-controls. Fusion screening, Hybrid paths, and screening in the separable `Irls`
-solver remain separate capabilities.
+controls. Fusion screening and screening in the separable `Irls` solver remain
+separate capabilities.
 
 Let $u$ be an observation-scale feasible dual point and $G$ its original-problem
 gap. The dual has strong concavity $n$ for Gaussian loss and at least $4n$ for

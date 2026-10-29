@@ -104,5 +104,7 @@ and nearly one segment per feature. Replace `Gaussian::new(&y)` with
 [logistic fitting controls](clustered-lasso.md) for budgets, diagnostics, and
 benchmarks. Predictions remain logits.
 
-Python exposure, hybrid paths, screening, and sparse-specific optimizations
-follow later roadmap milestones.
+Gaussian and binomial [hybrid paths](../modeling.md#regularization-paths)
+support explicit strength pairs and automatic fixed-ratio sequences. Python
+exposure, fusion screening, and sparse-specific optimizations follow later
+roadmap milestones.

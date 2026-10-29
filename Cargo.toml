@@ -122,6 +122,11 @@ harness = false
 required-features = ["faer_v0_24"]
 
 [[bench]]
+name = "hybrid_paths"
+harness = false
+required-features = ["faer_v0_24"]
+
+[[bench]]
 name = "proximal"
 harness = false
 required-features = ["faer_v0_24"]

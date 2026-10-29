@@ -48,6 +48,43 @@ raw design. Explicit normalization choices are independent of the intercept
 option. Explicit centering without a fitted intercept can induce a fixed
 original-scale intercept, which the returned fit preserves.
 
+## Regularization paths {#regularization-paths}
+
+All solver families support warm-started paths for their compatible problems.
+`problem.fit_path_with(&solver, penalties)` fits complete penalties in caller
+order, including repeated or increasing strengths. Every supplied point is
+fitted. Hybrid supports Gaussian and binomial paths with clustered lasso, chain
+fused lasso, and SLOPE. Its paths reuse preprocessing, partitions, and IRLS
+buffers while refreshing screening and working sets at every point.
+
+`problem.fit_regularization_path_with(&solver, &PathOptions::new())` generates
+up to 100 decreasing, log-spaced strengths. Clustered and chain fused paths
+multiply both supplied strengths by the scalar lambda, preserving their ratio
+and chain edge weights. SLOPE scales its supplied rank weights. Supply explicit
+complete penalties to vary the L1 and fusion strengths independently.
+
+Automatic paths use penalty-specific anchors with intercepts optimized. Sparse
+penalties start at the zero-model threshold; ridge uses a finite reference
+anchor. Pure fusion can have no finite zero-model threshold; supply
+`PathOptions::new().lambda_start(...)` or an explicit sequence in that case.
+Automatic binomial paths with a free intercept require a finite null intercept.
+
+By default, automatic paths stop after at least five points when the fractional
+deviance improvement falls below `1e-5` or the fraction of null deviance
+explained reaches `0.999`. Use `.early_stopping(false)` to fit the entire
+sequence, or adjust `.min_points(...)`, `.deviance_change_tolerance(...)`, and
+`.deviance_ratio_tolerance(...)`. Only converged points can trigger stopping.
+Losses without deviance support fit their entire sequence.
+
+`path.termination()` reports completion or the stopping criterion, independently
+of each fit's convergence. `path.lambdas()`, `path.penalties()`, and
+`path.fits()` contain the fitted prefix. Automatic paths also report
+`null_deviance()` and `deviances()` when supported. Deviance is twice the loss
+above the saturated loss, averaged over observations; multivariate Gaussian
+deviance sums over responses. Binomial deviance includes the saturated-loss
+correction for fractional responses. See the [runnable path
+example](https://github.com/jolars/shrinkage/blob/main/examples/regularization_path.rs).
+
 ## Examples and diagnostics
 
 The fitting examples use `faer::Mat` and, for proximal and hybrid solvers,

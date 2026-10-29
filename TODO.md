@@ -194,14 +194,14 @@ decision and concrete follow-up tasks.
 
 ### 6. Paths, cross-validation, and plotting
 
-- [ ] **Hybrid regularization paths:** Extend existing warm-start paths to all
+- [x] **Hybrid regularization paths:** Extend existing warm-start paths to all
   three hybrid solvers. Support explicit L1/fusion strength pairs for
   clustered and chain fused lasso, including fixed-ratio sequences, and
   scaled SLOPE weight profiles. Retain all tuning parameters and per-point
   diagnostics, rebuild cluster and screening state correctly, and compare
   with cold fits. Automatic sequences require a justified null model and
   tuning direction for the complete penalty.
-- [ ] **Logistic hybrid paths:** Reuse IRLS workspaces and warm starts across
+- [x] **Logistic hybrid paths:** Reuse IRLS workspaces and warm starts across
   tuning points for all three penalties. Refresh weighted summaries, working
   sets, and screening eligibility, and preserve inner and outer diagnostics.
   Compare with cold logistic fits, test boundary null models and failures,

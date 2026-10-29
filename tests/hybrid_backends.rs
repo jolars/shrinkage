@@ -26,6 +26,53 @@ mod dense {
     ];
     pub const Y: [f64; 5] = [1.0, -2.0, 3.0, 0.7, 2.0];
 
+    pub fn verify_paths<M, V>(x: &M)
+    where
+        M: shrinkage::lazymatrix::RawColumns<f64>
+            + shrinkage::lazymatrix::ColumnStats<f64>
+            + shrinkage::lazymatrix::MatVecInto<V>
+            + shrinkage::lazymatrix::MatTransposeVecInto<V>,
+        V: shrinkage::ProximalVector,
+    {
+        use shrinkage::{Binomial, ChainFusedLasso, PathOptions, Slope};
+        let options = PathOptions::new()
+            .nlambda(3)
+            .lambda_min_ratio(0.1)
+            .early_stopping(false);
+        let solver = Hybrid::<V>::new().tolerance(1e-9).max_iterations(100_000);
+        macro_rules! check {
+            ($datafit:expr, $penalty:expr) => {{
+                let datafit = $datafit;
+                let path = Problem::new(x, datafit, $penalty)
+                    .fit_regularization_path_with(&solver, &options)
+                    .unwrap();
+                for (penalty, fit) in path.iter() {
+                    let cold = Problem::new(x, datafit, penalty.clone())
+                        .fit_with(&solver)
+                        .unwrap();
+                    assert_eq!(fit.termination(), Termination::Converged);
+                    assert!((fit.objective() - cold.objective()).abs() < 1e-9);
+                    for (a, b) in fit.predict(x).unwrap().iter().zip(cold.predict(x).unwrap()) {
+                        assert!((a - b).abs() < 1e-6);
+                    }
+                }
+            }};
+        }
+        check!(Gaussian::new(&Y), ClusteredLasso::new(1.0, 0.2));
+        check!(
+            Gaussian::new(&Y),
+            ChainFusedLasso::new(1.0, 0.2).with_weights(vec![0.0, 2.0])
+        );
+        check!(Gaussian::new(&Y), Slope::new(vec![1.0, 0.5, 0.2]));
+        let y = [0.1, 0.8, 0.3, 0.7, 0.9];
+        check!(Binomial::new(&y), ClusteredLasso::new(1.0, 0.2));
+        check!(
+            Binomial::new(&y),
+            ChainFusedLasso::new(1.0, 0.2).with_weights(vec![0.0, 2.0])
+        );
+        check!(Binomial::new(&y), Slope::new(vec![1.0, 0.5, 0.2]));
+    }
+
     pub fn compare(fit: HybridFit) {
         let x = super::matrix::Matrix::from_rows(
             &ROWS.iter().map(|r| r.as_slice()).collect::<Vec<_>>(),
@@ -229,6 +276,7 @@ fn faer_dense() {
     dense::verify_chain::<_, faer::Col<f64>>(&x);
     dense::verify_slope::<_, faer::Col<f64>>(&x);
     dense::verify_logistic::<_, faer::Col<f64>>(&x);
+    dense::verify_paths::<_, faer::Col<f64>>(&x);
 }
 
 #[cfg(feature = "nalgebra_v0_34")]
@@ -248,6 +296,7 @@ fn nalgebra_dense() {
     dense::verify_chain::<_, nalgebra::DVector<f64>>(&x);
     dense::verify_slope::<_, nalgebra::DVector<f64>>(&x);
     dense::verify_logistic::<_, nalgebra::DVector<f64>>(&x);
+    dense::verify_paths::<_, nalgebra::DVector<f64>>(&x);
 }
 
 #[cfg(feature = "ndarray_v0_17")]
@@ -269,6 +318,7 @@ fn ndarray_strided_view() {
     dense::verify_chain::<_, ndarray::Array1<f64>>(&x);
     dense::verify_slope::<_, ndarray::Array1<f64>>(&x);
     dense::verify_logistic::<_, ndarray::Array1<f64>>(&x);
+    dense::verify_paths::<_, ndarray::Array1<f64>>(&x);
 }
 
 #[cfg(feature = "faer_v0_24")]
