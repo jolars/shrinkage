@@ -40,6 +40,16 @@ Use `task format` to format Rust, Python, and Markdown. `task check` runs the
 complete Rust and Python checks. The Python package does not install or build as
 part of a plain root `cargo build`.
 
+The [Python lasso
+benchmark](https://github.com/jolars/shrinkage/tree/main/packages/python/benchmarks)
+compares one regularization strength with scikit-learn through Metewand. Run it
+with
+`compute bench --reason "Python lasso comparison" -- devenv shell -- task python:bench`.
+This updates the convergence plot and retained measurements for the authored
+Python docs, using linear fit time and the independently evaluated duality gap.
+`task python:bench:check` checks the report and saved figure without rerunning
+the benchmark. Benchmark dependencies belong to the optional `benchmark` group.
+
 ## Documentation
 
 Edit this guide in the root `CONTRIBUTING.md`. Documentation tasks and CI copy

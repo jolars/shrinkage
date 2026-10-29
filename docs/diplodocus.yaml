@@ -99,6 +99,8 @@ presentation:
         items:
           - text: "Overview"
             link: "packages/python/index.html"
+          - text: "Lasso benchmark"
+            link: "packages/python/benchmarks.html"
   site-url: "https://shrinkage.cc/"
   canonical-url-style: "clean"
   description: "Regularized statistical models in Rust and Python."
@@ -195,6 +197,14 @@ content:
     owner: "project"
     repository: "shrinkage"
     path: "docs/pages"
+    mount: ""
+    format: "gfm"
+    execution:
+      mode: "never"
+  - id: "python-guide"
+    owner: "python"
+    repository: "shrinkage"
+    path: "packages/python/docs"
     mount: ""
     format: "gfm"
     execution:

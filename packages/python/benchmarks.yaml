@@ -1,0 +1,111 @@
+version: 1
+name: python-lasso
+
+datasets:
+  gaussian:
+    output-schema: {type: object}
+    runner: python
+    protocol-transport: socket
+    entrypoint: benchmarks/lasso.py
+    args: [dataset]
+    sources: [benchmarks/lasso.py, pyproject.toml, uv.lock]
+    parameters:
+      n_samples: {type: integer, minimum: 1, default: 5000}
+      n_features: {type: integer, minimum: 20, default: 1000}
+      alpha_fraction: {type: number, exclusiveMinimum: 0, default: 0.1}
+
+problems:
+  lasso:
+    dataset-schemas: [{type: object}]
+    result:
+      coefficients: {type: array, items: number, minItems: 1}
+    metrics:
+      objective: {type: number, minimum: 0, optional: true}
+      duality_gap: {type: number, minimum: 0, optional: true}
+      relative_gap: {type: number, minimum: 0, optional: true}
+      kkt_violation: {type: number, minimum: 0, optional: true}
+      alpha: {type: number, exclusiveMinimum: 0, optional: true}
+    allowed-timing-scopes: [execute_only]
+    semantics:
+      objective: "||y - X beta||^2 / (2 n) + alpha ||beta||_1"
+      preprocessing:
+        shared_materialization: centered_float64_fortran_order
+        allowed_outside_timed_scope: [load_arrays]
+        scaling: false
+        intercept: false
+      validity: {coefficients: finite_vector_matching_feature_count}
+      one_shot_completion: {relative_gap: 1.0e-8}
+    reference-cases:
+      - dataset: {x: [[1, 0], [0, 1]], y: [2, -1], alpha: 0.25}
+        result: {coefficients: [1.5, -0.5]}
+        expected-metrics: {objective: 0.625, duality_gap: 0, relative_gap: 0, kkt_violation: 0, alpha: 0.25}
+      - dataset: {x: [[1, 0], [0, 1]], y: [2, -1], alpha: 0.25}
+        result: {coefficients: [0, 0]}
+        expected-metrics: {objective: 1.25, duality_gap: 0.703125, relative_gap: 0.5625, kkt_violation: 0.75, alpha: 0.25}
+        expected-verdict: not_reached
+      - dataset: {x: [[1, 0], [0, 1]], y: [2, -1], alpha: 0.25}
+        result: {coefficients: [0]}
+        expected-metrics: {}
+        expected-verdict: invalid
+    evaluator:
+      runner: python
+      protocol-transport: socket
+      entrypoint: benchmarks/lasso.py
+      args: [evaluate]
+      sources: [benchmarks/lasso.py, pyproject.toml, uv.lock]
+
+implementations:
+  shrinkage: &implementation
+    runner: python
+    protocol-transport: socket
+    entrypoint: benchmarks/lasso.py
+    args: [shrinkage]
+    sources: [benchmarks/lasso.py, pyproject.toml, uv.lock]
+    problem-contracts: [lasso]
+    capabilities: [fresh_sequence]
+  scikit-learn:
+    <<: *implementation
+    args: [scikit-learn]
+
+experiments:
+  - name: single-alpha
+    problem: lasso
+    datasets: [gaussian]
+    implementations: [shrinkage, scikit-learn]
+    execution-policy: repeated
+    observation-policy: convergence
+    measurement-repetitions: 5
+    seed: 42
+
+execution-policies:
+  repeated:
+    timing-scope: execute_only
+    primary-time: timed_wall_time
+    run-order: randomized
+    max-concurrency: 1
+    worker-reuse: true
+    warmup-runs: 1
+
+observation-policies:
+  convergence:
+    kind: profile
+    metric: relative_gap
+    direction: at_most
+    threshold: 1.0e-8
+    max-observations: 12
+    max-active-time: 10 s
+    implementations:
+      shrinkage: &sweeps
+        delivery: fresh_sequence
+        control-schema:
+          type: object
+          properties: {iterations: {type: integer, minimum: 1, maximum: 12}}
+          required: [iterations]
+          additionalProperties: false
+        schedule:
+          kind: linear
+          field: iterations
+          start: 1
+          step: 1
+          count: 12
+      scikit-learn: *sweeps

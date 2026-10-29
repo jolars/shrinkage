@@ -201,6 +201,19 @@ tasks:
     cmds:
       - uv sync --locked --project packages/python --reinstall-package shrinkage
 
+  python:bench:
+    desc: Plot Python lasso convergence at one regularization strength
+    cmds:
+      - uv sync --locked --project packages/python --group benchmark --reinstall-package shrinkage --config-settings-package 'shrinkage:build-args=--profile release'
+      - uv run --no-sync --project packages/python pytest packages/python/benchmarks
+      - uv run --no-sync --project packages/python python packages/python/benchmarks/report.py --run
+
+  python:bench:check:
+    desc: Check benchmark reporting and the saved plot without taking timings
+    cmds:
+      - uv run --locked --project packages/python --group benchmark pytest packages/python/benchmarks
+      - uv run --locked --project packages/python --group benchmark python packages/python/benchmarks/report.py --check
+
   python:lint:
     desc: Check Python formatting, types, and native binding lints
     deps: [python:install]

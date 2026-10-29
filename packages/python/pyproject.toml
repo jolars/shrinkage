@@ -32,6 +32,15 @@ Issues = "https://github.com/jolars/shrinkage/issues"
 
 [dependency-groups]
 dev = ["maturin>=1.15,<2", "mypy>=1.14", "pytest>=8.3", "ruff>=0.16"]
+benchmark = [
+    "matplotlib>=3.10",
+    "metewand",
+    "scikit-learn>=1.7",
+]
+
+[tool.uv.sources]
+# Metewand's Python package is not published to PyPI yet.
+metewand = { git = "https://github.com/jolars/metewand", rev = "98db3e92fc8087a0ea14b7768e4160fb53bd4f04", subdirectory = "packages/python" }
 
 [tool.maturin]
 module-name = "shrinkage._shrinkage"

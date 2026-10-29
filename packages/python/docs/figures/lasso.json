@@ -1,0 +1,2547 @@
+{
+  "schema_version": 2,
+  "measured_at_utc": "2026-10-29T20:55:47.558303+00:00",
+  "source_revision": "7bd8c6c5f3a3814551f8edf481d198914c912f13",
+  "source_changes": "",
+  "native_extension_sha256": "ba69f49d497f43b1b161d4e26f065faebd5c12bb8a93d11435592b80ea00aab1",
+  "metewand": {
+    "version": "metewand 0.2.0",
+    "executable_sha256": "b9e65921aad6edb8c488ab2a5cc80becad83a782332c5589ed7be76beea5aa7d"
+  },
+  "software": {
+    "python": "3.14.7",
+    "shrinkage": "0.2.0",
+    "scikit-learn": "1.9.1",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "metewand": "0.2.0",
+    "matplotlib": "3.11.2"
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 9 7900 12-Core Processor",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.42"
+  },
+  "run_directory": ".build/python-lasso/20261029T205229814555Z",
+  "manifest_sha256": "13d955006aabaf65c2273ed66664303afd814192218a542fc0ffb37b8e0a1fbe",
+  "uv_lock_sha256": "f8ddfe5effcf5f88449ec6eb75a0474f02c7a1938cc215159dbac6d94d015ed5",
+  "benchmark": {
+    "dataset_parameters": {
+      "alpha_fraction": 0.1,
+      "n_features": 1000,
+      "n_samples": 5000
+    },
+    "dataset_seed": 6578402252773656,
+    "dataset_tree_sha256": "9952b632672cc760df7f81cd5d5dd58c39518a1fb529a5bd91103a756991a13d",
+    "execution_policy": {
+      "cpus": null,
+      "enforcement": "best_effort",
+      "max_concurrency": 1,
+      "memory": null,
+      "name": "repeated",
+      "network": false,
+      "primary_time": "timed_wall_time",
+      "run_order": "randomized",
+      "threads": null,
+      "timeout": null,
+      "timing_scope": "execute_only",
+      "version": 1,
+      "warmup_runs": 1,
+      "worker_reuse": true
+    },
+    "profile": "fresh_sequence",
+    "repetitions": 5,
+    "time_coordinate": "implementation_time_ns"
+  },
+  "observations": [
+    {
+      "id": "mw1-observation-85516545ea23ff3d77703be1afe8e8e5e9747a340a8ce7b1cdbf8512fe7cc2fc",
+      "attempt_id": "mw1-attempt-99e880e6e27a6b4d20b5e5f8892fdc19a377345d7953feabe498a11d2e9fefb9",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 14831087,
+      "timed_wall_time_ns": 20976202,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.00158785018056129,
+        "kkt_violation": 0.00011718261702053923,
+        "objective": 2.604862970904553,
+        "relative_gap": 0.00015668625921439134
+      }
+    },
+    {
+      "id": "mw1-observation-cfecd922b21bc3c84d0cee2b69457b8647d7097b93e4163a559933b038c1d49c",
+      "attempt_id": "mw1-attempt-c5149a0fce9d48ed16216b50e9ecdaaa4bd71fb616b13b26283d7c0955f64bee",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 17258279,
+      "timed_wall_time_ns": 23297389,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 2.498964812858162e-08,
+        "kkt_violation": 3.844664156482658e-09,
+        "objective": 2.6048629535578205,
+        "relative_gap": 2.4659344642750018e-09
+      }
+    },
+    {
+      "id": "mw1-observation-0d853cdf00cdcfda0d2fb37c115413fd6260f479fcda8e9c26c7721db8cdf2ed",
+      "attempt_id": "mw1-attempt-8963f31143ed56f7c301528867d03ff1aab7a35190a3caec2af0292beb2b8e51",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 18043843,
+      "timed_wall_time_ns": 24209588,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0771646845597616e-06,
+        "kkt_violation": 1.915777135819141e-07,
+        "objective": 2.604862953557848,
+        "relative_gap": 1.0629271391451921e-07
+      }
+    },
+    {
+      "id": "mw1-observation-144841f6df0fa639cb477977c860035f761ab0733fc5305a88efc29dc8c958b8",
+      "attempt_id": "mw1-attempt-63f5ad808c06b66d1fb7747d706448ba5b5708943b4d193c68a2d95db8966eea",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 13163094,
+      "timed_wall_time_ns": 19926289,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.7311217274155835,
+        "kkt_violation": 0.07619249364373315,
+        "objective": 2.6191376826567585,
+        "relative_gap": 0.07214580437218387
+      }
+    },
+    {
+      "id": "mw1-observation-6a7fe6cc49ef69addf069efbd32b3f17f8ad552874372fe63fe81b6103f33bc2",
+      "attempt_id": "mw1-attempt-947f3220e62e65cdfd763d459a9c38232d2644d0bc308080661702c3fd4df546",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 12518657,
+      "timed_wall_time_ns": 18573094,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.02979354613586871,
+        "kkt_violation": 0.0020316392352348195,
+        "objective": 2.6048724086555572,
+        "relative_gap": 0.00293997465876187
+      }
+    },
+    {
+      "id": "mw1-observation-1747e300f05751b16a71eed34b384433193600edd8346b87eb4100ae28cf8485",
+      "attempt_id": "mw1-attempt-7c2b0e45b3055f119edca168e7f415d6325f88e749b84c3a91d1a273581da413",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 15144021,
+      "timed_wall_time_ns": 21223827,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.7311217274155835,
+        "kkt_violation": 0.07619249364373315,
+        "objective": 2.6191376826567585,
+        "relative_gap": 0.07214580437218387
+      }
+    },
+    {
+      "id": "mw1-observation-6ae43321d3a3957c5946c54537afe0c77e408ca70cf223f09b45829fc77f8dde",
+      "attempt_id": "mw1-attempt-138a530051ab4154d8547be9ec601669c36f3989ca5d08af084c3b9df8e869a9",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 23295634,
+      "timed_wall_time_ns": 29264756,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0771646845597616e-06,
+        "kkt_violation": 1.915777135819141e-07,
+        "objective": 2.604862953557848,
+        "relative_gap": 1.0629271391451921e-07
+      }
+    },
+    {
+      "id": "mw1-observation-60dfdd154a4c2638b5aa6f3b0a9ae935e711b2145ae5bc163d6906c27828f3ad",
+      "attempt_id": "mw1-attempt-50e431a72e1bb629e818c850b92f648e41c490f534f36cbb0246dd7c0d9d4c4c",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 13287233,
+      "timed_wall_time_ns": 19461257,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.02979354613586871,
+        "kkt_violation": 0.0020316392352348195,
+        "objective": 2.6048724086555572,
+        "relative_gap": 0.00293997465876187
+      }
+    },
+    {
+      "id": "mw1-observation-12cb947aadf153e204ae4697cdf19fc498196537a991b79728191ab4faaecaac",
+      "attempt_id": "mw1-attempt-3c10ebdb684b6b34fbcbdc51f760f4996fb5f412404818fd18e19118a047757b",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 23468015,
+      "timed_wall_time_ns": 29910938,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.7311217274155835,
+        "kkt_violation": 0.07619249364373315,
+        "objective": 2.6191376826567585,
+        "relative_gap": 0.07214580437218387
+      }
+    },
+    {
+      "id": "mw1-observation-80f31bb674207538434ef94d2c211948facc6ae9d99db7ee5cedbfaf40f16510",
+      "attempt_id": "mw1-attempt-dba720f29784dc556dfd27509de6945545034c2aabbca8016bfa38d560835406",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 18598194,
+      "timed_wall_time_ns": 24510494,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 2.498964812858162e-08,
+        "kkt_violation": 3.844664156482658e-09,
+        "objective": 2.6048629535578205,
+        "relative_gap": 2.4659344642750018e-09
+      }
+    },
+    {
+      "id": "mw1-observation-174102d9f11e2f4725b22f79e65e8d739bad63a520a2861ff774a82dffd8cdfa",
+      "attempt_id": "mw1-attempt-624cc8b68943b4bd02e97658cffb59255952e169612313a8823ad8a4339ced1e",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 18818223,
+      "timed_wall_time_ns": 24717602,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 2.498964812858162e-08,
+        "kkt_violation": 3.844664156482658e-09,
+        "objective": 2.6048629535578205,
+        "relative_gap": 2.4659344642750018e-09
+      }
+    },
+    {
+      "id": "mw1-observation-c8b96ba2beb493bf7b7368c58c251dd8822d326a385c3dfb69c09ce2e6c376e9",
+      "attempt_id": "mw1-attempt-973af7ba8ebbd1b4c4a738ce3adf749660df8ce0a5450bc8f1f917197950db8a",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 19022717,
+      "timed_wall_time_ns": 25057082,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 2.498964812858162e-08,
+        "kkt_violation": 3.844664156482658e-09,
+        "objective": 2.6048629535578205,
+        "relative_gap": 2.4659344642750018e-09
+      }
+    },
+    {
+      "id": "mw1-observation-0ebe843392156aad1c38ff7f46eac4fc6615295722fb0d32a4a467066137fa65",
+      "attempt_id": "mw1-attempt-aed262560bd7e965905527f935028568871bc5db7da9a6b5d91b9cc51ada12b1",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 14119508,
+      "timed_wall_time_ns": 20019126,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.00158785018056129,
+        "kkt_violation": 0.00011718261702053923,
+        "objective": 2.604862970904553,
+        "relative_gap": 0.00015668625921439134
+      }
+    },
+    {
+      "id": "mw1-observation-e6b8813caf908b42611e591a6cd8f0793acd6f3affe5d7efc889d0f237767676",
+      "attempt_id": "mw1-attempt-7c5fb8f2f7bc6c6bfead9a25af115226cf820b9172e9df986eaaeddf9e70f52d",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 16426976,
+      "timed_wall_time_ns": 22396545,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 5.213122585523422e-05,
+        "kkt_violation": 6.053870790292959e-06,
+        "objective": 2.6048629535879573,
+        "relative_gap": 5.144217551198571e-06
+      }
+    },
+    {
+      "id": "mw1-observation-d6355ea251cd4108b0bade65839c6685319512a149c02c02d3faf11e095f066d",
+      "attempt_id": "mw1-attempt-e5d563bfc48bc6efb0af7bdeb7f84d7042b4311df588b4fc6c74d13fbd56cd54",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 27094357,
+      "timed_wall_time_ns": 33081183,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 5.213122585523422e-05,
+        "kkt_violation": 6.053870790292959e-06,
+        "objective": 2.6048629535879573,
+        "relative_gap": 5.144217551198571e-06
+      }
+    },
+    {
+      "id": "mw1-observation-e4f357b0cb594af003131bab0dded04bb854bcf000b568f31cc6cfc687c6a1d5",
+      "attempt_id": "mw1-attempt-df181bec00deca28c558a9abfa7e32d6a301c56aa15e8816978c21b9fb72031c",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 16315998,
+      "timed_wall_time_ns": 22326180,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 5.213122585523422e-05,
+        "kkt_violation": 6.053870790292959e-06,
+        "objective": 2.6048629535879573,
+        "relative_gap": 5.144217551198571e-06
+      }
+    },
+    {
+      "id": "mw1-observation-b3745413815e046eed415f2fee30fdf8e91519df4ba826c2b66f40f75dc61363",
+      "attempt_id": "mw1-attempt-a3b2901157de235308704c3e51fc4e0cf34b2eedcb4a749e189c63e7dfb09a3a",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 16328930,
+      "timed_wall_time_ns": 22873647,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 5.213122585523422e-05,
+        "kkt_violation": 6.053870790292959e-06,
+        "objective": 2.6048629535879573,
+        "relative_gap": 5.144217551198571e-06
+      }
+    },
+    {
+      "id": "mw1-observation-3e93c28f309e4c305c79f94aa921a633ae7a688f9c6a84a612c78e0acac048cf",
+      "attempt_id": "mw1-attempt-c243960439833afc7612fd953d6302669bc8f021eabeae001de8959a99e0f4a9",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 16272003,
+      "timed_wall_time_ns": 22416162,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.00158785018056129,
+        "kkt_violation": 0.00011718261702053923,
+        "objective": 2.604862970904553,
+        "relative_gap": 0.00015668625921439134
+      }
+    },
+    {
+      "id": "mw1-observation-17b911313fd06ea6dff6234ab920abb7aa6455e6ffaeeb474c97f3917003038c",
+      "attempt_id": "mw1-attempt-8e335ccdf5bb40449ac48fdcf611f58912bcc4f075decb320826e537873edffa",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 13835006,
+      "timed_wall_time_ns": 20195777,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.02979354613586871,
+        "kkt_violation": 0.0020316392352348195,
+        "objective": 2.6048724086555572,
+        "relative_gap": 0.00293997465876187
+      }
+    },
+    {
+      "id": "mw1-observation-ee6fb9aa1bb47b4fe917cfd8e1af5c0e1447e79c6fe3406896a484f060e3252c",
+      "attempt_id": "mw1-attempt-39b3c79854684bf5b7ee46c0bce4ed9d012677ba2765364ebd38c38d7016a0e9",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 13195111,
+      "timed_wall_time_ns": 19088141,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.02979354613586871,
+        "kkt_violation": 0.0020316392352348195,
+        "objective": 2.6048724086555572,
+        "relative_gap": 0.00293997465876187
+      }
+    },
+    {
+      "id": "mw1-observation-079004b38a2fb770227d51b070c7b63de139c7cc3192f14b64a411accbcbe134",
+      "attempt_id": "mw1-attempt-62d787cf455fca35be06511802431842bae843840d6c5648716a761ac83ef9e9",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 16493218,
+      "timed_wall_time_ns": 22382413,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0771646845597616e-06,
+        "kkt_violation": 1.915777135819141e-07,
+        "objective": 2.604862953557848,
+        "relative_gap": 1.0629271391451921e-07
+      }
+    },
+    {
+      "id": "mw1-observation-a25ee2f282165bc103e28dce09120605608f54e21724a1e754e8dd6e80ae1c5e",
+      "attempt_id": "mw1-attempt-b727c6169ee81884152f0ee6147502cff7226f1ed4a0d4c76e601c6529d0d39c",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 18919350,
+      "timed_wall_time_ns": 27468620,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 5.213122585523422e-05,
+        "kkt_violation": 6.053870790292959e-06,
+        "objective": 2.6048629535879573,
+        "relative_gap": 5.144217551198571e-06
+      }
+    },
+    {
+      "id": "mw1-observation-e57cd473e327b1f310b2e4bcf12a2865b1b9e52955f555cb864aae9b98b82d79",
+      "attempt_id": "mw1-attempt-0ccbcf8467f99cee711d5bf1362d026f237a230421b821cba5a6fe5372ce7721",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 36511881,
+      "timed_wall_time_ns": 42769054,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.02979354613586871,
+        "kkt_violation": 0.0020316392352348195,
+        "objective": 2.6048724086555572,
+        "relative_gap": 0.00293997465876187
+      }
+    },
+    {
+      "id": "mw1-observation-c5974eb3c20095d417eb91b6686d34fbf937f80fbaa7d56d9c4a310730d112c6",
+      "attempt_id": "mw1-attempt-7480caa1b199c7f667f062c22ec335dee0dcb3e0fb328237b11724b0a0fcc6f3",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 12495395,
+      "timed_wall_time_ns": 18537664,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.7311217274155835,
+        "kkt_violation": 0.07619249364373315,
+        "objective": 2.6191376826567585,
+        "relative_gap": 0.07214580437218387
+      }
+    },
+    {
+      "id": "mw1-observation-560562d0bd645ab396c114fa4749abf86a6828218d10de9d552f83063861d78f",
+      "attempt_id": "mw1-attempt-2c7d127d6739aaadd5b7225e1fa1a29116a5684c9cea2d6481c5be01acc5a7b3",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 16718197,
+      "timed_wall_time_ns": 22697334,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0771646845597616e-06,
+        "kkt_violation": 1.915777135819141e-07,
+        "objective": 2.604862953557848,
+        "relative_gap": 1.0629271391451921e-07
+      }
+    },
+    {
+      "id": "mw1-observation-491ad49d56880881d2c9b372142669d5cfc8d2b21254a86250ee2c0fe149dac4",
+      "attempt_id": "mw1-attempt-7011d23ef2cdbc57af833a0b3883907963d2e500cbb05a08f1bd09fb3ee8c6b6",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 15630653,
+      "timed_wall_time_ns": 22055887,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.00158785018056129,
+        "kkt_violation": 0.00011718261702053923,
+        "objective": 2.604862970904553,
+        "relative_gap": 0.00015668625921439134
+      }
+    },
+    {
+      "id": "mw1-observation-402fce87fb9a7d25d34f9884d91a238defd5e85a4450b90c68628d570853b75a",
+      "attempt_id": "mw1-attempt-65dafb75cf5156db4873bdc192495c47bb30c1ba64e65cb6cefa7689db5de7c7",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 20712122,
+      "timed_wall_time_ns": 26857030,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 2.498964812858162e-08,
+        "kkt_violation": 3.844664156482658e-09,
+        "objective": 2.6048629535578205,
+        "relative_gap": 2.4659344642750018e-09
+      }
+    },
+    {
+      "id": "mw1-observation-5462ad6331e7b57602b24d1f18bf07c8a090d5e1a87efaf74f853699518f7813",
+      "attempt_id": "mw1-attempt-8a290a502871817027c2d235b2feae6ffa4e86be396f8bb4291c3bd57c39cda9",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 15635926,
+      "timed_wall_time_ns": 21985350,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.00158785018056129,
+        "kkt_violation": 0.00011718261702053923,
+        "objective": 2.604862970904553,
+        "relative_gap": 0.00015668625921439134
+      }
+    },
+    {
+      "id": "mw1-observation-19ab6c5abe3dde1a3c2d718904336446b3288d132fe1bbd7283d76e6e6e4461d",
+      "attempt_id": "mw1-attempt-f60253eb7e9e2055c0dbec9eeb83a7f87bf8b7fdfd36ace254da8ac7ab9837d4",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        }
+      ],
+      "fit_time_ns": 12808450,
+      "timed_wall_time_ns": 18713714,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.7311217274155835,
+        "kkt_violation": 0.07619249364373315,
+        "objective": 2.6191376826567585,
+        "relative_gap": 0.07214580437218387
+      }
+    },
+    {
+      "id": "mw1-observation-d273eb23fc7dc853c5a1fb1f77205d468a2779800b22c5671034b960e5809e6f",
+      "attempt_id": "mw1-attempt-494cc387dbe0278ad5cc2f4610252b9d79778d028bad6343cc47c884075d33f3",
+      "implementation": "scikit-learn",
+      "version": "1.9.1",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        },
+        {
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+          "internal_api": "openmp",
+          "num_threads": 1,
+          "prefix": "libgomp",
+          "user_api": "openmp",
+          "version": null
+        },
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.31.dev"
+        }
+      ],
+      "fit_time_ns": 15993528,
+      "timed_wall_time_ns": 22049322,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0771646845597616e-06,
+        "kkt_violation": 1.915777135819141e-07,
+        "objective": 2.604862953557848,
+        "relative_gap": 1.0629271391451921e-07
+      }
+    },
+    {
+      "id": "mw1-observation-4a19124e5835ca5e84971da523d7e0d1c44a5ebed326c328c76f602841ae0aa1",
+      "attempt_id": "mw1-attempt-95ea805b667e072a8699cf48aae333f34de2bd65a37a72df90d5363c5cf8ab4b",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 7,
+      "iteration_limit": 7,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 103620889,
+      "timed_wall_time_ns": 106600498,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.9884676127901457e-08,
+        "kkt_violation": 3.3137956684248238e-09,
+        "objective": 2.604862953557821,
+        "relative_gap": 1.9621848183871052e-09
+      }
+    },
+    {
+      "id": "mw1-observation-29554f01f6486cc167d86f8db644db5f4dde1b491bf49cc81c400116cb620630",
+      "attempt_id": "mw1-attempt-e7e4aeaf3f241791a1893d25a188aae5067192f19c301c82a32573c38256de06",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 85069128,
+      "timed_wall_time_ns": 87750120,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 6.289516192570233e-05,
+        "kkt_violation": 3.6496740915964443e-06,
+        "objective": 2.604862953572238,
+        "relative_gap": 6.206383804634598e-06
+      }
+    },
+    {
+      "id": "mw1-observation-9e340ab8dbebf701fcd09d5fe9fe6ae8accc2afe8c1323e473a0fa7cd3ce7f09",
+      "attempt_id": "mw1-attempt-eaa49d15aa8e4ff15bbeef2ed46f4a3226469204cf0e8363ff6464da1d2484a7",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 67169903,
+      "timed_wall_time_ns": 70111036,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.03420177326735496,
+        "kkt_violation": 0.0023867996285028975,
+        "objective": 2.6048755116742126,
+        "relative_gap": 0.0033749707481006063
+      }
+    },
+    {
+      "id": "mw1-observation-8f02ab997e7dec12e1fed66902d3e420bdba73010e883399acc3a7829309da75",
+      "attempt_id": "mw1-attempt-2ac77a4ecdaf9c3d2abda6960febcb807ef7a39e2778ef0afce56be74116786e",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 59667358,
+      "timed_wall_time_ns": 62594134,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.327619825476976,
+        "kkt_violation": 0.04014115786232281,
+        "objective": 2.6119025672352616,
+        "relative_gap": 0.03232894735718278
+      }
+    },
+    {
+      "id": "mw1-observation-b384e52a33afcbdd16413e41a358e73100a2e8d203287de7493a06a05093ad4c",
+      "attempt_id": "mw1-attempt-69190ee56f502c7f1ae64bf95f2dcb9de7529b559df97f35d606128b8734fc12",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 85574412,
+      "timed_wall_time_ns": 88393639,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 6.289516192570233e-05,
+        "kkt_violation": 3.6496740915964443e-06,
+        "objective": 2.604862953572238,
+        "relative_gap": 6.206383804634598e-06
+      }
+    },
+    {
+      "id": "mw1-observation-97b0d0b7f02e535d70bd37cd275ead6ef97c648193df1ac1b99e2444b124a150",
+      "attempt_id": "mw1-attempt-fb018e05fd9aecbb4c5d9179368671181d93c1c5e31ffa552dbde6091f20d128",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 51826860,
+      "timed_wall_time_ns": 54660449,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 4.985761459568437,
+        "kkt_violation": 0.8551348404386544,
+        "objective": 6.2200378067780475,
+        "relative_gap": 0.4919861596507268
+      }
+    },
+    {
+      "id": "mw1-observation-67cae4c5f712f99408a3d13e89f789ad11a942f5970e193be9c990e5320c9343",
+      "attempt_id": "mw1-attempt-7eac924781f38b1e75f52dea0c67768bd2d8733ad9ee06ebd4bd19b55bc93280",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 53858772,
+      "timed_wall_time_ns": 57278970,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 4.985761459568437,
+        "kkt_violation": 0.8551348404386544,
+        "objective": 6.2200378067780475,
+        "relative_gap": 0.4919861596507268
+      }
+    },
+    {
+      "id": "mw1-observation-ecda26cac970da05867c2cc76b860e8e33742f3d409d62950a5ce417bc73886c",
+      "attempt_id": "mw1-attempt-37ca127937cb907115f202ce3ce8c6ef8650111399e805415e6ee013ce632406",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 67468139,
+      "timed_wall_time_ns": 70271673,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.03420177326735496,
+        "kkt_violation": 0.0023867996285028975,
+        "objective": 2.6048755116742126,
+        "relative_gap": 0.0033749707481006063
+      }
+    },
+    {
+      "id": "mw1-observation-f074ea9a19067431916e23f7cc5635819cfcc3a4073562ee6711b6cba06b2c35",
+      "attempt_id": "mw1-attempt-e202a4f32f80df77189e9cc5fa6b2c231b710efef7c0f2207f6e939c57bab9d9",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 51810777,
+      "timed_wall_time_ns": 54640131,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 4.985761459568437,
+        "kkt_violation": 0.8551348404386544,
+        "objective": 6.2200378067780475,
+        "relative_gap": 0.4919861596507268
+      }
+    },
+    {
+      "id": "mw1-observation-2b228a68014dad8621132144c69c62aaa88705a0c809cede68abed9cbbedc8c0",
+      "attempt_id": "mw1-attempt-1a005fdab0da000774eef0ffa2784b709a6c6cfba335f378e2e38cb954ed4103",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 86392825,
+      "timed_wall_time_ns": 89406418,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 6.289516192570233e-05,
+        "kkt_violation": 3.6496740915964443e-06,
+        "objective": 2.604862953572238,
+        "relative_gap": 6.206383804634598e-06
+      }
+    },
+    {
+      "id": "mw1-observation-a2f2d4a24d723600491e1aeab94304427b3e3ab95a8121d09c20dcd714ab4eab",
+      "attempt_id": "mw1-attempt-6eb5421de81ac67732119666dc8e0b5350f08146beb83112ad9b9ce4dc98103f",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 87418723,
+      "timed_wall_time_ns": 90263425,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 6.289516192570233e-05,
+        "kkt_violation": 3.6496740915964443e-06,
+        "objective": 2.604862953572238,
+        "relative_gap": 6.206383804634598e-06
+      }
+    },
+    {
+      "id": "mw1-observation-abfc133013645031ad2cabad478ffcbfc2a104d2032c93f3e62f98396f20b849",
+      "attempt_id": "mw1-attempt-7a3479556ebda071c79666de1de8d72ad24123c0079f5f8732cb77eb2cb69750",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 76125068,
+      "timed_wall_time_ns": 78991012,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.0010054725787500551,
+        "kkt_violation": 0.00010518145602991802,
+        "objective": 2.604862967853847,
+        "relative_gap": 9.921826318104107e-05
+      }
+    },
+    {
+      "id": "mw1-observation-f277fc6258cdc8ee47d7f6b9e3a408af6ec02a6c7160f5e9ac5675bd1e52d29e",
+      "attempt_id": "mw1-attempt-05159bc35ff82c754194930f05b8e456954e2625eb9dbc619f1310c36a6d9fdc",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 7,
+      "iteration_limit": 7,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 102031828,
+      "timed_wall_time_ns": 104779107,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.9884676127901457e-08,
+        "kkt_violation": 3.3137956684248238e-09,
+        "objective": 2.604862953557821,
+        "relative_gap": 1.9621848183871052e-09
+      }
+    },
+    {
+      "id": "mw1-observation-772518d14b76d60cd22be84a5abae93d104149e011d960cd39439f637640444b",
+      "attempt_id": "mw1-attempt-67b051deed1e89a72b6dcf578328f063e3e7732a2e2eeaa1e4e212c125cfa453",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 5,
+      "iteration_limit": 5,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 86495694,
+      "timed_wall_time_ns": 89257992,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 6.289516192570233e-05,
+        "kkt_violation": 3.6496740915964443e-06,
+        "objective": 2.604862953572238,
+        "relative_gap": 6.206383804634598e-06
+      }
+    },
+    {
+      "id": "mw1-observation-2dcf332fa5f8f4810a6558702a232886207b8e1f71fd5e489b2bc94685075fbe",
+      "attempt_id": "mw1-attempt-e15280846f47ddd5e74068b518dee5e26a58babefc6f0dc4c4776b34e4840e80",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 7,
+      "iteration_limit": 7,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 103055590,
+      "timed_wall_time_ns": 105851060,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.9884676127901457e-08,
+        "kkt_violation": 3.3137956684248238e-09,
+        "objective": 2.604862953557821,
+        "relative_gap": 1.9621848183871052e-09
+      }
+    },
+    {
+      "id": "mw1-observation-2daea83731a108d5b7a09fc6fcf32062b747ab9aeeaab7ab5a5bb4b5f5fafb4e",
+      "attempt_id": "mw1-attempt-55e89e13f1575e075878c26907715d30b4b04d5ace69e0ffad46d7fd99f270b2",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 77461793,
+      "timed_wall_time_ns": 80435228,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.0010054725787500551,
+        "kkt_violation": 0.00010518145602991802,
+        "objective": 2.604862967853847,
+        "relative_gap": 9.921826318104107e-05
+      }
+    },
+    {
+      "id": "mw1-observation-2d42fa893e077e85589d6aa5e5463cb8dec8b94b2f6da3c7a67185a16c0e0722",
+      "attempt_id": "mw1-attempt-6dcdb7e164f7ff3aff77f419201f837023b9e3f9ceb5dc450a5df468989ecb28",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 60629691,
+      "timed_wall_time_ns": 63434317,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.327619825476976,
+        "kkt_violation": 0.04014115786232281,
+        "objective": 2.6119025672352616,
+        "relative_gap": 0.03232894735718278
+      }
+    },
+    {
+      "id": "mw1-observation-1e6c6213f2128cdbca11d7be71f489872206bd776851adfad122fe6f1b31dde4",
+      "attempt_id": "mw1-attempt-7e71ad50952eb42d0888b18691f70521daa1d54dd6336ab18b60462941399341",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 7,
+      "iteration_limit": 7,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 102944943,
+      "timed_wall_time_ns": 105703385,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.9884676127901457e-08,
+        "kkt_violation": 3.3137956684248238e-09,
+        "objective": 2.604862953557821,
+        "relative_gap": 1.9621848183871052e-09
+      }
+    },
+    {
+      "id": "mw1-observation-0ea4b4c7b2735b855b08134f036927481e51674585f50df77d6fe95b1bb2c1d7",
+      "attempt_id": "mw1-attempt-62c3912909a5efee5c6cbd62295f90ab97817caa61c5588706e15ca6ab5a2919",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 59787927,
+      "timed_wall_time_ns": 62730186,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.327619825476976,
+        "kkt_violation": 0.04014115786232281,
+        "objective": 2.6119025672352616,
+        "relative_gap": 0.03232894735718278
+      }
+    },
+    {
+      "id": "mw1-observation-c3becfda29148411182fb92c54646af16f55338e26dd89e7fd3b4cfae05dba8f",
+      "attempt_id": "mw1-attempt-22520e75e91bad93a76027e7aefbd7a84cd2eef10a04afef0116d480cac7ab72",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 76502308,
+      "timed_wall_time_ns": 79272939,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.0010054725787500551,
+        "kkt_violation": 0.00010518145602991802,
+        "objective": 2.604862967853847,
+        "relative_gap": 9.921826318104107e-05
+      }
+    },
+    {
+      "id": "mw1-observation-ace8cf07602bc4605fcc811a1351187984a6a35690b684eeb27ae952cd254ee5",
+      "attempt_id": "mw1-attempt-097f631244cafee409b29db0457d8afb0bfd55db8b646b91613b3019f0bf71f7",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 52555490,
+      "timed_wall_time_ns": 55508088,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 4.985761459568437,
+        "kkt_violation": 0.8551348404386544,
+        "objective": 6.2200378067780475,
+        "relative_gap": 0.4919861596507268
+      }
+    },
+    {
+      "id": "mw1-observation-4d924bd9219f69c905bc60de424ec9e335cfb73deb7d75e64b3d3dcabd1d7ecd",
+      "attempt_id": "mw1-attempt-caf084d23a39f2757a8c9b73755d7207ba061e2b2b3a6b2478910e0b83efea46",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 7,
+      "iteration_limit": 7,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 101730562,
+      "timed_wall_time_ns": 104642120,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.9884676127901457e-08,
+        "kkt_violation": 3.3137956684248238e-09,
+        "objective": 2.604862953557821,
+        "relative_gap": 1.9621848183871052e-09
+      }
+    },
+    {
+      "id": "mw1-observation-32b424c184d7befa2ab2488ab6524cb8e2614e18679dfa9f2d6ad74ef5e73508",
+      "attempt_id": "mw1-attempt-609bae46a659fb370b842d6d7223980dbcb76c3048c21a94c82e0d8d121c821f",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 67851474,
+      "timed_wall_time_ns": 70635814,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.03420177326735496,
+        "kkt_violation": 0.0023867996285028975,
+        "objective": 2.6048755116742126,
+        "relative_gap": 0.0033749707481006063
+      }
+    },
+    {
+      "id": "mw1-observation-75a086b5a3132cdffe3bb80366e32d43d4a1981c0ae84578f2063c8ea6a5f9b7",
+      "attempt_id": "mw1-attempt-bcaae4d67133976d97073d273dd98ca2982cf5c12dd42d7be43f9b7befc17780",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 1,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 96191065,
+      "timed_wall_time_ns": 99174177,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0792591993435963e-06,
+        "kkt_violation": 1.9902100384383559e-07,
+        "objective": 2.6048629535578485,
+        "relative_gap": 1.0649939694442088e-07
+      }
+    },
+    {
+      "id": "mw1-observation-f9c8da66412a3d92627af0c857673a0f27886d1441e6d3fffb604aa36c72d73f",
+      "attempt_id": "mw1-attempt-a5379fe7ca826f061339047ee6873569a60095cb9ebee86a2b67dbc5c362967f",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 59383916,
+      "timed_wall_time_ns": 62116376,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.327619825476976,
+        "kkt_violation": 0.04014115786232281,
+        "objective": 2.6119025672352616,
+        "relative_gap": 0.03232894735718278
+      }
+    },
+    {
+      "id": "mw1-observation-4ebf3d37a33bf91647717aca269f1d4da790284c8a900b6fb7124a81b2291547",
+      "attempt_id": "mw1-attempt-69c7bb314e8873ca9dbd0b828bf60ce8fdc9804e41341fb5211781ed98590cd4",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 1,
+      "iteration_limit": 1,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 53500441,
+      "timed_wall_time_ns": 56365232,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 4.985761459568437,
+        "kkt_violation": 0.8551348404386544,
+        "objective": 6.2200378067780475,
+        "relative_gap": 0.4919861596507268
+      }
+    },
+    {
+      "id": "mw1-observation-3d96edeffd61d534cb14ef6e52433396e516e475019323b5e8598e3d0bfd686b",
+      "attempt_id": "mw1-attempt-7e2c5a102560cfd77a2c93b8c7b30ed51c6337a91e8115eea85cff699db0ac47",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 80788449,
+      "timed_wall_time_ns": 83766285,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.0010054725787500551,
+        "kkt_violation": 0.00010518145602991802,
+        "objective": 2.604862967853847,
+        "relative_gap": 9.921826318104107e-05
+      }
+    },
+    {
+      "id": "mw1-observation-b952d95b82203a5cb5d7c81905dad0c7bc57ce5210438ffc8003eb3a681f89be",
+      "attempt_id": "mw1-attempt-68614c56ed5da417d428cdc323b81baf719a19a1290754d44810e363a15d99c5",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 2,
+      "iteration_limit": 2,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 61438650,
+      "timed_wall_time_ns": 64168435,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.327619825476976,
+        "kkt_violation": 0.04014115786232281,
+        "objective": 2.6119025672352616,
+        "relative_gap": 0.03232894735718278
+      }
+    },
+    {
+      "id": "mw1-observation-d4e13d4993f60489fc12dee17ce0d0aafd8e4dbba9bca7c211d8e337a75737ed",
+      "attempt_id": "mw1-attempt-ca766f1fb61521252a0b5ec2d730c6aeb508eca004260eaf48f3bba2fbb173d8",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 71916051,
+      "timed_wall_time_ns": 74758833,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.03420177326735496,
+        "kkt_violation": 0.0023867996285028975,
+        "objective": 2.6048755116742126,
+        "relative_gap": 0.0033749707481006063
+      }
+    },
+    {
+      "id": "mw1-observation-dac813ead0f15df36a9e8759c16a46aa567872a2e39209a4e6eb2165dbd3294b",
+      "attempt_id": "mw1-attempt-a7cc0ef14de0913958e99a7657ac1168c8e01a1eba36f5a20d731e463270874b",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 93927298,
+      "timed_wall_time_ns": 96834269,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0792591993435963e-06,
+        "kkt_violation": 1.9902100384383559e-07,
+        "objective": 2.6048629535578485,
+        "relative_gap": 1.0649939694442088e-07
+      }
+    },
+    {
+      "id": "mw1-observation-f423f45cc7889ade2547fc574d1233c37b7112a5ca43a8fdacfe225fa16e0d5e",
+      "attempt_id": "mw1-attempt-aaa043603f2f52b7091b6e045d5fbc1c56479f66da70f8ec65242c20924cffa4",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 3,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 101465146,
+      "timed_wall_time_ns": 104383949,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0792591993435963e-06,
+        "kkt_violation": 1.9902100384383559e-07,
+        "objective": 2.6048629535578485,
+        "relative_gap": 1.0649939694442088e-07
+      }
+    },
+    {
+      "id": "mw1-observation-3eb03fd29ec9abf2dfe363d7ae1e015febb02662a5c27caee7ec05c270fc7a4e",
+      "attempt_id": "mw1-attempt-e3cac6bbe309b041face7103bc10cc2dc0860ce76422e7d0026f6cc372cb1cf2",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 4,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 117315084,
+      "timed_wall_time_ns": 125117399,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0792591993435963e-06,
+        "kkt_violation": 1.9902100384383559e-07,
+        "objective": 2.6048629535578485,
+        "relative_gap": 1.0649939694442088e-07
+      }
+    },
+    {
+      "id": "mw1-observation-af11a7f468ce69da22c0cdc8f01f85bf35152ce7b8dbcb37c157332e0897e33b",
+      "attempt_id": "mw1-attempt-91b0f472f993d913d51ba14fb12c6a05703e463161851e2e99029ea995fc4590",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 3,
+      "iteration_limit": 3,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 67716519,
+      "timed_wall_time_ns": 70438732,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.03420177326735496,
+        "kkt_violation": 0.0023867996285028975,
+        "objective": 2.6048755116742126,
+        "relative_gap": 0.0033749707481006063
+      }
+    },
+    {
+      "id": "mw1-observation-4a0ba74d24e7fc85b6f4be66493c0d9ceebdb20d54c1a34dbeacaaaf7096e270",
+      "attempt_id": "mw1-attempt-293d48e0f4f1bbdfb8ff5f0abd5be936e99e81827d37232bd9a8aa57fddecb4a",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 6,
+      "iteration_limit": 6,
+      "repetition": 2,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 93681525,
+      "timed_wall_time_ns": 96482057,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 1.0792591993435963e-06,
+        "kkt_violation": 1.9902100384383559e-07,
+        "objective": 2.6048629535578485,
+        "relative_gap": 1.0649939694442088e-07
+      }
+    },
+    {
+      "id": "mw1-observation-3de04286fdce707c9b76c5d16568d1fb89e16e3d76ef4c2e9a1c0b30f7c9e851",
+      "attempt_id": "mw1-attempt-a9aa83ec5a807bd2f24006d70fea0884bb224979886a57602d221debd7467de8",
+      "implementation": "shrinkage",
+      "version": "0.2.0",
+      "iterations": 4,
+      "iteration_limit": 4,
+      "repetition": 0,
+      "threadpools": [
+        {
+          "architecture": "SkylakeX",
+          "filepath": "/home/jola/projects/shrinkage/.devenv/state/venv/lib/python3.14/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+          "internal_api": "openblas",
+          "num_threads": 1,
+          "prefix": "libscipy_openblas",
+          "threading_layer": "pthreads",
+          "user_api": "blas",
+          "version": "0.3.34.106.0"
+        }
+      ],
+      "fit_time_ns": 78758600,
+      "timed_wall_time_ns": 81680869,
+      "metrics": {
+        "alpha": 0.11085165953285525,
+        "duality_gap": 0.0010054725787500551,
+        "kkt_violation": 0.00010518145602991802,
+        "objective": 2.604862967853847,
+        "relative_gap": 9.921826318104107e-05
+      }
+    }
+  ]
+}
