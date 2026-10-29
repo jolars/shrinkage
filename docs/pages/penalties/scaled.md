@@ -23,7 +23,7 @@ conventions](index.md#read-the-constraint-plots).
 ## Use the wrapper
 
 ```rust
-use shrinkage::{Penalty, ProximalPenalty, Scaled, L1};
+use shrinkage::{L1, Penalty, ProximalPenalty, Scaled};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let penalty = Scaled::new(2.0, L1::new(0.5));

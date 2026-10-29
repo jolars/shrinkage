@@ -9,7 +9,7 @@ quadratic-plus-L1 problem.
 
 ```rust
 use faer::Mat;
-use shrinkage::{CoordinateDescent, Gaussian, Problem, Termination, L1};
+use shrinkage::{CoordinateDescent, Gaussian, L1, Problem, Termination};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(3, 1, |i, _| i as f64);

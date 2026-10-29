@@ -276,13 +276,14 @@ impl<P> Sequence<P> {
                     self.diagnostics.termination = PathTermination::DevianceRatio;
                     break;
                 }
-                if let Some((last, true)) = previous
-                    && last > 0.0
-                    && deviance <= last
-                    && (last - deviance) / last < options.deviance_change_tolerance
-                {
-                    self.diagnostics.termination = PathTermination::DevianceChange;
-                    break;
+                if let Some((last, true)) = previous {
+                    if last > 0.0
+                        && deviance <= last
+                        && (last - deviance) / last < options.deviance_change_tolerance
+                    {
+                        self.diagnostics.termination = PathTermination::DevianceChange;
+                        break;
+                    }
                 }
             }
             previous = Some((deviance, converged));

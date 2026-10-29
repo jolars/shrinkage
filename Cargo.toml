@@ -1,8 +1,9 @@
 [package]
 name = "shrinkage"
 version = "0.3.0"
-edition = "2024"
-rust-version = "1.85"
+edition = "2021"
+rust-version = "1.84"
+resolver = "3"
 description = "Composable regularized statistical models in Rust."
 authors = ["Johan Larsson <johan@jolars.co>"]
 license = "MIT"

@@ -13,7 +13,7 @@ hybrid solver.
 
 ```rust
 use faer::Mat;
-use shrinkage::{Binomial, Irls, Problem, Termination, L1};
+use shrinkage::{Binomial, Irls, L1, Problem, Termination};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(4, 1, |i, _| i as f64);

@@ -22,7 +22,7 @@ conventions](index.md#read-the-constraint-plots).
 ## Use the wrapper
 
 ```rust
-use shrinkage::{Masked, Penalty, ProximalPenalty, L1};
+use shrinkage::{L1, Masked, Penalty, ProximalPenalty};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let penalty = Masked::new(vec![true, false], L1::new(0.5));

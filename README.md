@@ -24,7 +24,7 @@ cargo add shrinkage --features faer
 cargo add faer@0.24
 ```
 
-The core library requires Rust 1.85 or newer. Some optional matrix backends
+The core library requires Rust 1.84 or newer. Some optional matrix backends
 require a newer compiler; see the [compatibility
 guide](https://shrinkage.cc/installation/).
 

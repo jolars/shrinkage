@@ -571,12 +571,14 @@ impl<P: HybridPenalty> Workspace<P> {
         iteration: usize,
         selection: Selection,
     ) -> Result<f64, FitError<O::Error>> {
+        let columns = if matches!(selection, Selection::Working) && self.working.initialized {
+            design.screening_design()
+        } else {
+            None
+        };
         if matches!(selection, Selection::Full) {
             design.forward(&self.coefficients, &mut self.residual)?;
-        } else if matches!(selection, Selection::Working)
-            && self.working.initialized
-            && let Some(columns) = design.screening_design()
-        {
+        } else if let Some(columns) = columns {
             columns.forward_active(&self.coefficients, &self.working.active, &mut self.residual)?;
         } else {
             self.screening
@@ -598,12 +600,14 @@ impl<P: HybridPenalty> Workspace<P> {
             &mut self.derivative,
             iteration,
         )?;
+        let columns = if matches!(selection, Selection::Working) && self.working.initialized {
+            design.screening_design()
+        } else {
+            None
+        };
         if matches!(selection, Selection::Full) {
             design.transpose(&self.derivative, &mut self.gradient)?;
-        } else if matches!(selection, Selection::Working)
-            && self.working.initialized
-            && let Some(columns) = design.screening_design()
-        {
+        } else if let Some(columns) = columns {
             columns.transpose_active(&self.derivative, &self.working.active, &mut self.gradient)?;
         } else {
             self.screening
@@ -730,9 +734,12 @@ impl<P: HybridPenalty> Workspace<P> {
             *d /= scale;
             norm = norm.hypot(*d);
         }
-        if self.working.initialized
-            && let Some(columns) = design.screening_design()
-        {
+        let columns = if self.working.initialized {
+            design.screening_design()
+        } else {
+            None
+        };
+        if let Some(columns) = columns {
             columns.forward_active(&self.direction, &self.working.active, &mut self.product)?;
         } else {
             self.screening
@@ -933,22 +940,23 @@ where
             let (objective, mapping) =
                 work.diagnostics(design, datafit, penalty, curvature, iteration)?;
             diagnostic_checks += 1;
-            if options.screening
-                && let Model::Gaussian(original) = datafit
-                && work.screening.check(
-                    design,
-                    &original,
-                    penalty,
-                    &work.coefficients,
-                    &work.product,
-                    objective,
-                    iteration,
-                    mapping > threshold && iteration < options.max_iterations,
-                )?
-            {
-                work.state.set_screened(&work.screening.zeroed);
-                work.pending.set_screened(&work.screening.zeroed);
-                since_pg = options.cluster_sweeps;
+            if let Model::Gaussian(original) = datafit {
+                if options.screening
+                    && work.screening.check(
+                        design,
+                        &original,
+                        penalty,
+                        &work.coefficients,
+                        &work.product,
+                        objective,
+                        iteration,
+                        mapping > threshold && iteration < options.max_iterations,
+                    )?
+                {
+                    work.state.set_screened(&work.screening.zeroed);
+                    work.pending.set_screened(&work.screening.zeroed);
+                    since_pg = options.cluster_sweeps;
+                }
             }
             if mapping <= threshold || iteration == options.max_iterations {
                 work.working.select(
@@ -1066,9 +1074,12 @@ where
                     step: 1.0 / trial_curvature,
                 });
             };
-            if work.working.initialized
-                && let Some(columns) = design.screening_design()
-            {
+            let columns = if work.working.initialized {
+                design.screening_design()
+            } else {
+                None
+            };
+            if let Some(columns) = columns {
                 columns.forward_active(&work.candidate, &work.working.active, &mut work.product)?;
             } else {
                 work.screening

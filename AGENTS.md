@@ -2,7 +2,7 @@
 
 ## Scope and structure
 
-Shrinkage is a Rust 2024 library for regularized statistical models. `Lasso`
+Shrinkage is a Rust 2021 library for regularized statistical models. `Lasso`
 provides the convenience API in `src/model/lasso.rs`; `src/solver/coordinate.rs`
 owns Gaussian coordinate descent and its residual state. Named convenience
 wrappers live in `src/model/`. Typed composition, datafits, penalties, and
