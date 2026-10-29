@@ -48,6 +48,16 @@ raw design. Explicit normalization choices are independent of the intercept
 option. Explicit centering without a fitted intercept can induce a fixed
 original-scale intercept, which the returned fit preserves.
 
+Rust's `Normalization::Custom { center, scale }` also accepts sample standard
+deviations with `Scaling::Sd { df: 1 }`. The `Auto` and `Standardize` presets
+continue to use population standard deviations (`df: 0`). For robust
+normalization, combine `Centering::Median` with
+`Scaling::QuantileRange(QuantileRange::default())` to subtract medians and
+divide by interquartile ranges. Custom quantile bounds use probabilities, such
+as `QuantileRange::new(0.1, 0.9)`. LazyMatrix computes these statistics for
+dense, sparse, and file-backed input; Shrinkage retains the fitted values for
+prediction and replaces computed zero scales with one.
+
 ## Regularization paths {#regularization-paths}
 
 All solver families support warm-started paths for their compatible problems.

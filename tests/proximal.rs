@@ -400,8 +400,8 @@ impl shrinkage::lazymatrix::RawColumns<f64> for FailingProducts {
 }
 
 macro_rules! delegate_stats {
-    ($($name:ident $(($arg:ident))?),* $(,)?) => {
-        $(fn $name(&self $(, $arg: &[f64])?) -> Result<Vec<f64>, std::io::Error> {
+    ($($name:ident $(($arg:ident: $ty:ty))?),* $(,)?) => {
+        $(fn $name(&self $(, $arg: $ty)?) -> Result<Vec<f64>, std::io::Error> {
             if self.fail_statistics {
                 return Err(std::io::Error::other("injected statistics failure"));
             }
@@ -413,15 +413,17 @@ macro_rules! delegate_stats {
 impl shrinkage::lazymatrix::ColumnStats<f64> for FailingProducts {
     delegate_stats!(
         col_means,
-        col_sds,
+        col_sds(df: usize),
+        col_medians,
+        col_quantile_ranges(range: shrinkage::QuantileRange),
         col_mins,
         col_ranges,
         col_maxabs,
         col_l1,
         col_l2,
-        col_l2_centered(centers),
-        col_l1_centered(centers),
-        col_maxabs_centered(centers)
+        col_l2_centered(centers: &[f64]),
+        col_l1_centered(centers: &[f64]),
+        col_maxabs_centered(centers: &[f64])
     );
 }
 

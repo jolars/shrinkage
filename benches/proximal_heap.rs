@@ -44,19 +44,21 @@ fn main() {
     let normalized_dense = LazyMatrix::from_parts(&dense, Some(vec![0.1; 64]), Some(vec![2.0; 64]));
     let normalized_sparse =
         LazyMatrix::from_parts(&sparse, Some(vec![0.1; 64]), Some(vec![2.0; 64]));
+    let unscaled_dense = LazyMatrix::from_parts(&dense, None, None);
+    let unscaled_sparse = LazyMatrix::from_parts(&sparse, None, None);
     println!("operation,calls,allocations,allocated_bytes,peak_live_bytes");
     measure(
-        "dense_forward_legacy",
+        "dense_forward",
         100,
         || {
             normalized_dense
                 .matvec_into(black_box(&input), &mut output)
                 .unwrap()
         },
-        Some(100),
+        Some(0),
     );
     measure(
-        "csc_forward_legacy",
+        "csc_forward",
         100,
         || {
             normalized_sparse
@@ -64,6 +66,26 @@ fn main() {
                 .unwrap()
         },
         Some(100),
+    );
+    measure(
+        "dense_forward_unscaled",
+        100,
+        || {
+            unscaled_dense
+                .matvec_into(black_box(&input), &mut output)
+                .unwrap()
+        },
+        Some(0),
+    );
+    measure(
+        "csc_forward_unscaled",
+        100,
+        || {
+            unscaled_sparse
+                .matvec_into(black_box(&input), &mut output)
+                .unwrap()
+        },
+        Some(0),
     );
     measure(
         "dense_transpose",

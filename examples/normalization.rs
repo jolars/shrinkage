@@ -2,7 +2,7 @@
 
 use faer::sparse::{SparseColMat, Triplet};
 use faer::{Col, Mat};
-use shrinkage::lazymatrix::{Centering, LazyMatrix, MatVec, Normalization, Scaling};
+use shrinkage::lazymatrix::{LazyMatrix, MatVec, Normalization};
 
 fn main() {
     let raw = [[1.0, 0.0], [0.0, 3.0], [4.0, 2.0]];
@@ -19,7 +19,7 @@ fn main() {
     )
     .expect("valid CSC triplets");
 
-    let spec = Normalization::new(Centering::Mean, Scaling::Sd);
+    let spec = Normalization::standardize();
     let dense = LazyMatrix::new(&dense, spec).expect("in-memory statistics are infallible");
     let sparse = LazyMatrix::new(&sparse, spec).expect("in-memory statistics are infallible");
     let theta = Col::from_fn(2, |j| [0.75, -1.25][j]);

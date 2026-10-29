@@ -125,8 +125,10 @@ CPU work buffers for `Vec`, faer `Col`, nalgebra `DVector`, and ndarray
 to those native buffers, with storage reused within a fit and along a penalty
 path. This CPU capability does not prescribe future device storage. Shared
 problem preparation retains normalization metadata without copying its vectors.
-All normalization algebra remains in LazyMatrix, including its scaled
-forward-product input clone.
+All normalization algebra remains in LazyMatrix. Dense products center entries
+before accumulation to preserve small variation around large column offsets. The
+generic forward product clones coefficients only when scaling is active and the
+backend does not specialize normalization.
 
 `ProximalFit` owns original-scale parameters, preprocessing, objective, final
 step, and stopping diagnostics. The absolute proximal-gradient criterion uses
@@ -145,13 +147,16 @@ storage buffers.
 
 `task bench:proximal:heap` measures normalized forward and transposed products,
 the elastic-net proximal map, and a path against independent cold fits. It also
-checks LazyMatrix 0.5.0's published `matvec_scaled_with_workspace` API with
-dense and CSC faer input. The current native adapter uses `MatVecInto`, whose
-scaled forward product clones its input. The separate upstream scratch API
-avoids that normalization allocation on the measured backends. This does not
+checks LazyMatrix 0.9.0's published `matvec_scaled_with_workspace` API with
+dense and CSC faer input. The current native adapter uses `MatVecInto`. Centered
+dense forward products and unscaled dense and CSC products allocate no input
+copy. Scaled CSC forward products still clone their input; the separate upstream
+scratch API avoids that allocation on the measured backends. This does not
 establish allocation-free Shrinkage iterations or allocation-free products for
 every backend; adopting that API requires its additional fused-product
-capabilities.
+capabilities. Batched LazyMatrix products could also replace repeated
+response-wise products in multivariate fitting, but require a batched capability
+on the shared runtime design oracle.
 
 Build working numerical code before stabilizing abstractions. Do not introduce
 an elaborate type system or one crate per prospective feature at bootstrap.
@@ -246,10 +251,9 @@ their own compatibility requirements, and runtime dispatch preserves it.
 Use `lazymatrix` as the foundation for matrix operations and just-in-time
 normalization. Reuse its existing capabilities and backend adapters, including
 dense and sparse integrations, rather than defining a competing matrix API.
-Inspect dependency upgrades before changing the pinned release or relying on new
-capabilities.
+Inspect dependency upgrades before relying on new capabilities.
 
-The crate pins the inspected release `lazymatrix = "=0.5.0"`, with default
+The crate uses `lazymatrix = "0.9.0"`, allowing compatible updates, with default
 features disabled. Shrinkage's versioned features `faer_v0_24`,
 `nalgebra_v0_34`, `ndarray_v0_17`, and `sprs_v0_11` forward to the matching
 LazyMatrix features. The short names `faer`, `nalgebra`, `ndarray`, and `sprs`
@@ -258,12 +262,12 @@ benchmarks on the versioned features so either entry point works. These retain
 faer 0.24, nalgebra 0.34 with nalgebra-sparse 0.11, ndarray 0.17, and sprs 0.11.
 ndarray arrays and borrowed views support row-major, column-major, and strided
 storage. sprs CSC matrices and views use LazyMatrix's checked `SprsCsc` wrapper;
-callers explicitly convert CSR input to CSC before fitting. Version 0.5.0
+callers explicitly convert CSR input to CSC before fitting. Version 0.9.0
 supplies fallible statistics and products, including a combined
 normalization-statistics hook. Keep upstream development overrides local so the
 regular fitting APIs build without the sibling repository.
 
-Shrinkage exposes one release line per backend. LazyMatrix 0.5.0 implements
+Shrinkage exposes one release line per backend. LazyMatrix 0.9.0 implements
 every enabled release independently, retaining older matrix types when feature
 unification enables another release.
 
@@ -307,11 +311,12 @@ residual refreshes, and full convergence checks are separate passes. Test these
 operation counts and compare reconstructed residuals against dense references;
 periodically refresh cached state to control floating-point drift.
 
-Reusable output does not imply allocation-free execution. In release 0.5.0,
-`LazyMatrix::matvec_into` clones its input when scaling is active. Measure that
+Reusable output does not imply allocation-free execution. In release 0.9.0,
+`LazyMatrix::matvec_into` avoids cloning for centered dense products and
+unscaled inputs. Its generic scaled path still clones its input. Measure that
 allocation in the proximal-gradient consumer. Before claiming an allocation-free
-normalized iteration, add and verify reusable normalization scratch storage in
-LazyMatrix. Solvers own or retain their workspaces across iterations and path
+normalized iteration, adopt and verify LazyMatrix's reusable normalization
+scratch API. Solvers own or retain their workspaces across iterations and path
 points; backend products and proximal operations must report any remaining
 allocations. Do not duplicate normalization kernels in Shrinkage to bypass this
 boundary.
@@ -336,7 +341,7 @@ File-backed failures must propagate as errors rather than panic or corrupt a
 fit.
 
 Products, column statistics, and computed normalization return `Result` in
-LazyMatrix 0.5.0. The lasso uses the combined `normalization_stats` hook and
+LazyMatrix 0.9.0. The lasso uses the combined `normalization_stats` hook and
 preserves preprocessing errors with their operation context and source type.
 Borrowed column views remain infallible and must not hide I/O or decoding. The
 separate `ReadBlock` capability binds each successful block to caller-owned
@@ -933,10 +938,15 @@ silently discard it or claim the same no-intercept model was fitted.
 The lasso convenience API accepts `.normalize(Normalization)`, replacing the
 former `standardize(bool)` option. The enum provides `Auto`, `None`, `Center`,
 `Standardize`, `MinMax`, `MaxAbs`, `L1`, `L2`, and `Custom { center, scale }`.
-Custom choices reuse LazyMatrix's `Centering` and `Scaling` enums. Centering and
-scaling are independent; norm and maximum-absolute scales are computed after
-centering. The implementation delegates statistics and normalization algebra to
-LazyMatrix.
+Custom choices reuse LazyMatrix's `Centering`, `Scaling`, and `QuantileRange`
+types. `Scaling::Sd { df: 0 }` preserves population standard deviations; `df: 1`
+selects sample standard deviations. A nonpositive remaining divisor produces
+nonfinite scales, which preprocessing rejects. Median centering and
+quantile-range scaling support robust normalization without implementing
+statistics here. Centering and scaling are independent; norm and
+maximum-absolute scales are computed after centering. The implementation
+delegates statistics and normalization algebra to LazyMatrix, including its
+named standardization and min-max presets.
 
 `Auto` preserves the initial default: fit an intercept, center by
 training-column means, and scale by population standard deviations. Disabling

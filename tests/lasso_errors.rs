@@ -6,7 +6,7 @@ use std::fmt;
 
 use shrinkage::lazymatrix::{
     ColumnStats, MatrixErrorType, MatrixShape, Normalization as MatrixNormalization,
-    NormalizationStats, RawColumn, RawColumns,
+    NormalizationStats, QuantileRange, RawColumn, RawColumns,
 };
 use shrinkage::{Centering, Lasso, LassoError, Normalization, Scaling};
 
@@ -60,8 +60,8 @@ impl MatrixErrorType for Source {
 }
 
 macro_rules! unused_stats {
-    ($($name:ident $(($arg:ident))?),* $(,)?) => {
-        $(fn $name(&self $(, $arg: &[f64])?) -> Result<Vec<f64>, Self::Error> {
+    ($($name:ident $(($arg:ident: $ty:ty))?),* $(,)?) => {
+        $(fn $name(&self $(, $arg: $ty)?) -> Result<Vec<f64>, Self::Error> {
             $(let _ = $arg;)?
             panic!("fitting must use the combined normalization_stats hook")
         })*
@@ -102,7 +102,15 @@ impl ColumnStats<f64> for Source {
         ])
     }
     unused_stats!(
-        col_means, col_sds, col_mins, col_ranges, col_maxabs, col_l1, col_l2
+        col_means,
+        col_sds(df: usize),
+        col_medians,
+        col_quantile_ranges(range: QuantileRange),
+        col_mins,
+        col_ranges,
+        col_maxabs,
+        col_l1,
+        col_l2
     );
 }
 

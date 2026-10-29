@@ -32,6 +32,66 @@ fn close(a: f64, b: f64) {
     assert!((a - b).abs() < 1e-7 * (1.0 + b.abs()), "{a} != {b}");
 }
 
+#[test]
+#[cfg(any(
+    feature = "faer_v0_24",
+    feature = "nalgebra_v0_34",
+    feature = "ndarray_v0_17"
+))]
+fn centered_products_preserve_small_variation_around_large_offsets() {
+    use shrinkage::RuntimeDesign;
+
+    const CENTERED: [[f64; 2]; 4] = [[-4.0, 2.0], [-2.0, -4.0], [2.0, 4.0], [4.0, -2.0]];
+    const CENTERS: [f64; 2] = [1e16, -1e16];
+
+    fn verify<M, V>(matrix: &M)
+    where
+        M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
+        M::Error: std::error::Error + 'static,
+        V: ProximalVector + 'static,
+    {
+        let design = MatrixDesign::<_, V>::new(matrix);
+        for scales in [None, Some([2.0, 4.0].as_slice())] {
+            let mut prepared = design
+                .prepare(Normalization::None, Some(&CENTERS), scales, false)
+                .unwrap();
+            let coefficients = [0.3, -0.7];
+            let derivative = [0.1, -0.2, 0.3, 0.4];
+            let mut forward = [f64::NAN; 4];
+            let mut transpose = [f64::NAN; 2];
+            prepared.forward(&coefficients, &mut forward).unwrap();
+            prepared.transpose(&derivative, &mut transpose).unwrap();
+            for (row, actual) in CENTERED.iter().zip(forward) {
+                let expected = (0..2)
+                    .map(|j| row[j] / scales.map_or(1.0, |s| s[j]) * coefficients[j])
+                    .sum();
+                close(actual, expected);
+            }
+            for (j, actual) in transpose.into_iter().enumerate() {
+                let expected = CENTERED
+                    .iter()
+                    .zip(derivative)
+                    .map(|(row, value)| row[j] / scales.map_or(1.0, |s| s[j]) * value)
+                    .sum();
+                close(actual, expected);
+            }
+        }
+    }
+
+    #[cfg(feature = "faer_v0_24")]
+    verify::<_, faer::Col<f64>>(&faer::Mat::from_fn(4, 2, |i, j| {
+        CENTERS[j] + CENTERED[i][j]
+    }));
+    #[cfg(feature = "nalgebra_v0_34")]
+    verify::<_, nalgebra::DVector<f64>>(&nalgebra::DMatrix::from_fn(4, 2, |i, j| {
+        CENTERS[j] + CENTERED[i][j]
+    }));
+    #[cfg(feature = "ndarray_v0_17")]
+    verify::<_, ndarray::Array1<f64>>(&ndarray::Array2::from_shape_fn((4, 2), |(i, j)| {
+        CENTERS[j] + CENTERED[i][j]
+    }));
+}
+
 fn verify<M, V>(design: &M)
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V>,

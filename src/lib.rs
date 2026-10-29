@@ -12,7 +12,7 @@
 //! `sprs` are aliases for these features. Match your direct matrix dependency
 //! to the selected release line.
 //!
-//! LazyMatrix 0.5.0 implements each enabled backend release independently, so
+//! LazyMatrix implements each enabled backend release independently, so
 //! feature unification retains support for the selected matrix types.
 //!
 //! With `ndarray_v0_17` or its `ndarray` alias, fit directly against an array or
@@ -75,7 +75,7 @@ pub use fit::{
 };
 pub use layout::CoefficientLayout;
 pub use model::{Lasso, lasso};
-pub use normalization::{Centering, Normalization, Scaling};
+pub use normalization::{Centering, Normalization, QuantileRange, Scaling};
 pub use path::{
     ErasedPathPenalty, NullModelDatafit, PathDatafit, PathFit, PathOptions, PathPenalty,
     PathSolver, PathTermination, PenaltyMaximum, RegularizationPathSolver,

@@ -7,7 +7,7 @@ use std::cell::RefCell;
 
 use lazymatrix::{
     ColumnStats, DenseBlock, MatTransposeVecInto, MatVecInto, MatrixErrorType, MatrixShape,
-    NormalizationStats, ReadBlock,
+    NormalizationStats, QuantileRange, ReadBlock,
 };
 
 use crate::error::invalid;
@@ -169,8 +169,8 @@ impl<M: ReadBlock<f64> + ?Sized> MatTransposeVecInto<Vec<f64>> for BufferedDesig
 }
 
 macro_rules! delegate_stats {
-    ($($name:ident $(($arg:ident))?),* $(,)?) => {
-        $(fn $name(&self $(, $arg: &[f64])?) -> Result<Vec<f64>, Self::Error> {
+    ($($name:ident $(($arg:ident: $ty:ty))?),* $(,)?) => {
+        $(fn $name(&self $(, $arg: $ty)?) -> Result<Vec<f64>, Self::Error> {
             self.matrix.$name($($arg)?)
         })*
     };
@@ -185,15 +185,17 @@ impl<M: ColumnStats<f64> + ?Sized> ColumnStats<f64> for BufferedDesign<'_, M> {
     }
     delegate_stats!(
         col_means,
-        col_sds,
+        col_sds(df: usize),
+        col_medians,
+        col_quantile_ranges(range: QuantileRange),
         col_mins,
         col_ranges,
         col_maxabs,
         col_l1,
         col_l2,
-        col_l1_centered(centers),
-        col_l2_centered(centers),
-        col_maxabs_centered(centers)
+        col_l1_centered(centers: &[f64]),
+        col_l2_centered(centers: &[f64]),
+        col_maxabs_centered(centers: &[f64])
     );
 }
 

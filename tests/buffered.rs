@@ -6,8 +6,11 @@
 mod matrix;
 
 use shrinkage::experimental::{BufferedDesign, fit_buffered};
-use shrinkage::lazymatrix::{MatTransposeVecInto, MatVecInto, ZarrMatrix};
-use shrinkage::{FitError, Gaussian, Normalization, Problem, ProximalGradient, Ridge};
+use shrinkage::lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, ZarrMatrix};
+use shrinkage::{
+    Centering, FitError, Gaussian, Normalization, Problem, ProximalGradient, QuantileRange, Ridge,
+    Scaling,
+};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use zarrs::array::{Array, ArrayBuilder, DataType};
@@ -68,7 +71,7 @@ impl ReadableStorageTraits for Store {
     }
 }
 
-fn fixture() -> (ZarrMatrix<Store>, Arc<Store>) {
+fn fixture() -> (ZarrMatrix<Array<Store>>, Arc<Store>) {
     let inner = Arc::new(MemoryStore::new());
     let array = ArrayBuilder::new(vec![5, 3], vec![2, 2], DataType::Float64, 0.0_f64)
         .build(inner.clone(), "/x")
@@ -107,7 +110,14 @@ fn buffered_fits_match_dense_fits_and_reuse_the_same_buffer() {
         .tolerance(1e-8);
     let mut buffer = [f64::NAN; 14];
     let address = buffer.as_ptr();
-    for normalization in [Normalization::None, Normalization::Standardize] {
+    for normalization in [
+        Normalization::None,
+        Normalization::Standardize,
+        Normalization::Custom {
+            center: Centering::Mean,
+            scale: Scaling::Sd { df: 1 },
+        },
+    ] {
         for intercept in [false, true] {
             let datafit = Gaussian::new(&RESPONSE).fit_intercept(intercept);
             let expected = Problem::new(&dense, datafit, Ridge::new(0.2))
@@ -133,6 +143,80 @@ fn buffered_fits_match_dense_fits_and_reuse_the_same_buffer() {
                 assert!(buffer[shape[0] * shape[1]..].iter().all(|x| x.is_nan()));
             }
         }
+    }
+}
+
+#[test]
+fn buffered_quantile_normalization_matches_an_explicit_design() {
+    let (matrix, _) = fixture();
+    let mut buffer = [f64::NAN; 6];
+    {
+        let design = BufferedDesign::new(&matrix, [2, 2], &mut buffer);
+        assert_eq!(design.col_medians().unwrap(), [2.0, 2.0, 5.0]);
+        assert_eq!(
+            design
+                .col_quantile_ranges(QuantileRange::default())
+                .unwrap(),
+            [2.0, 2.0, 0.0]
+        );
+        assert_eq!(
+            design
+                .col_quantile_ranges(QuantileRange::new(0.0, 1.0))
+                .unwrap(),
+            [4.0, 4.0, 0.0]
+        );
+        let sds = design.col_sds(1).unwrap();
+        close(sds[0], 2.5_f64.sqrt());
+        close(sds[1], 2.5_f64.sqrt());
+        close(sds[2], 0.0);
+    }
+    assert!(buffer.iter().all(|value| value.is_nan()));
+
+    let normalized: Vec<_> = ROWS
+        .iter()
+        .map(|row| [(row[0] - 2.0) / 2.0, (row[1] - 2.0) / 2.0, 0.0])
+        .collect();
+    let dense = matrix::Matrix::from_rows(
+        &normalized
+            .iter()
+            .map(|row| row.as_slice())
+            .collect::<Vec<_>>(),
+    );
+    let options = ProximalGradient::<Vec<f64>>::new().tolerance(1e-8);
+    for intercept in [false, true] {
+        let datafit = Gaussian::new(&RESPONSE).fit_intercept(intercept);
+        let expected = Problem::new(&dense, datafit, Ridge::new(0.2))
+            .normalize(Normalization::None)
+            .fit_with(&options)
+            .unwrap();
+        let fit = fit_buffered(
+            &Problem::new(&matrix, datafit, Ridge::new(0.2)).normalize(Normalization::Custom {
+                center: Centering::Median,
+                scale: Scaling::QuantileRange(QuantileRange::default()),
+            }),
+            &options,
+            [2, 2],
+            &mut buffer,
+        )
+        .unwrap();
+        assert_eq!(fit.termination(), expected.termination());
+        assert_eq!(
+            fit.preprocessing().centers(),
+            Some([2.0, 2.0, 5.0].as_slice())
+        );
+        assert_eq!(
+            fit.preprocessing().scales(),
+            Some([2.0, 2.0, 1.0].as_slice())
+        );
+        close(fit.objective(), expected.objective());
+        for j in 0..2 {
+            close(fit.coefficients()[j], expected.coefficients()[j] / 2.0);
+        }
+        close(fit.coefficients()[2], 0.0);
+        close(
+            fit.intercept(),
+            expected.intercept() - expected.coefficients()[0] - expected.coefficients()[1],
+        );
     }
 }
 

@@ -9,7 +9,7 @@ wrappers live in `src/model/`. Typed composition, datafits, penalties, and
 fitted results live in their respective modules. Keep individual datafits in
 `src/datafit/` and fitted result types in `src/fit/`. Model fitting follows
 `DESIGN.md`. The `normalization` and `lasso` examples exercise dense and sparse
-CSC input through LazyMatrix 0.5.0. Optional `faer_v0_24`, `nalgebra_v0_34`,
+CSC input through LazyMatrix 0.9.0. Optional `faer_v0_24`, `nalgebra_v0_34`,
 `ndarray_v0_17`, and `sprs_v0_11` features expose its matrix integrations. The
 short names `faer`, `nalgebra`, `ndarray`, and `sprs` are aliases. sprs input
 uses LazyMatrix's checked `SprsCsc` wrapper.
@@ -38,8 +38,8 @@ Cloudflare Worker configuration.
 - Reuse LazyMatrix's matrix capabilities and normalization algebra. Solver
   state, residual offsets, statistical validation, and stopping criteria belong
   here.
-- Keep default features free of matrix backends. The pinned LazyMatrix release
-  defines supported backend versions; the sibling checkout may contain
+- Keep default features free of matrix backends. The supported LazyMatrix
+  release defines supported backend versions; the sibling checkout may contain
   unpublished APIs. Do not commit a dependency on a sibling directory.
 - Gate tests, doctests, examples, and benchmarks on versioned backend features.
   Test the versioned features and their short aliases independently.

@@ -2,8 +2,8 @@ use std::cell::Cell;
 use std::convert::Infallible;
 
 use lazymatrix::{
-    ColumnStats, MatTransposeVecInto, MatVecInto, MatrixErrorType, MatrixShape, RawColumn,
-    RawColumns,
+    ColumnStats, MatTransposeVecInto, MatVecInto, MatrixErrorType, MatrixShape, QuantileRange,
+    RawColumn, RawColumns,
 };
 
 /// Small CSC oracle that also works without a matrix backend feature.
@@ -83,8 +83,8 @@ impl RawColumns<f64> for Matrix {
 }
 
 macro_rules! unused_stats {
-    ($($name:ident $(($arg:ident))?),* $(,)?) => {
-        $(fn $name(&self $(, $arg: &[f64])?) -> Result<Vec<f64>, Self::Error> {
+    ($($name:ident $(($arg:ident: $ty:ty))?),* $(,)?) => {
+        $(fn $name(&self $(, $arg: $ty)?) -> Result<Vec<f64>, Self::Error> {
             $(let _ = $arg;)?
             panic!("Gaussian lasso does not request this statistic")
         })*
@@ -133,7 +133,12 @@ impl ColumnStats<f64> for Matrix {
             .collect())
     }
 
-    fn col_sds(&self) -> Result<Vec<f64>, Self::Error> {
+    fn col_sds(&self, df: usize) -> Result<Vec<f64>, Self::Error> {
+        let divisor = if self.nrows > df {
+            (self.nrows - df) as f64
+        } else {
+            f64::NAN
+        };
         Ok(self
             .columns
             .iter()
@@ -143,20 +148,21 @@ impl ColumnStats<f64> for Matrix {
                     .iter()
                     .map(|&(_, value)| (value - mean).powi(2))
                     .sum::<f64>();
-                ((stored + (self.nrows - column.len()) as f64 * mean * mean) / self.nrows as f64)
-                    .sqrt()
+                ((stored + (self.nrows - column.len()) as f64 * mean * mean) / divisor).sqrt()
             })
             .collect())
     }
 
     unused_stats!(
+        col_medians,
+        col_quantile_ranges(range: QuantileRange),
         col_mins,
         col_ranges,
         col_maxabs,
         col_l1,
         col_l2,
-        col_l2_centered(centers),
-        col_l1_centered(centers),
-        col_maxabs_centered(centers)
+        col_l2_centered(centers: &[f64]),
+        col_l1_centered(centers: &[f64]),
+        col_maxabs_centered(centers: &[f64])
     );
 }

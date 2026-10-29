@@ -119,17 +119,19 @@ impl PyLassoFit {
             Centering::None => "none",
             Centering::Mean => "mean",
             Centering::Min => "min",
+            Centering::Median => "median",
         }
     }
     #[getter]
     fn scaling(&self) -> &'static str {
         match self.fit.preprocessing().scaling() {
             Scaling::None => "none",
-            Scaling::Sd => "sd",
+            Scaling::Sd { .. } => "sd",
             Scaling::Range => "range",
             Scaling::MaxAbs => "max_abs",
             Scaling::L1 => "l1",
             Scaling::L2 => "l2",
+            Scaling::QuantileRange(_) => "quantile_range",
         }
     }
     #[getter]

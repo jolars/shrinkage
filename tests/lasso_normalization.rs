@@ -3,7 +3,7 @@
 #![cfg(feature = "faer_v0_24")]
 
 use faer::Mat;
-use shrinkage::{Centering, Lasso, Normalization, Scaling, Termination};
+use shrinkage::{Centering, Lasso, Normalization, QuantileRange, Scaling, Termination};
 
 const ROWS: [[f64; 3]; 4] = [
     [-2.0, 5.0, 0.0],
@@ -22,26 +22,30 @@ fn close(actual: f64, expected: f64) {
 fn verify(normalization: Normalization, center: Centering, scale: Scaling, intercept: bool) {
     let centers = match center {
         Centering::None => None,
-        Centering::Mean => Some([2.0, 5.0, 0.0]),
+        Centering::Mean | Centering::Median => Some([2.0, 5.0, 0.0]),
         Centering::Min => Some([-2.0, 5.0, 0.0]),
     };
     let scales = match scale {
         Scaling::None => None,
-        Scaling::Sd => Some([10.0_f64.sqrt(), 1.0, 1.0]),
+        Scaling::Sd { df } => Some([(40.0 / (4 - df) as f64).sqrt(), 1.0, 1.0]),
         Scaling::Range => Some([8.0, 1.0, 1.0]),
+        Scaling::QuantileRange(range) => {
+            assert_eq!(range, QuantileRange::default());
+            Some([5.0, 1.0, 1.0])
+        }
         Scaling::MaxAbs => Some(match center {
             Centering::None => [6.0, 5.0, 1.0],
-            Centering::Mean => [4.0, 1.0, 1.0],
+            Centering::Mean | Centering::Median => [4.0, 1.0, 1.0],
             Centering::Min => [8.0, 1.0, 1.0],
         }),
         Scaling::L1 => Some(match center {
             Centering::None => [12.0, 20.0, 1.0],
-            Centering::Mean => [12.0, 1.0, 1.0],
+            Centering::Mean | Centering::Median => [12.0, 1.0, 1.0],
             Centering::Min => [16.0, 1.0, 1.0],
         }),
         Scaling::L2 => Some(match center {
             Centering::None => [56.0_f64.sqrt(), 10.0, 1.0],
-            Centering::Mean => [40.0_f64.sqrt(), 1.0, 1.0],
+            Centering::Mean | Centering::Median => [40.0_f64.sqrt(), 1.0, 1.0],
             Centering::Min => [104.0_f64.sqrt(), 1.0, 1.0],
         }),
     };
@@ -105,11 +109,15 @@ fn presets_match_explicit_normalization_and_preserve_predictions() {
                 } else {
                     Centering::None
                 },
-                Scaling::Sd,
+                Scaling::Sd { df: 0 },
             ),
             (Normalization::None, Centering::None, Scaling::None),
             (Normalization::Center, Centering::Mean, Scaling::None),
-            (Normalization::Standardize, Centering::Mean, Scaling::Sd),
+            (
+                Normalization::Standardize,
+                Centering::Mean,
+                Scaling::Sd { df: 0 },
+            ),
             (Normalization::MinMax, Centering::Min, Scaling::Range),
             (Normalization::MaxAbs, Centering::None, Scaling::MaxAbs),
             (Normalization::L1, Centering::None, Scaling::L1),
@@ -123,10 +131,17 @@ fn presets_match_explicit_normalization_and_preserve_predictions() {
 #[test]
 fn custom_centering_and_scaling_match_explicit_fits() {
     for intercept in [false, true] {
-        for center in [Centering::None, Centering::Mean, Centering::Min] {
+        for center in [
+            Centering::None,
+            Centering::Mean,
+            Centering::Min,
+            Centering::Median,
+        ] {
             for scale in [
                 Scaling::None,
-                Scaling::Sd,
+                Scaling::Sd { df: 0 },
+                Scaling::Sd { df: 1 },
+                Scaling::QuantileRange(QuantileRange::default()),
                 Scaling::Range,
                 Scaling::MaxAbs,
                 Scaling::L1,
@@ -141,6 +156,24 @@ fn custom_centering_and_scaling_match_explicit_fits() {
             }
         }
     }
+}
+
+#[test]
+fn standard_deviations_require_remaining_degrees_of_freedom() {
+    let x = Mat::from_fn(4, 3, |i, j| ROWS[i][j]);
+    for df in [4, 5, usize::MAX] {
+        let error = Lasso::new(0.1)
+            .normalize(Normalization::Custom {
+                center: Centering::Mean,
+                scale: Scaling::Sd { df },
+            })
+            .fit(&x, &[-1.0, 2.0, 4.0, 7.0])
+            .unwrap_err();
+        assert!(error.to_string().contains("column scales"));
+    }
+    let singleton = Mat::from_fn(1, 1, |_, _| 2.0);
+    let fit = Lasso::new(0.1).fit(&singleton, &[3.0]).unwrap();
+    assert_eq!(fit.preprocessing().scales(), Some([1.0].as_slice()));
 }
 
 #[test]

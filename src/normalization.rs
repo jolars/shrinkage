@@ -1,6 +1,6 @@
 //! Column normalization presets and independent centering and scaling choices.
 
-pub use lazymatrix::{Centering, Scaling};
+pub use lazymatrix::{Centering, QuantileRange, Scaling};
 
 /// Training-column normalization applied before fitting.
 ///
@@ -33,6 +33,9 @@ pub enum Normalization {
     /// Divide by column L2 norms without centering.
     L2,
     /// Choose centering and scaling independently using LazyMatrix's options.
+    ///
+    /// Use `Scaling::Sd { df: 1 }` for sample standard deviations, or combine
+    /// [`Centering::Median`] with [`Scaling::QuantileRange`] for robust scaling.
     Custom {
         /// How to center each column.
         center: Centering,
@@ -43,24 +46,25 @@ pub enum Normalization {
 
 impl Normalization {
     pub(crate) fn specification(self, fit_intercept: bool) -> lazymatrix::Normalization {
-        let (center, scale) = match self {
-            Self::Auto => (
+        use lazymatrix::Normalization as Spec;
+
+        match self {
+            Self::Auto => Spec::new(
                 if fit_intercept {
                     Centering::Mean
                 } else {
                     Centering::None
                 },
-                Scaling::Sd,
+                Scaling::Sd { df: 0 },
             ),
-            Self::None => (Centering::None, Scaling::None),
-            Self::Center => (Centering::Mean, Scaling::None),
-            Self::Standardize => (Centering::Mean, Scaling::Sd),
-            Self::MinMax => (Centering::Min, Scaling::Range),
-            Self::MaxAbs => (Centering::None, Scaling::MaxAbs),
-            Self::L1 => (Centering::None, Scaling::L1),
-            Self::L2 => (Centering::None, Scaling::L2),
-            Self::Custom { center, scale } => (center, scale),
-        };
-        lazymatrix::Normalization::new(center, scale)
+            Self::None => Spec::default(),
+            Self::Center => Spec::new(Centering::Mean, Scaling::None),
+            Self::Standardize => Spec::standardize(),
+            Self::MinMax => Spec::min_max(),
+            Self::MaxAbs => Spec::new(Centering::None, Scaling::MaxAbs),
+            Self::L1 => Spec::new(Centering::None, Scaling::L1),
+            Self::L2 => Spec::new(Centering::None, Scaling::L2),
+            Self::Custom { center, scale } => Spec::new(center, scale),
+        }
     }
 }

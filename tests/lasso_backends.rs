@@ -8,7 +8,7 @@
 ))]
 
 use shrinkage::lazymatrix::{ColumnStats, RawColumns};
-use shrinkage::{Centering, Lasso, LassoFit, Normalization, Scaling, Termination};
+use shrinkage::{Centering, Lasso, LassoFit, Normalization, QuantileRange, Scaling, Termination};
 #[cfg(feature = "faer_v0_24")]
 use shrinkage::{CoordinateDescent, Gaussian, L1, Problem};
 
@@ -115,10 +115,18 @@ where
             Normalization::L1,
             Normalization::L2,
         ];
-        for center in [Centering::None, Centering::Mean, Centering::Min] {
+        for center in [
+            Centering::None,
+            Centering::Mean,
+            Centering::Min,
+            Centering::Median,
+        ] {
             for scale in [
                 Scaling::None,
-                Scaling::Sd,
+                Scaling::Sd { df: 0 },
+                Scaling::Sd { df: 1 },
+                Scaling::QuantileRange(QuantileRange::default()),
+                Scaling::QuantileRange(QuantileRange::new(0.0, 0.5)),
                 Scaling::Range,
                 Scaling::MaxAbs,
                 Scaling::L1,

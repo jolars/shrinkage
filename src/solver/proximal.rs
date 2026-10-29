@@ -97,8 +97,9 @@ impl ProximalVector for ndarray::Array1<f64> {
 ///
 /// `V` is the design backend's owned vector: `faer::Col<f64>`,
 /// `nalgebra::DVector<f64>`, `ndarray::Array1<f64>`, or `Vec<f64>` for sprs.
-/// No normalized design or Gram matrix is formed. LazyMatrix 0.5.0 still
-/// clones the input to scaled forward products.
+/// No normalized design or Gram matrix is formed. LazyMatrix centers dense
+/// products before accumulation. Its generic scaled forward product still
+/// clones the input when the backend does not specialize normalization.
 /// [`crate::MultivariateGaussian`] with [`crate::AxisPenalty`] fits joint
 /// matrix coefficients and response-specific unpenalized intercepts through
 /// the same iteration, returning [`crate::MultivariateFit`].
