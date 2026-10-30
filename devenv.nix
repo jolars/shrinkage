@@ -23,12 +23,20 @@ in
     pkgs.nodejs
     pkgs.wasm-bindgen-cli
     pkgs.ruff
+    pkgs.cargo-flamegraph
+    pkgs.samply
+    pkgs.hyperfine
+    pkgs.llvmPackages.bintools
     (inputs.diplodocus.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
       patches = (old.patches or [ ]) ++ [
         ./docs/diplodocus-generated-inputs.patch
         ./docs/diplodocus-components.patch
       ];
     }))
+  ] ++ lib.optionals pkgs.stdenv.isLinux [
+    pkgs.perf
+    pkgs.valgrind
+    pkgs.util-linux
   ];
 
   languages.python = {

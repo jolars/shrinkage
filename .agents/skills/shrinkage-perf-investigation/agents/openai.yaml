@@ -1,0 +1,4 @@
+interface:
+  display_name: "Investigate Shrinkage Performance"
+  short_description: "Diagnose solver, matrix, and Python performance"
+  default_prompt: "Use $shrinkage-perf-investigation to investigate this Shrinkage performance problem and measure its cause."
