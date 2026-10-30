@@ -37,6 +37,11 @@ pub trait Solver<P> {
 }
 
 /// Cyclic coordinate descent settings for Gaussian lasso.
+///
+/// Full convergence checks run at initialization, after every ten sweeps over
+/// the current working set, and at the iteration limit. Each check refreshes
+/// the residuals and updates the working set; individual sweeps do not perform
+/// restricted KKT checks.
 #[derive(Clone, Copy, Debug)]
 pub struct CoordinateDescent {
     stopping_criterion: Option<StoppingCriterion>,

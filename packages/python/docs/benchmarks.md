@@ -14,10 +14,11 @@ over several orders of magnitude remains visible. Each marker shows the median
 time and gap of five measurements at the same iteration limit. Horizontal error
 bars span the middle half of the times.
 
-Metewand increases the iteration limit from 1 to 12 complete coordinate sweeps.
-Every fit starts from zero coefficients. Each curve ends when its independently
-checked gap meets the accuracy target. Each point's time measures that fit from
-initialization through its selected limit.
+Metewand increases the iteration limit one sweep at a time, up to 40 sweeps.
+Shrinkage sweeps its current working set. Every fit starts from zero
+coefficients. Each curve ends when its independently checked gap meets the
+accuracy target. Each point's time measures that fit from initialization through
+its selected limit.
 
 The figure uses Metewand's in-worker timer around model construction and the
 call to `fit`. This includes input validation, the copies required by each API,
@@ -36,9 +37,9 @@ pass both methods the same Fortran-contiguous NumPy `float64` arrays.
 Both methods minimize
 
 $$
-  \frac{1}{2n}\lVert y - X\beta\rVert_2^2
-  + \alpha\lVert\beta\rVert_1, \qquad \alpha
-  = 0.1\,\frac{\lVert X^T y\rVert_\infty}{n}.
+  \frac{1}{2n}\lVert y - X\beta\rVert_2^2 + \alpha\lVert\beta\rVert_1,
+  \qquad
+  \alpha = 0.1\,\frac{\lVert X^T y\rVert_\infty}{n}.
 $$
 
 The plotted gap is the primal objective minus a feasible dual objective. It
@@ -61,6 +62,10 @@ documentation](https://scikit-learn.org/stable/modules/generated/sklearn.linear_
 for its objective and stopping rules.
 
 ## Measurement and reproduction
+
+Shrinkage checks full convergence at initialization, every ten coordinate
+sweeps, and at the iteration limit. Working sets update at these checks. The
+profile allows up to 40 sweeps to accommodate this cadence.
 
 The run uses a release build of shrinkage, one thread per numerical library,
 serial execution, one discarded warm-up per worker, and five measured profiles

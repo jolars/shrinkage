@@ -46,12 +46,14 @@ from that export. Package versions and the native-extension hash are recorded by
 the workers outside the fit timer.
 
 The `fresh_sequence` profile runs five repetitions per method, with increasing
-iteration limits from 1 through 12 sweeps. Each point starts a new model from
-zero coefficients. An independent evaluator computes both the absolute duality
-gap for plotting and its ratio to the null-model loss for stopping. Metewand
-stops each profile when that ratio reaches `1e-8`. Early points with larger gaps
-are valid observations. The reporting tests check that these points survive
-export processing and that each plotted time belongs to its own fit.
+iteration limits from 1 through 40 sweeps. Each point starts a new model from
+zero coefficients. Shrinkage sweeps its current working set and checks the full
+problem every ten sweeps and at the iteration limit. An independent evaluator
+computes both the absolute duality gap for plotting and its ratio to the
+null-model loss for stopping. Metewand stops each profile when that ratio
+reaches `1e-8`. Early points with larger gaps are valid observations. The
+reporting tests check that these points survive export processing and that each
+plotted time belongs to its own fit.
 
 Each marker shows the median time and gap at one iteration limit. Horizontal
 error bars span the middle half of five timings. Lines connect the limits in

@@ -1,5 +1,5 @@
 use super::observer::{NoObserver, notify};
-use super::working_set::{WorkingSetPolicy, Workspace as WorkingSet};
+use super::working_set::Workspace as WorkingSet;
 use super::{SolverObserver, StepKind};
 use lazymatrix::{LazyColumn, LazyMatrix, RawColumn, RawColumns};
 
@@ -10,7 +10,7 @@ use crate::{Gaussian, L1, Termination};
 #[cfg(test)]
 mod tests;
 
-const REFRESH_INTERVAL: usize = 50;
+const CHECK_INTERVAL: usize = 10;
 
 struct ColumnSummary {
     raw_sum: f64,
@@ -553,9 +553,7 @@ pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserve
         false,
         stationarity_tolerance,
     );
-    let mut target = stationarity_tolerance.max(0.1 * check.kkt_violation);
     let mut iterations = 0;
-    let mut since_full = 0;
     let mut moved = false;
     notify(
         observer,
@@ -566,7 +564,6 @@ pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserve
     );
     while stopping_value(&check, criterion) > threshold && iterations < options.max_iterations {
         iterations += 1;
-        since_full += 1;
         for &j in &work.working.active {
             work.working.diagnostics.feature_visits += 1;
             let summary = &work.summaries[j];
@@ -623,59 +620,17 @@ pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserve
             );
         }
         work.working.record(&work.coefficients);
-        if iterations % REFRESH_INTERVAL == 0 {
-            work.residual.refresh(
-                matrix,
-                datafit.response,
-                &work.coefficients,
-                work.intercept,
-                &work.summaries,
-                iterations,
-            )?;
-        }
-        let disabled = work.working.diagnostics.policy == WorkingSetPolicy::Disabled;
-        let local = if disabled {
-            f64::INFINITY
-        } else {
-            let mut local = if datafit.fit_intercept {
-                work.residual.mean(iterations)?.abs()
-            } else {
-                0.0
-            };
-            for &j in &work.working.active {
-                let correlation =
-                    work.residual
-                        .dot(&matrix.column(j), &work.summaries[j], iterations)?
-                        / n;
-                local = local.max(coordinate_violation(
-                    work.coefficients[j],
-                    correlation,
-                    penalty.lambda,
-                ));
-            }
-            work.working.diagnostics.restricted_checks += 1;
-            local
-        };
-        let discover =
-            iterations == 1 && work.working.diagnostics.policy == WorkingSetPolicy::EverActive;
-        if local <= target
-            || !moved
-            || since_full == 10
-            || disabled
-            || discover
-            || iterations == options.max_iterations
-        {
+        // Batch sweeps so convergence certification does not dominate small working sets.
+        if iterations % CHECK_INTERVAL == 0 || iterations == options.max_iterations {
             check = work.diagnose(matrix, datafit, penalty, iterations)?;
             work.screen(penalty, options, &check);
             work.working.select(
                 &work.coefficients,
                 &work.screened,
-                local <= target || !moved,
+                true,
                 !moved,
                 stationarity_tolerance,
             );
-            target = stationarity_tolerance.max(0.1 * check.kkt_violation);
-            since_full = 0;
             moved = false;
         }
     }

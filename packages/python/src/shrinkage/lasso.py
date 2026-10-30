@@ -50,8 +50,10 @@ class Lasso:
 
     By default, positive penalties use relative duality gap ``1e-6`` and zero
     penalty uses absolute KKT violation ``1e-6``. ``stopping`` overrides this
-    choice. ``max_iterations`` limits complete coordinate sweeps and must be
-    positive. Options are validated when fitting.
+    choice. ``max_iterations`` limits complete sweeps over the current working
+    set and must be positive. Full convergence checks run at initialization,
+    every ten sweeps, and at the iteration limit. Options are validated when
+    fitting.
     """
 
     lambda_: float

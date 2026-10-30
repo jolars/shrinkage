@@ -92,14 +92,14 @@ observation-policies:
     metric: relative_gap
     direction: at_most
     threshold: 1.0e-8
-    max-observations: 12
+    max-observations: 40
     max-active-time: 10 s
     implementations:
       shrinkage: &sweeps
         delivery: fresh_sequence
         control-schema:
           type: object
-          properties: {iterations: {type: integer, minimum: 1, maximum: 12}}
+          properties: {iterations: {type: integer, minimum: 1, maximum: 40}}
           required: [iterations]
           additionalProperties: false
         schedule:
@@ -107,5 +107,5 @@ observation-policies:
           field: iterations
           start: 1
           step: 1
-          count: 12
+          count: 40
       scikit-learn: *sweeps

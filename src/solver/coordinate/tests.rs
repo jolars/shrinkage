@@ -118,7 +118,7 @@ fn repeated_updates_and_refresh_match_materialized_residuals() {
             .unwrap();
         intercept += 0.003;
         residual.offset -= 0.003;
-        if iteration % REFRESH_INTERVAL == 0 {
+        if iteration % CHECK_INTERVAL == 0 {
             residual
                 .refresh(&matrix, &y, &coefficients, intercept, &summaries, iteration)
                 .unwrap();
@@ -244,4 +244,104 @@ fn path_iteration_limits_keep_optimization_parameters() {
     assert_eq!(second.iterations, 1);
     assert!(second.objective < first.objective);
     assert!(second.coefficients[0] > first.coefficients[0]);
+}
+
+#[test]
+fn full_checks_wait_for_ten_sweeps_even_when_coordinates_stop_moving() {
+    let raw = Sparse {
+        nrows: 2,
+        columns: vec![vec![(0, -1.0), (1, 1.0)]],
+        visits: Cell::new(0),
+    };
+    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    for policy in [
+        crate::WorkingSetPolicy::Disabled,
+        crate::WorkingSetPolicy::EverActive,
+        crate::WorkingSetPolicy::Auto,
+    ] {
+        for criterion in [
+            StoppingCriterion::kkt_violation(1e-10),
+            StoppingCriterion::duality_gap(1e-10),
+        ] {
+            let options = CoordinateDescent::new()
+                .working_set_policy(policy)
+                .terminate_on(criterion);
+            let fit = solve(
+                &matrix,
+                Gaussian::new(&[-2.0, 2.0]).fit_intercept(false),
+                L1::new(0.5),
+                &options,
+            )
+            .unwrap();
+            assert_eq!(fit.termination, Termination::Converged);
+            assert_eq!(fit.iterations, 10, "{policy:?}, {criterion:?}");
+            assert_eq!(fit.working_set.full_checks, 2);
+            assert_eq!(fit.working_set.restricted_checks, 0);
+            close(fit.coefficients[0], 1.5);
+        }
+    }
+}
+
+#[test]
+fn full_checks_include_iteration_limits_between_ten_sweep_boundaries() {
+    let raw = Sparse {
+        nrows: 2,
+        columns: vec![vec![(0, 1.0), (1, 1.0)], vec![(0, 1.0), (1, 1.01)]],
+        visits: Cell::new(0),
+    };
+    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    for limit in [1, 7, 10, 11, 23] {
+        let fit = solve(
+            &matrix,
+            Gaussian::new(&[-1.0, 1.0]).fit_intercept(false),
+            L1::new(0.0),
+            &CoordinateDescent::new()
+                .working_sets(false)
+                .tolerance(1e-14)
+                .max_iterations(limit),
+        )
+        .unwrap();
+        assert_eq!(fit.termination, Termination::IterationLimit);
+        assert_eq!(fit.iterations, limit);
+        assert_eq!(fit.working_set.full_checks, 1 + limit.div_ceil(10));
+        assert_eq!(fit.working_set.restricted_checks, 0);
+        let mut work =
+            Workspace::new(&matrix, Gaussian::new(&[-1.0, 1.0]).fit_intercept(false)).unwrap();
+        work.coefficients.copy_from_slice(&fit.coefficients);
+        let final_check = work
+            .diagnose(
+                &matrix,
+                Gaussian::new(&[-1.0, 1.0]).fit_intercept(false),
+                L1::new(0.0),
+                limit,
+            )
+            .unwrap();
+        close(fit.kkt_violation, final_check.kkt_violation);
+        close(fit.objective, final_check.objective);
+    }
+}
+
+#[test]
+fn scheduled_full_checks_expand_the_working_set_until_all_violations_are_resolved() {
+    let raw = Sparse {
+        nrows: 24,
+        columns: (0..24).map(|j| vec![(j, 1.0)]).collect(),
+        visits: Cell::new(0),
+    };
+    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let fit = solve(
+        &matrix,
+        Gaussian::new(&[1.0; 24]).fit_intercept(false),
+        L1::new(0.01),
+        &CoordinateDescent::new().tolerance(1e-12),
+    )
+    .unwrap();
+    assert_eq!(fit.termination, Termination::Converged);
+    assert_eq!(fit.iterations, 30);
+    assert_eq!(fit.working_set.full_checks, 4);
+    assert_eq!(fit.working_set.restricted_checks, 0);
+    assert_eq!(fit.working_set.peak_active_dimension, 24);
+    for coefficient in fit.coefficients {
+        close(coefficient, 0.76);
+    }
 }
