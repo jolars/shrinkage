@@ -38,13 +38,13 @@ in
 
   env.DIPLODOCUS_RUST_TOOLCHAIN = rustDocumentationToolchain;
   env.PLAYWRIGHT_BROWSERS_PATH =
-    assert lib.assertMsg
-      ((builtins.fromJSON (builtins.readFile ./docs/widget/package.json)).devDependencies."@playwright/test" == pkgs.playwright-driver.version)
-      "Keep the widget's Playwright version aligned with the locked devenv.";
+    assert lib.assertMsg (
+      (builtins.fromJSON (builtins.readFile ./docs/widget/package.json))
+      .devDependencies."@playwright/test" == pkgs.playwright-driver.version
+    ) "Keep the widget's Playwright version aligned with the locked devenv.";
     pkgs.playwright-driver.browsers-chromium;
   env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
   env.PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
-
 
   # NumPy wheels need these shared libraries outside Nix's patched executables.
   env.LD_LIBRARY_PATH = lib.makeLibraryPath [
@@ -88,7 +88,7 @@ in
 
     panache-format = {
       enable = true;
-      entry = "panache format --check --force-exclude";
+      entry = "panache format --force-exclude";
       files = "\\.md$";
       language = "system";
     };
