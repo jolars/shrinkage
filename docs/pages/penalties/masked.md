@@ -4,7 +4,7 @@
 one for penalized coordinates and zero for excluded coordinates. Then
 
 $$
-  P_{\mathrm{masked}}(\beta) = P(m \odot \beta).
+  R_{\mathrm{masked}}(\beta) = R(m \odot \beta).
 $$
 
 In the Rust mask, `true` means **unpenalized**, while `false` retains the

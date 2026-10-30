@@ -1,11 +1,11 @@
 # Linear regression
 
 A Gaussian linear model estimates a real-valued conditional mean. With a
-complete penalty $P$, its objective is
+complete penalty $R$, its objective is
 
 $$
   \min_{\beta_0,\beta}\;\frac{\|y - \beta_0\mathbf{1} - \widetilde X\beta\|_2^2}{2n}
-  + P(\beta).
+  + R(\beta).
 $$
 
 Choose [L1](../penalties/l1.md) for sparsity, [ridge](../penalties/ridge.md) for

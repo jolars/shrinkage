@@ -3,7 +3,7 @@
 `Scaled` multiplies an entire penalty, including its existing strengths:
 
 $$
-  P_{\mathrm{scaled}}(\beta) = aP(\beta),\qquad a \geq 0.
+  R_{\mathrm{scaled}}(\beta) = aR(\beta),\qquad a \geq 0.
 $$
 
 For $a > 0$, its exact proximal map is the inner penalty's map with step $sa$.

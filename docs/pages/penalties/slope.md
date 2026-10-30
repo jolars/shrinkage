@@ -7,7 +7,7 @@ exactly one finite, nonnegative, nonincreasing weight per coefficient; the
 weights already include the penalty strength.
 
 $$
-  P(\beta) = \sum_{j=1}^p w_j|\beta|_{(j)},\qquad w_1 \geq \cdots
+  R(\beta) = \sum_{j=1}^p w_j|\beta|_{(j)},\qquad w_1 \geq \cdots
                                                       \geq w_p \geq 0.
 $$
 

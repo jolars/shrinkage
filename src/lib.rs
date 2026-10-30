@@ -5,6 +5,12 @@
 //! and explicit convergence diagnostics. See [`Lasso::terminate_on`] for the
 //! stopping criterion and [`LassoFit::termination`] before using a fit.
 //!
+//! The primal objective is `P(beta_0, beta) = F(beta_0, beta) + R(beta)`,
+//! with datafit `F`, complete penalty `R`, coefficients `beta`, and intercept
+//! `beta_0`. For a feasible dual variable `theta`, the dual objective is
+//! `D(theta)` and the duality gap is
+//! `G(beta_0, beta, theta) = P(beta_0, beta) - D(theta)`.
+//!
 //! No matrix backend is enabled by default. Versioned features select
 //! LazyMatrix's integrations with faer 0.24 (`faer_v0_24`), nalgebra 0.34 and
 //! nalgebra-sparse 0.11 (`nalgebra_v0_34`), ndarray 0.17 (`ndarray_v0_17`), or

@@ -39,7 +39,9 @@ __all__ = [
 class Lasso:
     """Configure Gaussian lasso, then call :meth:`fit` for an owned result.
 
-    Minimize ``||y - X_tilde @ beta - beta_0||**2 / (2*n) + lambda_ * ||beta||_1``.
+    Minimize ``P(beta_0, beta) = F(beta_0, beta) + R(beta)``, where
+    ``F = ||y - X_tilde @ beta - beta_0||**2 / (2*n)`` and
+    ``R = lambda_ * ||beta||_1``.
     The intercept is unpenalized. ``lambda_`` must be finite and nonnegative.
     ``normalization="auto"`` divides columns by population standard deviations
     and centers by their means when ``fit_intercept=True``. Other presets are
@@ -129,17 +131,20 @@ class LassoFit:
 
     @property
     def dual_certificate(self) -> FloatArray:
-        """Feasible Gaussian dual vector with shape ``(n_samples,)``."""
+        """Feasible Gaussian dual vector ``theta`` with shape ``(n_samples,)``."""
         return np.asarray(self._native.dual_certificate, dtype=np.float64)
 
     @property
     def dual_objective(self) -> float:
-        """Dual objective ``y @ u - n * ||u||**2 / 2``."""
+        """Dual objective ``D(theta) = y @ theta - n * ||theta||**2 / 2``."""
         return self._native.dual_objective
 
     @property
     def duality_gap(self) -> float:
-        """Nonnegative primal minus dual; it can be loose at zero penalty."""
+        """Gap ``G(beta_0, beta, theta) = P(beta_0, beta) - D(theta)``.
+
+        The nonnegative gap can be loose at zero penalty.
+        """
         return self._native.duality_gap
 
     @property

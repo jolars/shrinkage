@@ -9,7 +9,7 @@ $$
   p_i = \frac{1}{1 + e^{-\eta_i}},
   \qquad
   \min_{\beta_0,\beta}\;\frac1n\sum_i[\log(1 + e^{\eta_i}) - y_i\eta_i]
-  + P(\beta).
+  + R(\beta).
 $$
 
 Responses lie in $[0,1]$, with zeros and ones representing binary observations.

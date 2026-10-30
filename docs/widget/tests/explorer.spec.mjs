@@ -105,6 +105,11 @@ test("shows the full trajectory from zero without playback controls", async ({
     "text-align",
     "center",
   );
+  await expect(root.locator('[data-caption="penalty"]')).toContainText("R(β)");
+  await expect(root.locator('[data-caption="penalty"]')).not.toContainText("P(β)");
+  await expect(root.locator('[data-caption="objective"]')).toContainText(
+    "P(0, β) = F(0, β) + R(β)",
+  );
   await expect(root).not.toContainText("θ");
   await expect(root.locator("[name=signal1]").locator("..")).toContainText(
     "β₁",

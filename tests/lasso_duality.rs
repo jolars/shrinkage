@@ -26,20 +26,24 @@ fn dual_certificate_is_feasible_and_uses_averaged_loss() {
                 .normalize(normalization)
                 .fit(&x, &y)
                 .unwrap();
-            let u = fit.dual_certificate();
+            let theta = fit.dual_certificate();
             let center = fit.preprocessing().centers().map_or(0.0, |c| c[0]);
             let scale = fit.preprocessing().scales().map_or(1.0, |s| s[0]);
             let correlation: f64 = [0.0, 2.0, 4.0]
                 .iter()
-                .zip(u)
-                .map(|(&x, &u)| (x - center) / scale * u)
+                .zip(theta)
+                .map(|(&x, &theta)| (x - center) / scale * theta)
                 .sum();
             assert!(correlation.abs() <= 0.5 + 1e-12);
             if intercept {
-                close(u.iter().sum(), 0.0);
+                close(theta.iter().sum(), 0.0);
             }
-            let dual = y.iter().zip(u).map(|(&y, &u)| y * u).sum::<f64>()
-                - 1.5 * u.iter().map(|u| u * u).sum::<f64>();
+            let dual = y
+                .iter()
+                .zip(theta)
+                .map(|(&y, &theta)| y * theta)
+                .sum::<f64>()
+                - 1.5 * theta.iter().map(|theta| theta * theta).sum::<f64>();
             close(fit.dual_objective(), dual);
             close(fit.duality_gap(), fit.objective() - dual);
             assert!(fit.duality_gap() >= 0.0);
@@ -71,14 +75,14 @@ fn supplied_normalization_and_constant_columns_keep_dual_feasible() {
         .with_scales(vec![2.0, 4.0])
         .fit(&x, &[1.0, 5.0, 9.0])
         .unwrap();
-    let u = fit.dual_certificate();
+    let theta = fit.dual_certificate();
     for j in 0..2 {
         let center = fit.preprocessing().centers().unwrap()[j];
         let scale = fit.preprocessing().scales().unwrap()[j];
         let correlation: f64 = rows
             .iter()
-            .zip(u)
-            .map(|(row, &u)| (row[j] - center) / scale * u)
+            .zip(theta)
+            .map(|(row, &theta)| (row[j] - center) / scale * theta)
             .sum();
         assert!(correlation.abs() <= 0.5 + 1e-12);
     }
@@ -121,7 +125,7 @@ fn dual_feasibility_holds_across_normalization_policies() {
                     .dual_certificate()
                     .iter()
                     .enumerate()
-                    .map(|(i, &u)| (x[(i, j)] - center) / scale * u)
+                    .map(|(i, &theta)| (x[(i, j)] - center) / scale * theta)
                     .sum();
                 assert!(correlation.abs() <= 0.5 + 1e-12);
             }
@@ -156,15 +160,15 @@ fn zero_penalty_still_has_a_feasible_dual_certificate() {
     let x = Matrix::from_rows(&[&[0.0], &[1.0], &[2.0]]);
     let y = [1.0, 3.0, 4.0];
     let fit = Lasso::new(0.0).fit(&x, &y).unwrap();
-    let u = fit.dual_certificate();
+    let theta = fit.dual_certificate();
     let center = fit.preprocessing().centers().unwrap()[0];
     let scale = fit.preprocessing().scales().unwrap()[0];
-    close(u.iter().sum(), 0.0);
+    close(theta.iter().sum(), 0.0);
     close(
         [0.0, 1.0, 2.0]
             .iter()
-            .zip(u)
-            .map(|(&x, &u)| (x - center) / scale * u)
+            .zip(theta)
+            .map(|(&x, &theta)| (x - center) / scale * theta)
             .sum(),
         0.0,
     );

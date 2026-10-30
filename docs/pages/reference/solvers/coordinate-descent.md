@@ -5,6 +5,18 @@ coefficients, maintaining reusable residuals. It is also the solver behind the
 `Lasso` convenience API. Each coordinate solves its exact one-dimensional
 quadratic-plus-L1 problem.
 
+For a feasible observation-scale dual point $\theta$, Gaussian lasso uses
+
+$$
+  D(\theta) = y^\mathsf{T}\theta - \frac{n}{2}\|\theta\|_2^2,
+  \qquad
+  \|\widetilde X^\mathsf{T}\theta\|_\infty \leq \lambda.
+$$
+
+A free intercept also requires $\mathbf{1}^\mathsf{T}\theta = 0$. The gap is
+$G(\beta_0,\beta,\theta) = P(\beta_0,\beta) - D(\theta)$, using the [shared
+primal objective convention](../../modeling.md#objective-and-notation).
+
 ## Fit a Gaussian lasso
 
 ```rust

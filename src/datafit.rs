@@ -10,7 +10,7 @@ pub(crate) use multivariate::StackedGaussian;
 
 use crate::FitError;
 
-/// Loss evaluated on a complete linear predictor, including any intercept.
+/// Datafit `F` evaluated on a complete linear predictor, including any intercept.
 ///
 /// Derivatives and solver-specific updates are separate capabilities. Matrix
 /// products belong to the design, not the datafit.

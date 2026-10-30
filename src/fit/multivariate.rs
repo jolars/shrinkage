@@ -69,7 +69,7 @@ impl MultivariateFit {
         self.iterations
     }
 
-    /// Final `||Y - predictor||_F² / (2n)` plus the complete matrix penalty.
+    /// Final primal objective `P(beta_0, beta) = F(beta_0, beta) + R(beta)`.
     pub fn objective(&self) -> f64 {
         self.objective
     }

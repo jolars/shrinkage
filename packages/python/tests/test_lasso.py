@@ -133,13 +133,13 @@ class LassoTests(unittest.TestCase):
                     objective = residual @ residual / (2 * len(self.y))
                     objective += 0.12 * abs(beta).sum()
                     self.assertAlmostEqual(fit.objective, objective, delta=1e-12)
-                    u = fit.dual_certificate
+                    theta = fit.dual_certificate
                     self.assertLessEqual(
-                        float(np.max(abs(x_tilde.T @ u))), 0.12 + 1e-12
+                        float(np.max(abs(x_tilde.T @ theta))), 0.12 + 1e-12
                     )
                     if fit_intercept:
-                        self.assertAlmostEqual(float(u.sum()), 0.0, delta=1e-12)
-                    dual = self.y @ u - len(self.y) * (u @ u) / 2
+                        self.assertAlmostEqual(float(theta.sum()), 0.0, delta=1e-12)
+                    dual = self.y @ theta - len(self.y) * (theta @ theta) / 2
                     self.assertAlmostEqual(fit.dual_objective, dual, delta=1e-12)
                     self.assertAlmostEqual(
                         fit.duality_gap, objective - dual, delta=1e-12

@@ -6,7 +6,7 @@ equal positive and negative magnitudes do not form one fusion cluster. The
 constructor takes separate L1 and fusion strengths.
 
 $$
-  P(\beta) = \lambda_1\sum_j|\beta_j| + \lambda_2\sum_{i<j}|\beta_i - \beta_j|.
+  R(\beta) = \lambda_1\sum_j|\beta_j| + \lambda_2\sum_{i<j}|\beta_i - \beta_j|.
 $$
 
 ## Constraint region

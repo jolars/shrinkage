@@ -3,7 +3,7 @@
 `MultivariateGaussian` fits $q$ real-valued responses with shared observations:
 
 $$
-  L(Y,H) = \frac{\|Y - H\|_F^2}{2n}
+  F(Y,H) = \frac{\|Y - H\|_F^2}{2n}
          = \frac1{2n}\sum_{r=1}^q\sum_{i=1}^n(Y_{ir} - H_{ir})^2.
 $$
 

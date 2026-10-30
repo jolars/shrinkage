@@ -71,18 +71,18 @@ fn check_certificate(
     logistic: bool,
     intercept: bool,
 ) {
-    let u = fit.dual_certificate().unwrap();
+    let theta = fit.dual_certificate().unwrap();
     let n = y.len() as f64;
     if intercept {
-        close(u.iter().sum(), 0.0, 1e-13);
+        close(theta.iter().sum(), 0.0, 1e-13);
     }
     let g: Vec<f64> = (0..fit.coefficients().len())
         .map(|j| {
             let center = fit.preprocessing().centers().map_or(0.0, |v| v[j]);
             let scale = fit.preprocessing().scales().map_or(1.0, |v| v[j]);
             rows.iter()
-                .zip(u)
-                .map(|(r, &u)| (r[j] - center) / scale * u)
+                .zip(theta)
+                .map(|(r, &theta)| (r[j] - center) / scale * theta)
                 .sum()
         })
         .collect();
@@ -95,18 +95,18 @@ fn check_certificate(
     );
     let dual = if logistic {
         y.iter()
-            .zip(u)
-            .map(|(&y, &u)| {
-                assert!(u >= (y - 1.0) / n && u <= y / n);
-                let p = (y - n * u).clamp(0.0, 1.0);
+            .zip(theta)
+            .map(|(&y, &theta)| {
+                assert!(theta >= (y - 1.0) / n && theta <= y / n);
+                let p = (y - n * theta).clamp(0.0, 1.0);
                 let entropy = |x: f64| if x == 0.0 { 0.0 } else { -x * x.ln() };
                 (entropy(p) + entropy(1.0 - p)) / n
             })
             .sum()
     } else {
         y.iter()
-            .zip(u)
-            .map(|(&y, &u)| y * u - 0.5 * n * u * u)
+            .zip(theta)
+            .map(|(&y, &theta)| y * theta - 0.5 * n * theta * theta)
             .sum()
     };
     close(fit.dual_objective().unwrap(), dual, 1e-12);
@@ -233,15 +233,15 @@ fn binomial_candidate_projection_preserves_domain_at_extreme_logits() {
     use shrinkage::GapSafeDatafit;
     let y = [0.0, 1.0, 0.2, 1.0, 0.0];
     let datafit = Binomial::new(&y);
-    let mut u = [0.0; 5];
+    let mut theta = [0.0; 5];
     datafit
-        .dual_candidate(&[1000.0, -1000.0, 10.0, 5.0, -5.0], &mut u)
+        .dual_candidate(&[1000.0, -1000.0, 10.0, 5.0, -5.0], &mut theta)
         .unwrap();
-    close(u.iter().sum(), 0.0, 1e-14);
-    for (&y, &u) in y.iter().zip(&u) {
-        assert!(((y - 1.0) / 5.0..=y / 5.0).contains(&u));
+    close(theta.iter().sum(), 0.0, 1e-14);
+    for (&y, &theta) in y.iter().zip(&theta) {
+        assert!(((y - 1.0) / 5.0..=y / 5.0).contains(&theta));
     }
-    assert!(datafit.dual_objective(&u).unwrap().is_finite());
+    assert!(datafit.dual_objective(&theta).unwrap().is_finite());
 }
 
 #[test]
@@ -272,8 +272,8 @@ fn gaussian_dual_objective_removes_large_free_intercept_before_summing() {
     use shrinkage::GapSafeDatafit;
     let y = [1e16, 1e16 + 2.0, 1e16 + 4.0];
     let loss = Gaussian::new(&y);
-    let u = [0.125, -0.25, 0.125];
-    close(loss.dual_objective(&u).unwrap(), -0.140625, 1e-15);
+    let theta = [0.125, -0.25, 0.125];
+    close(loss.dual_objective(&theta).unwrap(), -0.140625, 1e-15);
 }
 
 #[test]

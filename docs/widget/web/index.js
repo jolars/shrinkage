@@ -219,18 +219,18 @@ ${select("method", "Solver", Object.entries(methods))}
         );
       root.querySelector('[data-caption="loss"]').textContent =
         (current.loss === "gaussian"
-          ? "Averaged squared error. "
-          : "Averaged binomial negative log likelihood. Responses are proportions. ") +
+          ? "F(0, β): averaged squared error. "
+          : "F(0, β): averaged binomial negative log likelihood. Responses are proportions. ") +
         (scene.reference.converged
           ? "Orange dot: penalized optimum."
           : "Reference optimum unavailable.");
       const zero = current.strength === 0;
       const fusion = current.penalty === "clustered-lasso";
       root.querySelector('[data-caption="penalty"]').textContent =
-        `P(β) = ${penaltyFormula(current)}. ` +
+        `R(β) = ${penaltyFormula(current)}. ` +
         (!scene.reference.converged
           ? "The constraint region is unavailable until the reference fit converges."
-          : `Matching constraint: P(β) ≤ P(β̂) = ${number(scene.penalty_budget)}. ` +
+          : `Matching constraint: R(β) ≤ R(β̂) = ${number(scene.penalty_budget)}. ` +
             (zero
               ? "Zero penalty: the entire coefficient plane is feasible."
               : scene.penalty_budget === 0
@@ -240,8 +240,8 @@ ${select("method", "Solver", Object.entries(methods))}
                 : `${scene.penalty_clipped ? "The region continues beyond this view. " : "Shading includes the boundary. "}${fusion && current.mixing === 0 ? "Pure fusion gives an unbounded strip." : ""}`));
       root.querySelector('[data-caption="objective"]').textContent = scene
         .reference.converged
-        ? "Loss + penalty, evaluated at every grid point. Orange dot: penalized optimum. Black line: accepted steps."
-        : "Loss + penalty. Reference optimum unavailable.";
+        ? "P(0, β) = F(0, β) + R(β), evaluated at every grid point. Orange dot: penalized optimum. Black line: accepted steps."
+        : "P(0, β) = F(0, β) + R(β). Reference optimum unavailable.";
       solver.innerHTML = scene.compatible_methods
         .map(
           (method) => `<option value="${method}">${methods[method]}</option>`,

@@ -57,7 +57,7 @@ impl HybridFit {
     pub fn iterations(&self) -> usize {
         self.fit.iterations()
     }
-    /// Original averaged loss plus the complete optimization-scale penalty.
+    /// Final primal objective `P(beta_0, beta) = F(beta_0, beta) + R(beta)`.
     pub fn objective(&self) -> f64 {
         self.fit.objective()
     }
@@ -68,12 +68,12 @@ impl HybridFit {
         self.fit.dual_certificate()
     }
 
-    /// Original-loss dual lower bound, when a certificate is available.
+    /// Dual objective `D(theta)`, when a certificate is available.
     pub fn dual_objective(&self) -> Option<f64> {
         self.fit.dual_objective()
     }
 
-    /// Original objective minus its feasible dual lower bound.
+    /// Duality gap `G(beta_0, beta, theta) = P(beta_0, beta) - D(theta)`.
     /// This diagnostic does not replace the full mapping stopping rule.
     pub fn duality_gap(&self) -> Option<f64> {
         self.fit.duality_gap()

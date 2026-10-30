@@ -74,13 +74,16 @@ impl SmoothDatafit for Gaussian<'_> {
 impl crate::GapSafeDatafit for Gaussian<'_> {
     fn dual_candidate(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError> {
         self.gradient(predictor, output)?;
-        for u in output.iter_mut() {
-            *u = -*u;
+        for theta in output.iter_mut() {
+            *theta = -*theta;
         }
         if self.fit_intercept {
-            let mean = output.iter().map(|u| u / output.len() as f64).sum::<f64>();
-            for u in output.iter_mut() {
-                *u -= mean;
+            let mean = output
+                .iter()
+                .map(|theta| theta / output.len() as f64)
+                .sum::<f64>();
+            for theta in output.iter_mut() {
+                *theta -= mean;
             }
             let last = output.len() - 1;
             output[last] = -output[..last].iter().sum::<f64>();
@@ -110,9 +113,9 @@ impl crate::GapSafeDatafit for Gaussian<'_> {
             0.0
         };
         let mut value = 0.0;
-        for (&y, &u) in self.response.iter().zip(dual) {
+        for (&y, &theta) in self.response.iter().zip(dual) {
             value += finite(
-                ((y - reference) - 0.5 * n * u) * u,
+                ((y - reference) - 0.5 * n * theta) * theta,
                 "evaluating the Gaussian dual",
                 0,
             )?;
@@ -131,8 +134,8 @@ impl crate::GapSafeDatafit for Gaussian<'_> {
         }
         let n = predictor.len() as f64;
         let mut gap = 0.0;
-        for ((&y, &eta), &u) in self.response.iter().zip(predictor).zip(dual) {
-            let difference = ((y - eta) / n.sqrt()) - n.sqrt() * u;
+        for ((&y, &eta), &theta) in self.response.iter().zip(predictor).zip(dual) {
+            let difference = ((y - eta) / n.sqrt()) - n.sqrt() * theta;
             gap += 0.5 * difference * difference;
         }
         Ok(finite(gap, "computing the Gaussian Fenchel gap", 0)?)

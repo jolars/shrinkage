@@ -4,7 +4,7 @@
 complete penalty. A step updates the coefficients by
 
 $$
-  \beta^+ = \operatorname{prox}_{sP}(\beta - s\nabla_\beta L).
+  \beta^+ = \operatorname{prox}_{sR}(\beta - s\nabla_\beta F(\beta_0,\beta)).
 $$
 
 The free intercept takes an ordinary gradient step. Backtracking halves the step

@@ -25,14 +25,15 @@ available when JavaScript is disabled or the component cannot load. Reduced
 motion preferences disable the loading animation.
 
 The explorer fixes the intercept at zero and disables additional normalization.
-It constructs 32 deterministic observations with centered, unit-variance columns
-and the selected correlation. Gaussian responses equal the selected linear
-signal. Binomial responses are fractional proportions from its logistic
-transformation, giving a finite unpenalized optimum throughout the control
-range.
+Captions use `F(0, β)` for the datafit, `R(β)` for the penalty, and
+`P(0, β) = F(0, β) + R(β)` for the primal objective. It constructs 32
+deterministic observations with centered, unit-variance columns and the selected
+correlation. Gaussian responses equal the selected linear signal. Binomial
+responses are fractional proportions from its logistic transformation, giving a
+finite unpenalized optimum throughout the control range.
 
 The penalty region uses the complete cost, including strength, with budget
-`P(β̂)` at the penalized optimum. It overlays the datafit contours and shows the
+`R(β̂)` at the penalized optimum. It overlays the datafit contours and shows the
 equivalent constrained problem. The heavier datafit contour passes through the
 optimum. Zero-budget regions appear as a point or line; a zero penalty leaves
 the entire plane feasible. Both panels share coefficient coordinates. A tighter
@@ -60,7 +61,7 @@ Penalty strength defaults to 0.05. The slider maps its position to λ using
 `λ = 0.001 × expm1(t × log1p(2 / 0.001))`, for `t` between zero and one. This
 gives weak penalties more room while preserving zero and the upper limit of two.
 The output and accessible value report the actual λ, rather than the slider
-position. The constraint budget remains `P(β̂)` for that actual penalty.
+position. The constraint budget remains `R(β̂)` for that actual penalty.
 
 `npm --prefix docs/widget run test:browser` tests the isolated component. Set
 `SHRINKAGE_DOCS_SITE` to an absolute generated site directory to run the same

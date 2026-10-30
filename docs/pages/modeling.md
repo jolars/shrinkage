@@ -10,20 +10,38 @@ using explicit hybrid or proximal-gradient solvers. See the [Python installation
 guide](installation.md#python) and [package
 guide](../../packages/python/README.md) for fitting and prediction.
 
-## Objective and notation
+## Objective and notation {#objective-and-notation}
 
-For a design with $n$ observations and $p$ features, Shrinkage solves
+For a design with $n$ observations and $p$ features, Shrinkage minimizes the
+composite primal objective
 
 $$
-  \min_{\beta_0,\beta}\; L(y,\eta) + P(\beta),
+  \min_{\beta_0,\beta} P(\beta_0,\beta),
+  \qquad
+  P(\beta_0,\beta) = F(\beta_0,\beta) + R(\beta),
   \qquad
   \eta = \beta_0\mathbf{1} + \widetilde X\beta.
 $$
 
-The datafit $L$ averages over observations. The complete penalty $P$ includes
-its strengths, with no additional factor of $n$. The intercept $\beta_0$ is
-unpenalized. Set `.fit_intercept(false)` on the datafit to omit a free
-intercept. The convenience `Lasso` builder provides the same option directly.
+The datafit $F$ averages over observations. The complete penalty $R$ includes
+its strengths, with no additional factor of $n$. Datafit pages also write
+$F(y,\eta)$ to express the same loss directly in predictor coordinates. The
+intercept $\beta_0$ is unpenalized. Set `.fit_intercept(false)` on the datafit
+to omit a free intercept. The convenience `Lasso` builder provides the same
+option directly.
+
+For an observation-scale dual variable $\theta$, write $D(\theta)$ for the dual
+objective. The dual problem maximizes $D$ over its feasible domain, and the
+duality gap is
+
+$$
+  G(\beta_0,\beta,\theta) = P(\beta_0,\beta) - D(\theta).
+$$
+
+For a feasible dual point, weak duality gives $G \geq 0$. Solvers evaluate gaps
+through stable Fenchel decompositions when available, avoiding subtraction of
+nearly equal objectives. The [solver reference](reference/solvers/index.md)
+describes which methods report or use this diagnostic.
 
 Here $\beta = (\beta_1, \ldots, \beta_p)^\mathsf{T}$ denotes optimization-scale
 coefficients, and $\beta_0$ denotes the intercept. Unless you select a different

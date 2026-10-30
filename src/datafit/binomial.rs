@@ -141,8 +141,8 @@ impl SmoothDatafit for Binomial<'_> {
 impl crate::GapSafeDatafit for Binomial<'_> {
     fn dual_candidate(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError> {
         self.gradient(predictor, output)?;
-        for u in output.iter_mut() {
-            *u = -*u;
+        for theta in output.iter_mut() {
+            *theta = -*theta;
         }
         if !self.fit_intercept {
             return Ok(());
@@ -173,17 +173,17 @@ impl crate::GapSafeDatafit for Binomial<'_> {
             }
         }
         let shift = lower + (upper - lower) / 2.0;
-        for (u, &y) in output.iter_mut().zip(self.response) {
-            *u = (*u - shift).clamp((y - 1.0) / n, y / n);
+        for (theta, &y) in output.iter_mut().zip(self.response) {
+            *theta = (*theta - shift).clamp((y - 1.0) / n, y / n);
         }
         // Repair the last few rounding bits using available box slack.
         for _ in 0..3 {
             let mut correction = -output.iter().sum::<f64>();
-            for (u, &y) in output.iter_mut().zip(self.response) {
-                let delta = correction.clamp((y - 1.0) / n - *u, y / n - *u);
-                let previous = *u;
-                *u = (*u + delta).clamp((y - 1.0) / n, y / n);
-                correction -= *u - previous;
+            for (theta, &y) in output.iter_mut().zip(self.response) {
+                let delta = correction.clamp((y - 1.0) / n - *theta, y / n - *theta);
+                let previous = *theta;
+                *theta = (*theta + delta).clamp((y - 1.0) / n, y / n);
+                correction -= *theta - previous;
                 if correction == 0.0 {
                     break;
                 }
@@ -213,11 +213,11 @@ impl crate::GapSafeDatafit for Binomial<'_> {
             ));
         }
         let mut value = 0.0;
-        for (&u, &y) in dual.iter().zip(self.response) {
-            if !u.is_finite() || u < (y - 1.0) / n || u > y / n {
+        for (&theta, &y) in dual.iter().zip(self.response) {
+            if !theta.is_finite() || theta < (y - 1.0) / n || theta > y / n {
                 return Err(invalid("binomial dual point is outside its entropy domain"));
             }
-            let tail = (y - n * u).min((1.0 - y) + n * u).clamp(0.0, 0.5);
+            let tail = (y - n * theta).min((1.0 - y) + n * theta).clamp(0.0, 0.5);
             value -= negative_entropy(tail) / n;
         }
         Ok(finite(value, "evaluating the binomial dual", 0)?)
@@ -232,11 +232,11 @@ impl crate::GapSafeDatafit for Binomial<'_> {
         self.dual_objective(dual)?;
         let n = predictor.len() as f64;
         let mut gap = 0.0;
-        for ((&eta, &y), &u) in predictor.iter().zip(self.response).zip(dual) {
+        for ((&eta, &y), &theta) in predictor.iter().zip(self.response).zip(dual) {
             // Compute both probabilities from the dual variable. Subtracting
             // from a rounded probability of one would discard a tiny tail.
-            let p = (y - n * u).clamp(0.0, 1.0);
-            let q = ((1.0 - y) + n * u).clamp(0.0, 1.0);
+            let p = (y - n * theta).clamp(0.0, 1.0);
+            let q = ((1.0 - y) + n * theta).clamp(0.0, 1.0);
             let tail = (-eta.abs()).exp().ln_1p();
             let cross_entropy = if eta >= 0.0 {
                 q * eta + tail

@@ -35,7 +35,7 @@ impl L1 {
     }
 }
 
-/// The value of a complete penalty on optimization-scale coefficients.
+/// The complete penalty `R(beta)` on optimization-scale coefficients.
 ///
 /// A value alone does not imply a proximal map or a valid coordinate update.
 pub trait Penalty {

@@ -174,9 +174,9 @@ mod tests {
         ] {
             balance(&mut dual, Some(&response)).unwrap();
             exact_sum(&dual);
-            for (&u, &y) in dual.iter().zip(&response) {
-                assert!(u >= (y - 1.0) / dual.len() as f64);
-                assert!(u <= y / dual.len() as f64);
+            for (&theta, &y) in dual.iter().zip(&response) {
+                assert!(theta >= (y - 1.0) / dual.len() as f64);
+                assert!(theta <= y / dual.len() as f64);
             }
         }
     }

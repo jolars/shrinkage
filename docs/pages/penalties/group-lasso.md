@@ -3,14 +3,14 @@
 Group LASSO selects explicitly defined groups of coefficients together:
 
 $$
-  P(\beta) = \lambda\sum_{g=1}^G w_g\|\beta_g\|_2.
+  R(\beta) = \lambda\sum_{g=1}^K w_g\|\beta_g\|_2.
 $$
 
-Groups must be disjoint, nonempty, and contain valid coefficient indices.
-`DisjointGroups` checks these requirements at construction. Supply one finite,
-nonnegative weight per group. Shrinkage applies those weights directly, without
-implicit group-size scaling. For a size adjustment, supply weights such as
-$w_g = \sqrt{|g|}$ explicitly.
+Here $K$ is the number of groups. Groups must be disjoint, nonempty, and contain
+valid coefficient indices. `DisjointGroups` checks these requirements at
+construction. Supply one finite, nonnegative weight per group. Shrinkage applies
+those weights directly, without implicit group-size scaling. For a size
+adjustment, supply weights such as $w_g = \sqrt{|g|}$ explicitly.
 
 ## Constraint region
 

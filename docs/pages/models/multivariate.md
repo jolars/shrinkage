@@ -4,7 +4,7 @@ A multivariate Gaussian model estimates $q$ responses from the same design:
 
 $$
   \min_{\beta_0,\beta}\;\frac{\|Y - \mathbf{1}\beta_0^\mathsf{T} - \widetilde X\beta\|_F^2}{2n}
-  + P_{\mathrm{axis}}(\beta).
+  + R_{\mathrm{axis}}(\beta).
 $$
 
 Here $\beta$ is a $p \times q$ coefficient matrix, and $\beta_0$ is a vector of

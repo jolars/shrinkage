@@ -41,11 +41,20 @@ explicit, with generic methods complementing specialized implementations.
 
 ## 2. Mathematical model and scope
 
-The central objective is
+The primal problem minimizes the composite objective
 
 $$
-  \min_{\beta_0,\beta}\; L(Y, X\beta + \mathbf{1}\beta_0^\mathsf{T} + O; M)
-  + \sum_{k=1}^{K}\lambda_k P_k(\beta),
+  \min_{\beta_0,\beta} P(\beta_0,\beta),
+  \qquad
+  P(\beta_0,\beta) = F(\beta_0,\beta) + R(\beta),
+$$
+
+with
+
+$$
+  F(\beta_0,\beta) = F(Y, X\beta + \mathbf{1}\beta_0^\mathsf{T} + O; M),
+  \qquad
+  R(\beta) = \sum_{k=1}^{K}\lambda_k R_k(\beta),
 $$
 
 where `X` is a design operator, `beta` is a coefficient vector or matrix,
@@ -60,6 +69,17 @@ the input matrix, penalties act on the corresponding normalized coefficients
 unless an explicitly supported original-scale penalty is requested. Section 8
 defines the initial lasso convention and the transformation of reported
 coefficients.
+
+Use $\theta$ for an observation-scale dual variable and $D(\theta)$ for the dual
+objective. The dual problem maximizes $D$ over its feasible domain. The duality
+gap is
+
+$$
+  G(\beta_0,\beta,\theta) = P(\beta_0,\beta) - D(\theta).
+$$
+
+For feasible primal and dual points, weak duality gives $G \geq 0$. Reserve
+$M_s$ for the proximal-gradient mapping so $G$ consistently denotes the gap.
 
 Long-term scope:
 
@@ -543,11 +563,11 @@ never read that checkout.
 
 **Scaling the research objective.** With `Normalization::None` and no fitted
 intercept, divide both research strengths by `n`. Then
-`F_shrinkage = F_research / n` at every coefficient vector, and scalar
+`P_shrinkage = P_research / n` at every coefficient vector, and scalar
 minimizers are unchanged. Divide research curvatures and scalar linear terms by
 `n` as well. Corresponding PG curvatures obey `L_shrinkage = L_research / n`,
-giving identical proximal inputs and outputs and `G_shrinkage = G_research / n`.
-If research stopping uses `||G_research||_inf / s <= tolerance`, where
+giving identical proximal inputs and outputs and `M_shrinkage = M_research / n`.
+If research stopping uses `||M_research||_inf / s <= tolerance`, where
 `s = max(1, ||X' y||_inf)`, use Shrinkage's absolute mapping tolerance
 `tolerance * s / n`. Absolute objective differences scale by `1/n` too. A zero
 design admits any positive curvature; choose corresponding positive values
@@ -579,13 +599,13 @@ $$
 $$
 
 Combine coincident knots and discard zero weights. For positive curvature, scan
-ordered knots using the interval root `(h_C + W - 2P)/q_C`, where `W` is total
-knot weight and `P` is weight strictly to the left. At a knot, its left and
-right derivatives bracket zero exactly when that knot minimizes the restriction.
-For exactly zero curvature, the aggregate column and linear term must be zero;
-project `c` onto the weighted-median interval, retaining `c` when there are no
-positive weights. Never round a small positive curvature to zero. Nonzero
-aggregates with underflowed zero curvature produce a numerical error.
+ordered knots using the interval root `(h_C + W - 2W_left)/q_C`, where `W` is
+total knot weight and `W_left` is weight strictly to the left. At a knot, its
+left and right derivatives bracket zero exactly when that knot minimizes the
+restriction. For exactly zero curvature, the aggregate column and linear term
+must be zero; project `c` onto the weighted-median interval, retaining `c` when
+there are no positive weights. Never round a small positive curvature to zero.
+Nonzero aggregates with underflowed zero curvature produce a numerical error.
 
 A sweep snapshots block identities in initial signed-value order. Each surviving
 identity is visited once. Moves may cross any number of blocks and may move a
@@ -1148,7 +1168,7 @@ including allocations and peak live storage.
 
 Coordinate paths cache column summaries, residual offsets, correlations, dual
 certificate storage, and working-set masks across points. Gap Safe screening
-uses the existing feasible dual vector `u` and radius `sqrt(2 * gap / n)`. A
+uses the existing feasible dual vector `theta` and radius `sqrt(2 * gap / n)`. A
 zero coordinate is screened when its absolute dual correlation plus column norm
 times the radius lies strictly below lambda, with conservative rounding guards.
 Working sets retain current nonzeros and restore excluded violators through full
@@ -1272,17 +1292,18 @@ product-only designs retain ordinary fitting. Working sets have independent
 controls. Fusion screening and screening in the separable `Irls` solver remain
 separate capabilities.
 
-Let $u$ be an observation-scale feasible dual point and $G$ its original-problem
-gap. The dual has strong concavity $n$ for Gaussian loss and at least $4n$ for
-binomial loss. The radii are therefore $\sqrt{2G/n}$ and $\sqrt{G/(2n)}$,
-respectively, following the [Gap Safe
-framework](https://www.jmlr.org/papers/v18/16-577.html). Gaussian candidates
-start from residuals divided by $n$. Binomial candidates start from the negative
-original-loss gradient. A free intercept requires $\mathbf1^\mathsf{T}u = 0$;
-binomial candidates also require $(y_i - 1)/n \leq u_i \leq y_i/n$. A scalar
-clipped-shift projection enforces the box and intercept constraint together.
-Mean-centering alone would be invalid. Radial scaling then enforces the complete
-penalty's polar constraints.
+Let $\theta$ be an observation-scale feasible dual point and
+$G = G(\beta_0,\beta,\theta)$ its original-problem gap. The dual has strong
+concavity $n$ for Gaussian loss and at least $4n$ for binomial loss. The radii
+are therefore $\sqrt{2G/n}$ and $\sqrt{G/(2n)}$, respectively, following the
+[Gap Safe framework](https://www.jmlr.org/papers/v18/16-577.html). Gaussian
+candidates start from residuals divided by $n$. Binomial candidates start from
+the negative original-loss gradient. A free intercept requires
+$\mathbf1^\mathsf{T}\theta = 0$; binomial candidates also require
+$(y_i - 1)/n \leq \theta_i \leq y_i/n$. A scalar clipped-shift projection
+enforces the box and intercept constraint together. Mean-centering alone would
+be invalid. Radial scaling then enforces the complete penalty's polar
+constraints.
 
 Clustered-lasso feasibility uses sorted signed subset sums. A subset of size $k$
 has capacity $ak + bk(p - k)$ for L1 strength $a$ and fusion strength $b$. SLOPE
@@ -1299,24 +1320,26 @@ for the stored values while retaining binomial box feasibility. Correlations are
 then recomputed and checked again.
 
 For zero L1 or entirely zero SLOPE weights, zero screening is inactive and the
-certificate is the universally feasible $u = 0$. Its gap can remain loose even
-at an optimum. For binomial proportions, $D(0)$ is mean response entropy, not
-necessarily zero. No rank decision or nullspace projection is required for this
-fallback. Convergence continues to use the original-space PG mapping.
+certificate is the universally feasible $\theta = 0$. Its gap can remain loose
+even at an optimum. For binomial proportions, $D(0)$ is mean response entropy,
+not necessarily zero. No rank decision or nullspace projection is required for
+this fallback. Convergence continues to use the original-space PG mapping.
 
-Gaps use the loss Fenchel gap plus $P(\beta) - \beta^\mathsf{T}X^\mathsf{T}u$,
-avoiding subtraction of complete objectives. Rounding allowances cover dot
-products, normalization cancellation, and intercept equality. Norms use stable
-accumulation; bounds for raw centered products also account for magnitudes
-before cancellation. Directed rounding and strict inequalities retain uncertain
-boundary features. These are floating-point numerical certificates, not an
-interval-arithmetic proof. A materially negative gap is a numerical failure.
+Gaps use the loss Fenchel gap plus
+$R(\beta) - \beta^\mathsf{T}X^\mathsf{T}\theta$, avoiding subtraction of
+complete objectives. Rounding allowances cover dot products, normalization
+cancellation, and intercept equality. Norms use stable accumulation; bounds for
+raw centered products also account for magnitudes before cancellation. Directed
+rounding and strict inequalities retain uncertain boundary features. These are
+floating-point numerical certificates, not an interval-arithmetic proof. A
+materially negative gap is a numerical failure.
 
-**Zero rules.** Write $g = X^\mathsf{T}u$ and $e_j = R\|x_j\|$ plus product
-uncertainty. Clustered lasso certifies zero when $|g_j| + e_j < a - b(p - 1)$,
-using the original feature count. The rule follows from bounding every incident
-fusion subgradient; the ordinary lasso threshold is unsafe for this coupled
-penalty. A nonpositive threshold certifies nothing.
+**Zero rules.** Let $\rho$ be the safe radius. Write $g = X^\mathsf{T}\theta$
+and $e_j = \rho\|x_j\|$ plus product uncertainty. Clustered lasso certifies zero
+when $|g_j| + e_j < a - b(p - 1)$, using the original feature count. The rule
+follows from bounding every incident fusion subgradient; the ordinary lasso
+threshold is unsafe for this coupled penalty. A nonpositive threshold certifies
+nothing.
 
 For chain screening, forward reachable intervals $F_j$ describe $t_j$ using
 nodes through $j$, and backward intervals $B_j$ describe it using later nodes.
@@ -1612,15 +1635,15 @@ tolerances with at least one positive component.
 
 Duality gap is the default for positive-penalty Gaussian lasso. The
 `.tolerance(...)` API still controls absolute KKT violation. A feasible dual
-vector `u` satisfies `||X_tilde' u||_inf <= lambda` and, when fitting an
-intercept, `1' u = 0`. Its objective is `y' u - n ||u||² / 2`. The solver
-centers `r/n` when fitting an intercept and scales it to satisfy the column
-constraints. At zero penalty this construction can yield the zero vector and a
-loose gap, so the default uses KKT violation. The gap is evaluated using a
-Fenchel decomposition to avoid subtracting nearly equal objectives. Unsupported
-criteria must be rejected before iteration, without silently substituting
-another criterion. Nonconvex models require an appropriate stationarity
-criterion.
+vector `theta` satisfies `||X_tilde' theta||_inf <= lambda` and, when fitting an
+intercept, `1' theta = 0`. Its objective is
+`D(theta) = y' theta - n ||theta||² / 2`. The solver centers `r/n` when fitting
+an intercept and scales it to satisfy the column constraints. At zero penalty
+this construction can yield the zero vector and a loose gap, so the default uses
+KKT violation. The gap is evaluated using a Fenchel decomposition to avoid
+subtracting nearly equal objectives. Unsupported criteria must be rejected
+before iteration, without silently substituting another criterion. Nonconvex
+models require an appropriate stationarity criterion.
 
 Iteration limits remain independent budgets and report `IterationLimit`, not
 convergence. Report the selected criterion, its final value, and its threshold.

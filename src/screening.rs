@@ -16,15 +16,15 @@ pub struct DualCertificate {
 }
 
 impl DualCertificate {
-    /// Feasible observation-scale dual vector, in training-row order.
+    /// Feasible observation-scale dual vector `theta`, in training-row order.
     pub fn dual_vector(&self) -> &[f64] {
         &self.vector
     }
-    /// Dual objective for the original, complete problem.
+    /// Dual objective `D(theta)` for the original, complete problem.
     pub fn dual_objective(&self) -> f64 {
         self.objective
     }
-    /// Conservatively padded primal-dual gap on the averaged-loss scale.
+    /// Conservatively padded `G(beta_0, beta, theta)` on the averaged-loss scale.
     pub fn duality_gap(&self) -> f64 {
         self.gap
     }
@@ -72,7 +72,7 @@ pub trait GapSafeDatafit {
     fn dual_objective(&self, dual: &[f64]) -> Result<f64, FitError>;
     /// Evaluate the loss Fenchel gap without subtracting full objectives.
     ///
-    /// This is `loss(eta) + loss_conjugate(-dual) + dot(eta, dual)`.
+    /// This is `F(eta) + F_conjugate(-theta) + dot(eta, theta)`.
     ///
     /// # Errors
     /// Reject incompatible dimensions, invalid domains, or nonfinite arithmetic.
@@ -393,8 +393,8 @@ impl ScreeningWorkspace {
             }
             if !fallback {
                 upper *= 1.0 + rounding;
-                for u in &mut self.dual {
-                    *u /= upper;
+                for theta in &mut self.dual {
+                    *theta /= upper;
                 }
                 loss.finalize_dual(&mut self.dual)
                     .map_err(|e| FitError::from_component(e, iteration))?;

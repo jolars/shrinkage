@@ -45,6 +45,11 @@ Cloudflare Worker configuration.
   Test the versioned features and their short aliases independently.
 - Use `beta` for coefficient notation and `beta_0` for intercept notation.
   Distinguish original-scale parameters with an `original` suffix when needed.
+  Use `P(beta_0, beta) = F(beta_0, beta) + R(beta)` for the primal objective,
+  with datafit `F` and complete penalty `R`. Use `theta` for dual variables,
+  `D(theta)` for the dual objective, and
+  `G(beta_0, beta, theta) = P(beta_0, beta) - D(theta)` for the duality gap. Use
+  `M_s` for the proximal-gradient mapping.
 - Preserve the penalty scale, loss normalization, and intercept conventions in
   `DESIGN.md`. Back-transforming coefficients must preserve predictions.
 - Keep runtime dispatch outside scalar loops. Establish fallible operations and

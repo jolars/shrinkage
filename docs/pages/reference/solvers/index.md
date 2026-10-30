@@ -21,16 +21,17 @@ an error. Proximal gradient also supports runtime multivariate problems.
 
 Tolerances have units specific to the selected criterion. A lasso duality-gap
 check compares the primal-dual gap with
-$\epsilon_{\mathrm{abs}} + \epsilon_{\mathrm{rel}}L_0$, where $L_0$ is the fixed
-zero-coefficient reference loss. KKT violation and PG mapping checks use an
-absolute infinity-norm threshold on the optimization scale. All default
-numerical tolerances are `1e-6` in their respective units.
+$\epsilon_{\mathrm{abs}} + \epsilon_{\mathrm{rel}}F_{\mathrm{ref}}$, where
+$F_{\mathrm{ref}}$ is the fixed zero-coefficient reference loss. KKT violation
+and PG mapping checks use an absolute infinity-norm threshold on the
+optimization scale. All default numerical tolerances are `1e-6` in their
+respective units.
 
-The PG mapping for the penalized coefficients is
+The PG mapping $M_s$ for the penalized coefficients is
 
 $$
-  G_s(\beta)
-  = \frac{\beta - \operatorname{prox}_{sP}(\beta - s\nabla_\beta L)}{s}.
+  M_s(\beta_0,\beta)
+  = \frac{\beta - \operatorname{prox}_{sR}(\beta - s\nabla_\beta F(\beta_0,\beta))}{s}.
 $$
 
 With a fitted intercept, the full check also includes the unpenalized intercept

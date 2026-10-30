@@ -6,7 +6,7 @@ independently with `ElasticNet::new(l1, l2)`. Setting either strength to zero
 recovers ridge or lasso, respectively.
 
 $$
-  P(\beta) = \lambda_1\|\beta\|_1 + \frac{\lambda_2}{2}\|\beta\|_2^2.
+  R(\beta) = \lambda_1\|\beta\|_1 + \frac{\lambda_2}{2}\|\beta\|_2^2.
 $$
 
 ## Constraint region

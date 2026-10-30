@@ -59,7 +59,7 @@ impl IrlsFit {
     pub fn coordinate_sweeps(&self) -> usize {
         self.solution.coordinate_sweeps
     }
-    /// Original normalized loss plus the optimization-scale penalty.
+    /// Final primal objective `P(beta_0, beta) = F(beta_0, beta) + R(beta)`.
     pub fn objective(&self) -> f64 {
         self.solution.objective
     }

@@ -5,9 +5,9 @@ of a $p$-feature, $q$-response coefficient matrix $\beta$:
 
 $$
   \begin{aligned}
-    P_{\mathrm{Features}}(\beta)  & = \sum_{r=1}^q P(\beta_{:,r}),  \\
-    P_{\mathrm{Responses}}(\beta) & = \sum_{j=1}^p P(\beta_{j,:}),  \\
-    P_{\mathrm{All}}(\beta)       & = P(\operatorname{vec}(\beta)).
+    R_{\mathrm{Features}}(\beta)  & = \sum_{r=1}^q R(\beta_{:,r}),  \\
+    R_{\mathrm{Responses}}(\beta) & = \sum_{j=1}^p R(\beta_{j,:}),  \\
+    R_{\mathrm{All}}(\beta)       & = R(\operatorname{vec}(\beta)).
   \end{aligned}
 $$
 

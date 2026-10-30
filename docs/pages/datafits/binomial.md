@@ -4,7 +4,7 @@
 likelihood:
 
 $$
-  L(y,\eta)
+  F(y,\eta)
   = \frac1n\sum_{i=1}^n \left[ \log(1 + e^{\eta_i}) - y_i\eta_i \right],
   \qquad
   p_i = \frac{1}{1 + e^{-\eta_i}}.
@@ -13,9 +13,9 @@ $$
 The predictor derivatives are
 
 $$
-  \frac{\partial L}{\partial\eta_i} = \frac{p_i - y_i}{n},
+  \frac{\partial F}{\partial\eta_i} = \frac{p_i - y_i}{n},
   \qquad
-  \frac{\partial^2 L}{\partial\eta_i^2} = \frac{p_i(1 - p_i)}{n}
+  \frac{\partial^2 F}{\partial\eta_i^2} = \frac{p_i(1 - p_i)}{n}
                                         \leq \frac{1}{4n}.
 $$
 

@@ -766,7 +766,7 @@ where
             next,
         )?;
         // Coordinate minimization decreases the quadratic model, so
-        // g'd + P(beta+d) - P(beta) <= -d'Hd/2. This upper bound
+        // g'd + R(beta+d) - R(beta) <= -d'Hd/2. This upper bound
         // avoids subtracting nearly equal penalty values near convergence.
         let slope = finite(
             -0.5 * work

@@ -62,7 +62,7 @@ impl LassoFit {
         self.iterations
     }
 
-    /// Final `||residual||² / (2n) + lambda * ||beta||₁`.
+    /// Final primal objective `P(beta_0, beta) = ||residual||² / (2n) + lambda * ||beta||₁`.
     pub fn objective(&self) -> f64 {
         self.objective
     }
@@ -72,19 +72,19 @@ impl LassoFit {
         self.kkt_violation
     }
 
-    /// Feasible dual vector `u`, with `||X_tilde' u||_inf <= lambda` and
-    /// `sum(u) = 0` when an intercept was fitted, up to floating-point error.
+    /// Feasible dual vector `theta`, with `||X_tilde' theta||_inf <= lambda` and
+    /// `sum(theta) = 0` when an intercept was fitted, up to floating-point error.
     /// At zero penalty, the certificate can be zero and its gap can be loose.
     pub fn dual_certificate(&self) -> &[f64] {
         &self.dual_certificate
     }
 
-    /// Gaussian dual objective `y' u - n ||u||² / 2`.
+    /// Gaussian dual objective `D(theta) = y' theta - n ||theta||² / 2`.
     pub fn dual_objective(&self) -> f64 {
         self.dual_objective
     }
 
-    /// Nonnegative primal minus dual objective.
+    /// Nonnegative gap `G(beta_0, beta, theta) = P(beta_0, beta) - D(theta)`.
     pub fn duality_gap(&self) -> f64 {
         self.duality_gap
     }

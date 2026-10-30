@@ -5,7 +5,7 @@ constraint region is a disk. This is a squared L2 penalty, which differs from
 the unsquared norm used by Group LASSO.
 
 $$
-  P(\beta) = \frac{\lambda}{2}\|\beta\|_2^2.
+  R(\beta) = \frac{\lambda}{2}\|\beta\|_2^2.
 $$
 
 ## Constraint region

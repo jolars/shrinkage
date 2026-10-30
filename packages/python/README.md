@@ -180,9 +180,14 @@ leaves the configuration and inputs unchanged. The penalty strength must be
 finite and nonnegative. The objective is
 
 $$
-  \frac{1}{2n}\|y - \widetilde X\beta
-  - \beta_0\mathbf1\|_2^2 + \lambda\|\beta\|_1.
+  P(\beta_0,\beta) = F(\beta_0,\beta) + R(\beta)
+                   = \frac{1}{2n}\|y - \widetilde X\beta
+                     - \beta_0\mathbf1\|_2^2 + \lambda\|\beta\|_1.
 $$
+
+Here $F$ is the datafit and $R$ is the complete penalty. For a feasible dual
+variable $\theta$, $D(\theta)$ denotes the dual objective, and
+$G(\beta_0,\beta,\theta) = P(\beta_0,\beta) - D(\theta)$ is the duality gap.
 
 The intercept is unpenalized. Penalties and diagnostics use normalized
 coefficients `beta`, while `fit.coefficients` and `fit.intercept` use the

@@ -41,14 +41,18 @@ fn verify_diagnostics(fit: &LassoFit, intercept: bool, lambda: f64) {
         let correlation: f64 = ROWS
             .iter()
             .zip(dual)
-            .map(|(row, &u)| {
-                (row[j] - centers.map_or(0.0, |c| c[j])) / scales.map_or(1.0, |s| s[j]) * u
+            .map(|(row, &theta)| {
+                (row[j] - centers.map_or(0.0, |c| c[j])) / scales.map_or(1.0, |s| s[j]) * theta
             })
             .sum();
         assert!(correlation.abs() <= lambda + 1e-10);
     }
-    let dual_objective = Y.iter().zip(dual).map(|(&y, &u)| y * u).sum::<f64>()
-        - 3.0 * dual.iter().map(|u| u * u).sum::<f64>();
+    let dual_objective = Y
+        .iter()
+        .zip(dual)
+        .map(|(&y, &theta)| y * theta)
+        .sum::<f64>()
+        - 3.0 * dual.iter().map(|theta| theta * theta).sum::<f64>();
     close(fit.dual_objective(), dual_objective);
     close(fit.duality_gap(), fit.objective() - dual_objective);
     let residual: Vec<f64> = ROWS

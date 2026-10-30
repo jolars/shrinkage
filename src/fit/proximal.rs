@@ -34,14 +34,14 @@ impl ProximalFit {
             .map(crate::DualCertificate::dual_vector)
     }
 
-    /// Original-problem dual objective, when a certificate was constructed.
+    /// Dual objective `D(theta)`, when a certificate was constructed.
     pub fn dual_objective(&self) -> Option<f64> {
         self.certificate
             .as_ref()
             .map(crate::DualCertificate::dual_objective)
     }
 
-    /// Padded original-problem duality gap, independently of stopping choice.
+    /// Padded `G(beta_0, beta, theta)`, independently of stopping choice.
     pub fn duality_gap(&self) -> Option<f64> {
         self.certificate
             .as_ref()
@@ -73,7 +73,7 @@ impl ProximalFit {
     pub fn iterations(&self) -> usize {
         self.iterations
     }
-    /// Final normalized loss plus the complete optimization-scale penalty.
+    /// Final primal objective `P(beta_0, beta) = F(beta_0, beta) + R(beta)`.
     pub fn objective(&self) -> f64 {
         self.objective
     }
