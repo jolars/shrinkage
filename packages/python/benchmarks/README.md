@@ -7,20 +7,19 @@ computed duality gap. Metewand runs the methods, evaluates their answers, and
 retains the measurements. The authored Python documentation uses a plot
 generated from a JSON snapshot of the completed run.
 
-Install the Metewand CLI separately. Its crates and Python package are not yet
-published to registries. The Python dependency group pins the worker package to
-a Git revision; the CLI can use the same revision:
+Install the Metewand CLI separately, using a revision that supports
+`export --format json --require-complete`. The Python dependency group pins the
+worker package independently; both use binding API version 1:
 
 ```sh
 compute run -- rustup toolchain install 1.98.0 --profile minimal
 compute run -- rustup run 1.98.0 cargo install --locked --git https://github.com/jolars/metewand \
-  --rev 98db3e92fc8087a0ea14b7768e4160fb53bd4f04 metewand-cli
+  metewand
 ```
 
 The CLI needs its own Rust 1.98 toolchain when built from source. Keep
 shrinkage's pinned toolchain for the Python extension. An existing compatible
-CLI also works: set `METEWAND=/absolute/path/to/metewand` to select it. Both
-packages use binding API version 1.
+CLI also works: set `METEWAND=/absolute/path/to/metewand` to select it.
 
 From the shrinkage repository root:
 
@@ -34,7 +33,17 @@ exports the results. Each run gets a new directory under `.build/python-lasso/`.
 Keep that directory for the full Metewand results, provenance, and exports. The
 documentation snapshot retains the dataset seed and hash, plus every measured
 convergence point, including both the fit timer and the executor's wall timer.
-The report rejects failed or incomplete comparisons.
+Metewand rejects incomplete exports before writing the snapshot. Successful
+retries can supply the selected measurements; full attempt history remains in
+the retained run directory. The reporting code checks the assumptions specific
+to this figure: shared data, one-thread execution, fit timers, and enough
+measurements for its error bars.
+
+The saved `docs/figures/lasso.json` is Metewand's `results.json` analysis
+export. The report copies it directly, then plots selected observations with
+complete metric dictionaries. Repetition counts and observation settings come
+from that export. Package versions and the native-extension hash are recorded by
+the workers outside the fit timer.
 
 The `fresh_sequence` profile runs five repetitions per method, with increasing
 iteration limits from 1 through 12 sweeps. Each point starts a new model from

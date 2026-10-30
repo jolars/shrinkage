@@ -1,14 +1,14 @@
 # SLOPE
 
 SLOPE assigns larger weights to larger coefficient magnitudes. Here
-$|\theta|_{(j)}$ denotes the $j$th largest absolute value. Its corners can
+$|\beta|_{(j)}$ denotes the $j$th largest absolute value. Its corners can
 encourage equal magnitudes, including coefficients with opposite signs. Supply
 exactly one finite, nonnegative, nonincreasing weight per coefficient; the
 weights already include the penalty strength.
 
 $$
-  P(\theta) = \sum_{j=1}^p w_j|\theta|_{(j)},\qquad w_1
-            \geq \cdots \geq w_p \geq 0.
+  P(\beta) = \sum_{j=1}^p w_j|\beta|_{(j)},\qquad w_1 \geq \cdots
+                                                      \geq w_p \geq 0.
 $$
 
 ## Constraint region
@@ -17,8 +17,8 @@ $$
 boundary.](figures/slope.svg)
 
 $w = (1,0.5)$:
-$\max(|\theta_1|,|\theta_2|) + 0.5\min(|\theta_1|,|\theta_2|) \leq 1$. See the
-[plot conventions](index.md#read-the-constraint-plots) for the fixed budget and
+$\max(|\beta_1|,|\beta_2|) + 0.5\min(|\beta_1|,|\beta_2|) \leq 1$. See the [plot
+conventions](index.md#read-the-constraint-plots) for the fixed budget and
 coefficient scale.
 
 ## Use the penalty

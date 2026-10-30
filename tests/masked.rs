@@ -411,19 +411,19 @@ fn lazy_normalization_preserves_restricted_values_and_predictions() {
             assert_eq!(lazy.termination(), Termination::Converged);
             assert_eq!(explicit.termination(), Termination::Converged);
             close(lazy.objective(), explicit.objective());
-            let theta: Vec<_> = lazy
+            let beta: Vec<_> = lazy
                 .coefficients()
                 .iter()
                 .zip([2.0, 0.5])
                 .map(|(b, s)| b * s)
                 .collect();
-            for (&a, &b) in theta.iter().zip(explicit.coefficients()) {
+            for (&a, &b) in beta.iter().zip(explicit.coefficients()) {
                 close(a, b);
             }
             let predictions = lazy.predict(&x).unwrap();
             close(
                 lazy.objective(),
-                datafit.value(&predictions).unwrap() + penalty.value(&theta).unwrap(),
+                datafit.value(&predictions).unwrap() + penalty.value(&beta).unwrap(),
             );
             for (a, b) in predictions
                 .into_iter()

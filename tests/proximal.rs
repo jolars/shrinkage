@@ -133,7 +133,7 @@ fn lazy_normalization_preserves_the_complete_penalty_and_predictions() {
             .unwrap();
         assert_eq!(lazy.termination(), Termination::Converged);
         close(lazy.objective(), explicit.objective());
-        let theta: Vec<_> = lazy
+        let beta: Vec<_> = lazy
             .coefficients()
             .iter()
             .zip([2.0, 0.5])
@@ -141,7 +141,7 @@ fn lazy_normalization_preserves_the_complete_penalty_and_predictions() {
             .collect();
         close(
             lazy.objective(),
-            datafit.value(&lazy.predict(&x).unwrap()).unwrap() + penalty.value(&theta).unwrap(),
+            datafit.value(&lazy.predict(&x).unwrap()).unwrap() + penalty.value(&beta).unwrap(),
         );
         for (a, b) in lazy
             .predict(&x)

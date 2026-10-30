@@ -65,7 +65,7 @@ fn extracted_values_reconstruct_the_fitted_objective() {
         let fit = problem
             .fit_with(&CoordinateDescent::new().tolerance(1e-10))
             .unwrap();
-        let theta: Vec<_> = fit
+        let beta: Vec<_> = fit
             .coefficients()
             .iter()
             .zip(fit.preprocessing().scales().unwrap())
@@ -73,7 +73,7 @@ fn extracted_values_reconstruct_the_fitted_objective() {
             .collect();
         close(
             fit.objective(),
-            datafit.value(&fit.predict(&x).unwrap()).unwrap() + penalty.value(&theta).unwrap(),
+            datafit.value(&fit.predict(&x).unwrap()).unwrap() + penalty.value(&beta).unwrap(),
         );
     }
 }

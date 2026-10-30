@@ -50,7 +50,7 @@ def region(ax: Axes, linear: ScalarTerm, quadratic: float = 0.0) -> None:
     x, y = radius * x, radius * y
     values = linear(x, y) + quadratic * (x * x + y * y)
     if not np.allclose(values, 1.0, rtol=0.0, atol=2e-14):
-        raise AssertionError("A plotted boundary does not satisfy P(theta) = 1.")
+        raise AssertionError("A plotted boundary does not satisfy P(beta) = 1.")
     if not np.all(linear(0.5 * x, 0.5 * y) + quadratic * 0.25 * (x * x + y * y) < 1):
         raise AssertionError("Interior samples must be feasible.")
     if not np.all(linear(1.5 * x, 1.5 * y) + quadratic * 2.25 * (x * x + y * y) > 1):
@@ -88,8 +88,8 @@ def panel(ax: Axes, title: str) -> None:
     ax.set(xlim=(-2.0, 2.0), ylim=(-2.0, 2.0), aspect="equal", title=title)
     ax.set_xticks([-2, -1, 0, 1, 2])
     ax.set_yticks([-2, -1, 0, 1, 2])
-    ax.set_xlabel(r"$\theta_1$", fontsize=13)
-    ax.set_ylabel(r"$\theta_2$", fontsize=13, rotation=0, labelpad=8)
+    ax.set_xlabel(r"$\beta_1$", fontsize=13)
+    ax.set_ylabel(r"$\beta_2$", fontsize=13, rotation=0, labelpad=8)
     ax.grid(color="#e5e7eb", linewidth=0.6, zorder=0)
     ax.axhline(0, color="#9ca3af", linewidth=0.8, zorder=1)
     ax.axvline(0, color="#9ca3af", linewidth=0.8, zorder=1)

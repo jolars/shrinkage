@@ -21,7 +21,7 @@ fn close(actual: f64, expected: f64, tolerance: f64) {
 
 fn check<P: ProximalPenalty>(fit: &HybridFit, x: &Matrix, y: &[f64], penalty: &P, intercept: bool) {
     let eta = fit.predict(x).unwrap();
-    let theta: Vec<_> = fit
+    let beta: Vec<_> = fit
         .coefficients()
         .iter()
         .enumerate()
@@ -29,7 +29,7 @@ fn check<P: ProximalPenalty>(fit: &HybridFit, x: &Matrix, y: &[f64], penalty: &P
         .collect();
     close(
         fit.objective(),
-        Binomial::new(y).value(&eta).unwrap() + penalty.value(&theta).unwrap(),
+        Binomial::new(y).value(&eta).unwrap() + penalty.value(&beta).unwrap(),
         2e-13,
     );
     assert_eq!(fit.iterations(), fit.pg_steps() + fit.coordinate_sweeps());
@@ -46,7 +46,7 @@ fn check<P: ProximalPenalty>(fit: &HybridFit, x: &Matrix, y: &[f64], penalty: &P
         })
         .collect();
     let sum: f64 = derivative.iter().sum();
-    let input: Vec<_> = theta
+    let input: Vec<_> = beta
         .iter()
         .enumerate()
         .map(|(j, &b)| {
@@ -58,9 +58,9 @@ fn check<P: ProximalPenalty>(fit: &HybridFit, x: &Matrix, y: &[f64], penalty: &P
             b - fit.step_size() * (g - center * sum) / scale
         })
         .collect();
-    let mut prox = vec![0.0; theta.len()];
+    let mut prox = vec![0.0; beta.len()];
     penalty.prox(&input, fit.step_size(), &mut prox).unwrap();
-    let mapping = theta
+    let mapping = beta
         .iter()
         .zip(prox)
         .map(|(b, z)| (b - z).abs() / fit.step_size())
@@ -71,10 +71,10 @@ fn check<P: ProximalPenalty>(fit: &HybridFit, x: &Matrix, y: &[f64], penalty: &P
     }
     for (j, &label) in fit.cluster_labels().iter().enumerate() {
         let value = fit.cluster_values()[label];
-        close(theta[j].abs(), value.abs(), 1e-13);
+        close(beta[j].abs(), value.abs(), 1e-13);
         assert_eq!(
             fit.coefficient_signs()[j],
-            theta[j].signum() * f64::from(theta[j] != 0.0)
+            beta[j].signum() * f64::from(beta[j] != 0.0)
         );
     }
 }

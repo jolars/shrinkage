@@ -39,7 +39,7 @@ __all__ = [
 class Lasso:
     """Configure Gaussian lasso, then call :meth:`fit` for an owned result.
 
-    Minimize ``||y - X_tilde @ theta - b||**2 / (2*n) + lambda_ * ||theta||_1``.
+    Minimize ``||y - X_tilde @ beta - beta_0||**2 / (2*n) + lambda_ * ||beta||_1``.
     The intercept is unpenalized. ``lambda_`` must be finite and nonnegative.
     ``normalization="auto"`` divides columns by population standard deviations
     and centers by their means when ``fit_intercept=True``. Other presets are

@@ -360,7 +360,7 @@ fn normalization_orders_optimization_coefficients_and_preserves_predictions() {
     {
         close(actual, expected);
     }
-    let theta: Vec<_> = lazy
+    let beta: Vec<_> = lazy
         .coefficients()
         .iter()
         .zip([2.0, 0.5])
@@ -368,6 +368,6 @@ fn normalization_orders_optimization_coefficients_and_preserves_predictions() {
         .collect();
     close(
         lazy.objective(),
-        datafit.value(&lazy.predict(&x).unwrap()).unwrap() + penalty.value(&theta).unwrap(),
+        datafit.value(&lazy.predict(&x).unwrap()).unwrap() + penalty.value(&beta).unwrap(),
     );
 }

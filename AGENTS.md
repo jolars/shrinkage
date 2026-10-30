@@ -43,6 +43,8 @@ Cloudflare Worker configuration.
   unpublished APIs. Do not commit a dependency on a sibling directory.
 - Gate tests, doctests, examples, and benchmarks on versioned backend features.
   Test the versioned features and their short aliases independently.
+- Use `beta` for coefficient notation and `beta_0` for intercept notation.
+  Distinguish original-scale parameters with an `original` suffix when needed.
 - Preserve the penalty scale, loss normalization, and intercept conventions in
   `DESIGN.md`. Back-transforming coefficients must preserve predictions.
 - Keep runtime dispatch outside scalar loops. Establish fallible operations and

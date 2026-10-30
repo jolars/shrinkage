@@ -155,7 +155,7 @@ pub trait ProximalPenalty: Penalty<Error = FitError> {
     fn prox(&self, input: &[f64], step: f64, output: &mut [f64]) -> Result<(), FitError>;
 }
 
-/// Ridge penalty `lambda * ||theta||² / 2`, distinct from the L2 norm.
+/// Ridge penalty `lambda * ||beta||² / 2`, distinct from the L2 norm.
 #[derive(Clone, Copy, Debug)]
 pub struct Ridge {
     lambda: f64,
@@ -173,7 +173,7 @@ impl Ridge {
     }
 }
 
-/// Complete elastic-net penalty `l1 * ||theta||₁ + l2 * ||theta||² / 2`.
+/// Complete elastic-net penalty `l1 * ||beta||₁ + l2 * ||beta||² / 2`.
 #[derive(Clone, Copy, Debug)]
 pub struct ElasticNet {
     l1: f64,
@@ -191,7 +191,7 @@ impl ElasticNet {
         }
     }
 
-    /// Use `lambda * (alpha * ||theta||₁ + (1 - alpha) * ||theta||² / 2)`.
+    /// Use `lambda * (alpha * ||beta||₁ + (1 - alpha) * ||beta||² / 2)`.
     /// Lambda must be finite and nonnegative, and alpha must lie in `[0, 1]`.
     /// Validation occurs during evaluation or fitting. Automatic paths retain
     /// alpha even when the supplied lambda is zero.

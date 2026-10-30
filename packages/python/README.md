@@ -58,14 +58,14 @@ inputs on every call. Keep inputs unchanged until fitting returns. Returned
 results retain no problem, training arrays, or design snapshots. Array-valued
 properties return independent copies, so mutating them cannot change prediction.
 
-Choose one complete penalty, applied to optimization-scale coefficients `theta`.
+Choose one complete penalty, applied to optimization-scale coefficients `beta`.
 The intercept is excluded:
 
-  | Penalty                                        | Definition and configuration                                                                              |
-  | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-  | `ClusteredLasso(l1, fusion)`                   | `l1 * sum(abs(theta)) + fusion * sum(i < j, abs(theta[i] - theta[j]))`; each signed pair contributes once |
-  | `ChainFusedLasso(l1, fusion, *, weights=None)` | `l1 * sum(abs(theta)) + fusion * sum(weights * abs(diff(theta)))`; feature order defines the chain        |
-  | `Slope(weights)`                               | Rank weights multiply decreasing coefficient magnitudes; weights include the complete penalty strength    |
+  | Penalty                                        | Definition and configuration                                                                           |
+  | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+  | `ClusteredLasso(l1, fusion)`                   | `l1 * sum(abs(beta)) + fusion * sum(i < j, abs(beta[i] - beta[j]))`; each signed pair contributes once |
+  | `ChainFusedLasso(l1, fusion, *, weights=None)` | `l1 * sum(abs(beta)) + fusion * sum(weights * abs(diff(beta)))`; feature order defines the chain       |
+  | `Slope(weights)`                               | Rank weights multiply decreasing coefficient magnitudes; weights include the complete penalty strength |
 
 Strengths and weights must be finite and nonnegative. Chain weights default to
 one and otherwise have length `max(n_features - 1, 0)`; zero weights cut the
@@ -180,12 +180,12 @@ leaves the configuration and inputs unchanged. The penalty strength must be
 finite and nonnegative. The objective is
 
 $$
-  \frac{1}{2n}\|y - \widetilde X\theta
-  - \widetilde b\mathbf1\|_2^2 + \lambda\|\theta\|_1.
+  \frac{1}{2n}\|y - \widetilde X\beta
+  - \beta_0\mathbf1\|_2^2 + \lambda\|\beta\|_1.
 $$
 
 The intercept is unpenalized. Penalties and diagnostics use normalized
-coefficients `theta`, while `fit.coefficients` and `fit.intercept` use the
+coefficients `beta`, while `fit.coefficients` and `fit.intercept` use the
 original input scale. `fit.predict(X_new)` returns a `float64` NumPy array of
 shape `(n_samples,)` using raw columns in training order. Empty prediction
 batches are allowed. Prediction uses the fitted parameters without estimating

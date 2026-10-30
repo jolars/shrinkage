@@ -62,22 +62,22 @@ fn check_kkt(fit: &IrlsFit, rows: &[&[f64]], y: &[f64], intercept: bool, l1: f64
         0.0
     };
     let mut regularization = 0.0;
-    for (j, &beta) in fit.coefficients().iter().enumerate() {
+    for (j, &beta_original) in fit.coefficients().iter().enumerate() {
         let center = fit.preprocessing().centers().map_or(0.0, |v| v[j]);
         let scale = fit.preprocessing().scales().map_or(1.0, |v| v[j]);
-        let theta = beta * scale;
+        let beta = beta_original * scale;
         let smooth = rows
             .iter()
             .zip(&g)
             .map(|(row, g)| (row[j] - center) / scale * g)
             .sum::<f64>()
-            + l2 * theta;
-        violation = violation.max(if theta == 0.0 {
+            + l2 * beta;
+        violation = violation.max(if beta == 0.0 {
             (smooth.abs() - l1).max(0.0)
         } else {
-            (smooth + l1 * theta.signum()).abs()
+            (smooth + l1 * beta.signum()).abs()
         });
-        regularization += l1 * theta.abs() + 0.5 * l2 * theta * theta;
+        regularization += l1 * beta.abs() + 0.5 * l2 * beta * beta;
     }
     close(fit.kkt_violation(), violation);
     close(

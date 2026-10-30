@@ -35,11 +35,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 The complete objective is
 
 $$
-  \frac{\|y - b\mathbf{1} - \widetilde X\theta\|_2^2}{2n}
-  + \sum_{j=1}^p w_j|\theta|_{(j)}.
+  \frac{\|y - \beta_0\mathbf{1} - \widetilde X\beta\|_2^2}{2n}
+  + \sum_{j=1}^p w_j|\beta|_{(j)}.
 $$
 
-Here $|\theta|_{(j)}$ is the $j$th largest magnitude on the optimization scale.
+Here $|\beta|_{(j)}$ is the $j$th largest magnitude on the optimization scale.
 The supplied weights include the strength, with no additional factor of `n`.
 Equal weights give lasso; all zero weights give an unpenalized fit. Repeated
 weights and trailing zeros are valid. Empty feature vectors require empty

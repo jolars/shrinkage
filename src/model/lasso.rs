@@ -10,7 +10,7 @@ use lazymatrix::{ColumnStats, RawColumns};
 
 /// Gaussian lasso configuration.
 ///
-/// Fits `||y - X_tilde * theta - intercept||² / (2n) + lambda * ||theta||₁`.
+/// Fits `||y - X_tilde * beta - beta_0||² / (2n) + lambda * ||beta||₁`.
 /// The intercept is unpenalized. By default, `X_tilde` uses training-column
 /// means and population standard deviations, and the penalty acts on the
 /// normalized coefficients. Reported coefficients and predictions use the
@@ -115,7 +115,7 @@ impl Lasso {
     /// Set a finite, strictly positive absolute KKT tolerance.
     ///
     /// With `c_j = X_tilde_j' * residual / n`, the violation is
-    /// `|c_j - lambda * sign(theta_j)|` for nonzero coefficients and
+    /// `|c_j - lambda * sign(beta_j)|` for nonzero coefficients and
     /// `max(|c_j| - lambda, 0)` otherwise. When fitting an intercept, include
     /// `|mean(residual)|`. Convergence requires the largest violation to be at
     /// most this tolerance, confirmed after reconstructing the residual.

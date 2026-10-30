@@ -25,8 +25,8 @@ def _weights(weights: npt.ArrayLike) -> tuple[float, ...]:
 class ClusteredLasso:
     """L1 plus uniform all-pairs fusion of signed coefficient values.
 
-    The penalty is ``l1 * sum(abs(theta)) + fusion * sum(i<j,
-    abs(theta[i] - theta[j]))``. Strengths must be finite and nonnegative.
+    The penalty is ``l1 * sum(abs(beta)) + fusion * sum(i<j,
+    abs(beta[i] - beta[j]))``. Strengths must be finite and nonnegative.
     Each unordered pair contributes once. The intercept is excluded.
     """
 
@@ -41,8 +41,8 @@ class ClusteredLasso:
 class ChainFusedLasso:
     """L1 plus weighted fusion of adjacent coefficients in feature order.
 
-    The penalty is ``l1 * sum(abs(theta)) + fusion * sum(weights *
-    abs(diff(theta)))``. Strengths and weights must be finite and nonnegative.
+    The penalty is ``l1 * sum(abs(beta)) + fusion * sum(weights *
+    abs(diff(beta)))``. Strengths and weights must be finite and nonnegative.
     ``weights=None`` uses unit weights; explicit weights must have length
     ``max(n_features - 1, 0)``. Zero weights cut the chain. Weight sequences
     are copied into an immutable tuple. The intercept is excluded.

@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use crate::error::{finite, invalid};
 use crate::{FitError, Penalty, ProximalPenalty};
 
-/// Complete penalty `l1 * sum_j |theta[j]| + fusion * sum_{i<j} |theta[i]-theta[j]|`.
+/// Complete penalty `l1 * sum_j |beta[j]| + fusion * sum_{i<j} |beta[i]-beta[j]|`.
 ///
 /// Both strengths are finite and nonnegative, checked on use. Each unordered
 /// pair contributes once. Fusion concerns signed optimization-scale values:

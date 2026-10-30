@@ -3,7 +3,7 @@
 Group LASSO selects explicitly defined groups of coefficients together:
 
 $$
-  P(\theta) = \lambda\sum_{g=1}^G w_g\|\theta_g\|_2.
+  P(\beta) = \lambda\sum_{g=1}^G w_g\|\beta_g\|_2.
 $$
 
 Groups must be disjoint, nonempty, and contain valid coefficient indices.
@@ -18,8 +18,8 @@ $w_g = \sqrt{|g|}$ explicitly.
 groups.](figures/group-lasso.svg)
 
 Both panels use $\lambda = 1$ and unit weights. One group $\{1,2\}$ gives the
-unsquared L2 constraint $\sqrt{\theta_1^2 + \theta_2^2} \leq 1$. Two singleton
-groups give $|\theta_1| + |\theta_2| \leq 1$. The circle coincides with a ridge
+unsquared L2 constraint $\sqrt{\beta_1^2 + \beta_2^2} \leq 1$. Two singleton
+groups give $|\beta_1| + |\beta_2| \leq 1$. The circle coincides with a ridge
 sublevel set in this example, although the penalty values and shrinkage differ.
 See the [plot conventions](index.md#read-the-constraint-plots).
 

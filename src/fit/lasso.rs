@@ -62,7 +62,7 @@ impl LassoFit {
         self.iterations
     }
 
-    /// Final `||residual||² / (2n) + lambda * ||theta||₁`.
+    /// Final `||residual||² / (2n) + lambda * ||beta||₁`.
     pub fn objective(&self) -> f64 {
         self.objective
     }

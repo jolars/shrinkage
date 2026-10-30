@@ -44,20 +44,22 @@ explicit, with generic methods complementing specialized implementations.
 The central objective is
 
 $$
-  \min_{B,b}\; L(Y, XB + \mathbf{1}b^\mathsf{T} + O; M)
-  + \sum_{k=1}^{K}\lambda_k P_k(B),
+  \min_{\beta_0,\beta}\; L(Y, X\beta + \mathbf{1}\beta_0^\mathsf{T} + O; M)
+  + \sum_{k=1}^{K}\lambda_k P_k(\beta),
 $$
 
-where `X` is a design operator, `B` is a coefficient vector or matrix, `b` is an
-optional unpenalized intercept, `O` contains offsets, and `M` contains metadata
-such as weights, event indicators, times, or strata. Constraints may be
-expressed as indicator penalties when the solver supports them. The intercept is
-excluded from penalties by default; other unpenalized blocks must be explicit.
+where `X` is a design operator, `beta` is a coefficient vector or matrix,
+`beta_0` is an optional unpenalized intercept, `O` contains offsets, and `M`
+contains metadata such as weights, event indicators, times, or strata.
+Constraints may be expressed as indicator penalties when the solver supports
+them. The intercept is excluded from penalties by default; other unpenalized
+blocks must be explicit.
 
-Here `X` and `B` are on the optimization scale. If preprocessing normalizes the
-input matrix, penalties act on the corresponding normalized coefficients unless
-an explicitly supported original-scale penalty is requested. Section 8 defines
-the initial lasso convention and the transformation of reported coefficients.
+Here `X` and `beta` are on the optimization scale. If preprocessing normalizes
+the input matrix, penalties act on the corresponding normalized coefficients
+unless an explicitly supported original-scale penalty is requested. Section 8
+defines the initial lasso convention and the transformation of reported
+coefficients.
 
 Long-term scope:
 
@@ -115,9 +117,8 @@ an experimental block-reader consumer exercise fallible storage access.
 `SmoothDatafit` adds a fallible predictor gradient, observation count, and
 intercept policy. `ProximalPenalty` requires an exact prox for the complete
 convex term. `L1`, `Ridge`, `ElasticNet`, and `Slope` implement this capability.
-Ridge means `lambda * ||theta||² / 2`; elastic net accepts separate strengths
-for `l1 * ||theta||₁ + l2 * ||theta||² / 2`. There is no inferred prox for a
-sum.
+Ridge means `lambda * ||beta||² / 2`; elastic net accepts separate strengths for
+`l1 * ||beta||₁ + l2 * ||beta||² / 2`. There is no inferred prox for a sum.
 
 `ProximalGradient<V>` uses LazyMatrix's fallible native-vector products and
 backtracking against the smooth quadratic upper bound. `ProximalDesign` exposes
@@ -455,21 +456,21 @@ membership checks. An empty collection is valid for zero coefficients under
 either policy, or for any coefficient count with unpenalized handling.
 
 `GroupLasso::new(lambda, groups)` implements the complete convex penalty
-`lambda * sum_g weights[g] * ||theta[g]||₂`. Its exact prox multiplies each
-block by `max(1 - step * lambda * weights[g] / ||input[g]||₂, 0)` and maps
-zero-norm blocks to zero. Zero-strength and zero-weight blocks, along with
-uncovered coordinates, retain their inputs. Singleton groups give weighted L1.
-Strengths must be finite and nonnegative, and input dimensions must match the
-validated definitions even at zero strength. Finite inputs, positive finite
-steps, and finite penalty and threshold arithmetic are checked independently.
-Scaled norms avoid squaring coefficients on their original scale and support
-proximal inputs whose block norm exceeds `f64::MAX`. Neither value evaluation
-nor the prox allocates scratch storage.
+`lambda * sum_g weights[g] * ||beta[g]||₂`. Its exact prox multiplies each block
+by `max(1 - step * lambda * weights[g] / ||input[g]||₂, 0)` and maps zero-norm
+blocks to zero. Zero-strength and zero-weight blocks, along with uncovered
+coordinates, retain their inputs. Singleton groups give weighted L1. Strengths
+must be finite and nonnegative, and input dimensions must match the validated
+definitions even at zero strength. Finite inputs, positive finite steps, and
+finite penalty and threshold arithmetic are checked independently. Scaled norms
+avoid squaring coefficients on their original scale and support proximal inputs
+whose block norm exceeds `f64::MAX`. Neither value evaluation nor the prox
+allocates scratch storage.
 
 Typed and runtime Gaussian problems use the existing proximal-gradient
 iteration, native product buffers, and reusable slice workspaces. The objective
-is `||y - X theta - b||² / (2n) + lambda * sum_g weights[g] * ||theta[g]||₂`,
-where `X` and `theta` denote the optimization scale. The intercept remains
+is `||y - X beta - beta_0||² / (2n) + lambda * sum_g weights[g] * ||beta[g]||₂`,
+where `X` and `beta` denote the optimization scale. The intercept remains
 unpenalized. Fitted normalization and back-transformation follow the same
 prediction-preserving contract as other penalties; group norms act on
 optimization-scale coefficients rather than reported original-scale values. This
@@ -521,14 +522,14 @@ arbitrary nonconvex nonsmooth penalties.
 `ClusteredLasso::new(l1, fusion)` defines the complete convex penalty
 
 $$
-  R(\theta) = \lambda_1\sum_j|\theta_j|
-              + \lambda_2\sum_{i<j}|\theta_i - \theta_j|.
+  R(\beta) = \lambda_1\sum_{j=1}^p|\beta_j|
+             + \lambda_2\sum_{i<j}|\beta_i - \beta_j|.
 $$
 
 Both strengths are finite and nonnegative. Each unordered pair contributes once,
 regardless of the signs of its coefficients. Empty vectors are valid. Intercepts
 are excluded. The fitted Gaussian objective is
-`||y - b - X_tilde theta||² / (2n) + R(theta)`. Strengths and cluster labels
+`||y - beta_0 - X_tilde beta||² / (2n) + R(beta)`. Strengths and cluster labels
 refer to optimization-scale coefficients. Back-transformation preserves
 predictions, but unequal column scales can turn a fused optimization block into
 unequal original-scale coefficients.
@@ -568,7 +569,7 @@ Normalize both signed zeros to positive zero. Opposite signs, merely close
 values, and adjacent unequal floats remain distinct. Each block stores its
 membership, aggregate `a_C = sum_{j in C} X_tilde[:,j]`, averaged curvature
 `q_C = ||a_C||²/n`, and a stable identity. The maintained residual is
-`r = y - b - X_tilde theta`.
+`r = y - beta_0 - X_tilde beta`.
 
 For a block of size `m` and value `c`, the exact scalar restriction is
 
@@ -669,8 +670,8 @@ final checks unless explicitly labeled.
 `ChainFusedLasso::new(l1, fusion)` defines
 
 $$
-  R(\theta) = \lambda_1\sum_j|\theta_j|
-              + \lambda_2\sum_{j=0}^{p-2}w_j|\theta_{j+1} - \theta_j|.
+  R(\beta) = \lambda_1\sum_{j=1}^p|\beta_j|
+             + \lambda_2\sum_{j=1}^{p-1}w_j|\beta_{j+1} - \beta_j|.
 $$
 
 Strengths are independent, finite, and nonnegative. Weights default to one;
@@ -678,7 +679,7 @@ Strengths are independent, finite, and nonnegative. Weights default to one;
 nonnegative weights. Validate dimensions and weights even at zero strength.
 Empty and single-feature chains have no edges. Each edge contributes once, in
 training-column order, without dividing by the edge count. The Gaussian
-objective is `||y - b - X_tilde theta||² / (2n) + R(theta)`. Intercepts are
+objective is `||y - beta_0 - X_tilde beta||² / (2n) + R(beta)`. Intercepts are
 unpenalized. Penalties and segment labels use optimization-scale coefficients;
 back-transformation preserves predictions, but unequal column scales may change
 equalities among reported coefficients.
@@ -780,7 +781,7 @@ accounting are shared with the fusion penalties. SLOPE has a private partition
 implementation following [Coordinate Descent for
 SLOPE](https://proceedings.mlr.press/v206/larsson23a.html). The complete
 objective is
-`||y - b - X_tilde theta||² / (2n) + sum_j weights[j] * |theta|_(j)`, with an
+`||y - beta_0 - X_tilde beta||² / (2n) + sum_j weights[j] * |beta|_(j)`, with an
 unpenalized intercept. No additional strength or observation-count factor
 multiplies the supplied weights.
 
@@ -790,16 +791,16 @@ adjacent unequal floating-point magnitudes remain distinct. Both signed zeros
 belong to one zero block, with magnitude and individual signs zero. For each
 nonzero block `C`, retain signs `s_j` and the signed aggregate
 `a_C = sum_{j in C} s_j X_tilde[:, j]`, together with its averaged curvature
-`q_C = ||a_C||²/n`. Prediction is `b + sum_C a_C c_C`. The zero block has a zero
-aggregate and stays fixed throughout restricted sweeps.
+`q_C = ||a_C||²/n`. Prediction is `beta_0 + sum_C a_C c_C`. The zero block has a
+zero aggregate and stays fixed throughout restricted sweeps.
 
 **Exact scalar restriction.** Updating a nonzero block of size `m` replaces
-`theta_j` by `s_j z` for all its members, while other coefficients stay fixed.
+`beta_j` by `s_j z` for all its members, while other coefficients stay fixed.
 With current magnitude `c`, maintained residual `r`, and
 `h = a_C' (r + a_C c)/n`, minimize
 
 $$
-  \tfrac12 q_C z^2 - h z + R(\theta(z)).
+  \tfrac12 q_C z^2 - h z + R(\beta(z)).
 $$
 
 The penalty restriction is even in `z`. For positive curvature, solve for
@@ -850,7 +851,7 @@ SLOPE's `HybridFit::cluster_values()` contains nonnegative optimization-scale
 magnitudes in strictly decreasing order, with zero last when present.
 `cluster_labels()` indexes those values; `coefficient_signs()` contains
 optimization-scale signs in feature order, recorded before back-transformation.
-Reconstruct `theta_j` as `signs[j] * values[labels[j]]`. Clustered lasso and
+Reconstruct `beta_j` as `signs[j] * values[labels[j]]`. Clustered lasso and
 chain fused lasso continue to return signed block values. Unequal feature scales
 can change equalities and ordering among original-scale coefficient magnitudes.
 
@@ -886,7 +887,7 @@ predictions remain logits. Preprocessing is fitted once and reused throughout.
 
 At each accepted outer point, the binomial gradient `g` and diagonal predictor
 Hessian `H` define the quadratic model
-`g' d_eta + d_eta' H d_eta / 2 + R(theta + d_theta)`. Stable binomial tails and
+`g' d_eta + d_eta' H d_eta / 2 + R(beta + d_beta)`. Stable binomial tails and
 the model-only floor `1e-12 / nobs` match coordinate IRLS. Internally, weights
 are `w_i = nobs * H_i` and residuals are `r_i = -nobs * (g_i + H_i * d_eta_i)`.
 This representation never divides by a row weight. For an aggregate `a` at level
@@ -977,11 +978,13 @@ runtime-selected design and vector penalty. These interfaces do not yet specify
 class identifiability, overlapping groups, or device storage.
 
 Normalization is a modeling choice. Record the centering/scaling rule and the
-scale on which penalties are defined. With normalized coefficients `Theta`,
+scale on which penalties are defined. With normalized coefficients `beta`,
 return original-scale coefficients using
 
 $$
-  B = S^{-1}\Theta,\qquad b = \widetilde b - B^\mathsf Tc.
+  \beta_{\mathrm{original}} = S^{-1}\beta,
+  \qquad
+  \beta_{0,\mathrm{original}} = \beta_0 - \beta_{\mathrm{original}}^\mathsf Tc.
 $$
 
 Retain fitted preprocessing metadata and verify prediction equivalence. With no
@@ -1020,12 +1023,12 @@ Specify loss normalization, observation-weight semantics, offsets, and penalty
 scaling. For the initial Gaussian lasso, use
 
 $$
-  \frac{1}{2n}\|y - \widetilde X\theta
-  - \widetilde b\mathbf1\|_2^2 + \lambda\|\theta\|_1.
+  \frac{1}{2n}\|y - \widetilde X\beta
+  - \beta_0\mathbf1\|_2^2 + \lambda\|\beta\|_1.
 $$
 
-Without normalization, `X_tilde = X` and `theta = beta`. With scaling, an
-original-scale lasso penalty would instead be `lambda * ||S^-1 theta||_1`;
+Without normalization, `X_tilde = X` and `beta_original = beta`. With scaling,
+an original-scale lasso penalty would instead be `lambda * ||S^-1 beta||_1`;
 back-transforming fitted coefficients does not change the penalty that was
 optimized. The same distinction affects SLOPE ordering. Objectives, gradients,
 KKT tolerances, and automatic `lambda_max` calculations use the `1/n` loss
@@ -1047,7 +1050,7 @@ The implemented `Lasso` builder defaults to a relative duality-gap tolerance of
 `1e-6` and at most 10,000 sweeps over the current working set. At zero penalty,
 the default uses absolute KKT tolerance `1e-6`, because a residual-scaled
 feasible dual vector can give a loose lower bound. For `c_j = X_tilde_j' r / n`,
-use `|c_j - lambda sign(theta_j)|` on active coordinates and
+use `|c_j - lambda sign(beta_j)|` on active coordinates and
 `max(|c_j| - lambda, 0)` on zero coordinates, together with `|mean(r)|` when
 fitting an intercept. Check the maximum violation after each sweep. Reconstruct
 residuals every 50 sweeps, at the iteration limit, and before accepting
@@ -1350,7 +1353,8 @@ weighted TV $T$ and nonnegative node weights $\alpha$, the exact prox is
 
 $$
   \operatorname{prox}_{\tau(T+\sum_j\alpha_j|\cdot_j|)}(v)
-  = [\operatorname{prox}_{\tau T}(v - \tau\alpha)]_+ + [\operatorname{prox}_{\tau T}(v + \tau\alpha)]_-.
+  = [\operatorname{prox}_{\tau T}(v - \tau\alpha)]_+
+    + [\operatorname{prox}_{\tau T}(v + \tau\alpha)]_-.
 $$
 
 TV's prox preserves order, and clipping preserves its edge subgradients. The

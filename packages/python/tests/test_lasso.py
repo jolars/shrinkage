@@ -117,12 +117,12 @@ class LassoTests(unittest.TestCase):
                     x_tilde = self.x - (0.0 if centers is None else centers)
                     scales = np.ones(4) if scales is None else scales
                     x_tilde /= scales
-                    theta = fit.coefficients * scales
+                    beta = fit.coefficients * scales
                     residual = self.y - fit.predict(self.x)
                     correlations = x_tilde.T @ residual / len(self.y)
                     violations = np.where(
-                        theta != 0.0,
-                        abs(correlations - 0.12 * np.sign(theta)),
+                        beta != 0.0,
+                        abs(correlations - 0.12 * np.sign(beta)),
                         np.maximum(abs(correlations) - 0.12, 0.0),
                     )
                     kkt = float(np.max(violations))
@@ -131,7 +131,7 @@ class LassoTests(unittest.TestCase):
                     self.assertAlmostEqual(fit.kkt_violation, kkt, delta=1e-12)
                     self.assertLessEqual(kkt, 1.1e-10)
                     objective = residual @ residual / (2 * len(self.y))
-                    objective += 0.12 * abs(theta).sum()
+                    objective += 0.12 * abs(beta).sum()
                     self.assertAlmostEqual(fit.objective, objective, delta=1e-12)
                     u = fit.dual_certificate
                     self.assertLessEqual(

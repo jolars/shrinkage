@@ -5,7 +5,7 @@ use std::{cell::RefCell, collections::VecDeque};
 use crate::error::{finite, invalid};
 use crate::{FitError, Penalty, ProximalPenalty};
 
-/// Complete penalty `l1 * sum_j |theta[j]| + fusion * sum_j w[j] * |theta[j+1]-theta[j]|`.
+/// Complete penalty `l1 * sum_j |beta[j]| + fusion * sum_j w[j] * |beta[j+1]-beta[j]|`.
 ///
 /// Edges follow feature order and contribute once. Both strengths and every
 /// weight must be finite and nonnegative, checked on use. Unit weights are

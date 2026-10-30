@@ -22,25 +22,26 @@ fn main() {
     let spec = Normalization::standardize();
     let dense = LazyMatrix::new(&dense, spec).expect("in-memory statistics are infallible");
     let sparse = LazyMatrix::new(&sparse, spec).expect("in-memory statistics are infallible");
-    let theta = Col::from_fn(2, |j| [0.75, -1.25][j]);
-    let normalized_intercept = 0.5;
+    let beta = Col::from_fn(2, |j| [0.75, -1.25][j]);
+    let beta_0 = 0.5;
     let dense_prediction = dense
-        .matvec(&theta)
+        .matvec(&beta)
         .expect("in-memory product is infallible");
     let sparse_prediction = sparse
-        .matvec(&theta)
+        .matvec(&beta)
         .expect("in-memory product is infallible");
 
     let centers = dense.centers().expect("mean centering is enabled");
     let scales = dense
         .scales()
         .expect("standard-deviation scaling is enabled");
-    let beta = [theta[0] / scales[0], theta[1] / scales[1]];
-    let intercept = normalized_intercept - beta[0] * centers[0] - beta[1] * centers[1];
+    let beta_original = [beta[0] / scales[0], beta[1] / scales[1]];
+    let beta_0_original = beta_0 - beta_original[0] * centers[0] - beta_original[1] * centers[1];
 
     for i in 0..raw.len() {
-        let original_prediction = raw[i][0] * beta[0] + raw[i][1] * beta[1] + intercept;
-        let normalized_prediction = dense_prediction[i] + normalized_intercept;
+        let original_prediction =
+            raw[i][0] * beta_original[0] + raw[i][1] * beta_original[1] + beta_0_original;
+        let normalized_prediction = dense_prediction[i] + beta_0;
         assert!((dense_prediction[i] - sparse_prediction[i]).abs() < 1e-12);
         assert!((original_prediction - normalized_prediction).abs() < 1e-12);
     }

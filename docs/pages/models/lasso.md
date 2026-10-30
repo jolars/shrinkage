@@ -3,8 +3,8 @@
 `Lasso` fits the Gaussian L1 model:
 
 $$
-  \min_{b,\theta}\;\frac{\|y - b\mathbf{1} - \widetilde X\theta\|_2^2}{2n}
-  + \lambda\|\theta\|_1.
+  \min_{\beta_0,\beta}\;\frac{\|y - \beta_0\mathbf{1} - \widetilde X\beta\|_2^2}{2n}
+  + \lambda\|\beta\|_1.
 $$
 
 It combines `Gaussian`, `L1`, and specialized cyclic coordinate descent. The

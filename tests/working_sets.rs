@@ -17,7 +17,7 @@ fn check_mapping<D: SmoothDatafit, P: ProximalPenalty>(
     fit: &HybridFit,
 ) {
     let n = rows.len();
-    let theta: Vec<_> = fit
+    let beta: Vec<_> = fit
         .coefficients()
         .iter()
         .enumerate()
@@ -34,12 +34,12 @@ fn check_mapping<D: SmoothDatafit, P: ProximalPenalty>(
                     .sum::<f64>()
         })
         .collect();
-    let objective = datafit.value(&eta).unwrap() + penalty.value(&theta).unwrap();
+    let objective = datafit.value(&eta).unwrap() + penalty.value(&beta).unwrap();
     assert!((objective - fit.objective()).abs() < 1e-11);
     let mut derivative = vec![0.0; n];
     datafit.gradient(&eta, &mut derivative).unwrap();
     let sum: f64 = derivative.iter().sum();
-    let input: Vec<_> = theta
+    let input: Vec<_> = beta
         .iter()
         .enumerate()
         .map(|(j, &b)| {
@@ -53,9 +53,9 @@ fn check_mapping<D: SmoothDatafit, P: ProximalPenalty>(
             b - fit.step_size() * gradient
         })
         .collect();
-    let mut output = vec![0.0; theta.len()];
+    let mut output = vec![0.0; beta.len()];
     penalty.prox(&input, fit.step_size(), &mut output).unwrap();
-    let mapping = theta
+    let mapping = beta
         .iter()
         .zip(output)
         .map(|(b, z)| (b - z).abs() / fit.step_size())

@@ -6,8 +6,7 @@ equal positive and negative magnitudes do not form one fusion cluster. The
 constructor takes separate L1 and fusion strengths.
 
 $$
-  P(\theta) = \lambda_1\sum_j|\theta_j|
-              + \lambda_2\sum_{i<j}|\theta_i - \theta_j|.
+  P(\beta) = \lambda_1\sum_j|\beta_j| + \lambda_2\sum_{i<j}|\beta_i - \beta_j|.
 $$
 
 ## Constraint region
@@ -16,7 +15,7 @@ $$
 boundary.](figures/clustered-lasso.svg)
 
 Top: $\lambda_1 = \lambda_2 = 0.5$. Bottom: pure fusion, $\lambda_1 = 0$,
-$\lambda_2 = 1$, giving the unbounded strip $|\theta_1 - \theta_2| \leq 1$. See
+$\lambda_2 = 1$, giving the unbounded strip $|\beta_1 - \beta_2| \leq 1$. See
 the [plot conventions](index.md#read-the-constraint-plots) for the fixed budget
 and coefficient scale.
 

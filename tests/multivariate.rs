@@ -265,7 +265,7 @@ fn supplied_normalization_preserves_joint_predictions_and_penalty_scale() {
             {
                 close(a, b);
             }
-            let theta: Vec<_> = lazy
+            let beta: Vec<_> = lazy
                 .coefficients()
                 .iter()
                 .enumerate()
@@ -273,7 +273,7 @@ fn supplied_normalization_preserves_joint_predictions_and_penalty_scale() {
                 .collect();
             close(
                 lazy.objective(),
-                datafit.value(&lazy.predict(&x).unwrap()).unwrap() + term.value(&theta).unwrap(),
+                datafit.value(&lazy.predict(&x).unwrap()).unwrap() + term.value(&beta).unwrap(),
             );
             assert!(lazy.preprocessing().centers_were_supplied());
             assert!(lazy.preprocessing().scales_were_supplied());

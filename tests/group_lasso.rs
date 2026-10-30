@@ -356,18 +356,18 @@ fn normalization_preserves_predictions_and_penalizes_optimization_coefficients()
         {
             close(actual, expected, 1e-10);
         }
-        let theta: Vec<_> = lazy
+        let beta: Vec<_> = lazy
             .coefficients()
             .iter()
             .zip([2.0, 0.5])
             .map(|(b, s)| b * s)
             .collect();
-        for (&actual, &expected) in theta.iter().zip(explicit.coefficients()) {
+        for (&actual, &expected) in beta.iter().zip(explicit.coefficients()) {
             close(actual, expected, 1e-10);
         }
         close(
             lazy.objective(),
-            datafit.value(&lazy.predict(&x).unwrap()).unwrap() + penalty.value(&theta).unwrap(),
+            datafit.value(&lazy.predict(&x).unwrap()).unwrap() + penalty.value(&beta).unwrap(),
             1e-12,
         );
         close(

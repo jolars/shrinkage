@@ -6,8 +6,8 @@ default to one. `.with_weights(...)` takes exactly one finite, nonnegative
 weight per edge; a zero weight cuts the chain.
 
 $$
-  P(\theta) = \lambda_1\sum_{j=1}^p|\theta_j|
-              + \lambda_2\sum_{j=1}^{p-1}w_j|\theta_{j+1} - \theta_j|.
+  P(\beta) = \lambda_1\sum_{j=1}^p|\beta_j|
+             + \lambda_2\sum_{j=1}^{p-1}w_j|\beta_{j+1} - \beta_j|.
 $$
 
 ## Constraint region

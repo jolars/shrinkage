@@ -70,11 +70,19 @@ randomizes method order within comparison blocks. Workers retain their imports,
 but every fit creates a new model. A single `compute bench` reservation covers
 both methods.
 
-The [retained measurements](figures/lasso.json) identify the CPU, operating
-system, Python and package versions, solver source revision, native extension
-hash, Metewand executable hash, input configuration hashes, timings, and
-accuracy metrics. They also retain Metewand's primary `execute_only` wall time,
-which includes result conversion and protocol work.
+The [retained measurements](figures/lasso.json) are Metewand's JSON analysis
+export. They contain complete observation metrics, effective settings, profile
+progress, and recorded provenance. Shared provenance identifies the CPU,
+operating system, source revision and dirty status, Metewand executable hash,
+dataset seed, and dataset content hash. Worker statistics identify Python and
+numerical package versions and the native-extension hash. The export also
+retains Metewand's primary `execute_only` wall time, which includes result
+conversion and protocol work.
+
+Metewand checks declared repetitions and profile completion before exporting.
+The figure uses selected successful measurements, including valid intermediate
+points with larger gaps. A successful retry can supply those measurements after
+an earlier failure. The full run directory retains the attempt history.
 
 From the repository root, with the Metewand CLI installed:
 

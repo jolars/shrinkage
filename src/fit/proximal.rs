@@ -81,7 +81,7 @@ impl ProximalFit {
     pub fn stopping_criterion(&self) -> StoppingCriterion {
         self.stopping_criterion
     }
-    /// Infinity norm of `(theta - prox(theta - step * gradient)) / step`,
+    /// Infinity norm of `(beta - prox(beta - step * gradient)) / step`,
     /// maximized with the absolute unpenalized intercept derivative.
     /// Evaluated at the returned parameters, using [`Self::step_size`].
     pub fn stopping_value(&self) -> f64 {

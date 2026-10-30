@@ -1,13 +1,13 @@
 # AxisPenalty
 
 `AxisPenalty` applies a complete vector penalty along explicitly selected axes
-of a $p$-feature, $q$-response coefficient matrix $\Theta$:
+of a $p$-feature, $q$-response coefficient matrix $\beta$:
 
 $$
   \begin{aligned}
-    P_{\mathrm{Features}}(\Theta)  & = \sum_{r=1}^q P(\Theta_{:,r}),  \\
-    P_{\mathrm{Responses}}(\Theta) & = \sum_{j=1}^p P(\Theta_{j,:}),  \\
-    P_{\mathrm{All}}(\Theta)       & = P(\operatorname{vec}(\Theta)).
+    P_{\mathrm{Features}}(\beta)  & = \sum_{r=1}^q P(\beta_{:,r}),  \\
+    P_{\mathrm{Responses}}(\beta) & = \sum_{j=1}^p P(\beta_{j,:}),  \\
+    P_{\mathrm{All}}(\beta)       & = P(\operatorname{vec}(\beta)).
   \end{aligned}
 $$
 
@@ -24,9 +24,9 @@ penalty.](figures/axis.svg)
 Both panels use one feature and two responses, with the unsquared L2 norm as the
 inner penalty, represented by one Group LASSO group of unit weight and strength
 one at each required vector width. The axes denote the two response coefficients
-of that feature. `Features` gives $|\theta_1| + |\theta_2| \leq 1$; `Responses`
-gives $\sqrt{\theta_1^2 + \theta_2^2} \leq 1$. `All` coincides with `Responses`
-in this layout. See the [plot conventions](index.md#read-the-constraint-plots).
+of that feature. `Features` gives $|\beta_1| + |\beta_2| \leq 1$; `Responses`
+gives $\sqrt{\beta_1^2 + \beta_2^2} \leq 1$. `All` coincides with `Responses` in
+this layout. See the [plot conventions](index.md#read-the-constraint-plots).
 
 ## Use the wrapper
 

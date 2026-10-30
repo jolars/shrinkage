@@ -4,7 +4,7 @@
 one for penalized coordinates and zero for excluded coordinates. Then
 
 $$
-  P_{\mathrm{masked}}(\theta) = P(m \odot \theta).
+  P_{\mathrm{masked}}(\beta) = P(m \odot \beta).
 $$
 
 In the Rust mask, `true` means **unpenalized**, while `false` retains the
@@ -12,10 +12,10 @@ penalty. The mask has one entry per coefficient and never includes intercepts.
 
 ## Constraint region
 
-![A horizontal strip bounded at theta two equal to plus or minus one, continuing
+![A horizontal strip bounded at beta two equal to plus or minus one, continuing
 in both horizontal directions.](figures/masked.svg)
 
-`Masked::new(vec![true, false], L1::new(1.0))` gives $|\theta_2| \leq 1$. The
+`Masked::new(vec![true, false], L1::new(1.0))` gives $|\beta_2| \leq 1$. The
 first coordinate is free, so the region is unbounded horizontally. See the [plot
 conventions](index.md#read-the-constraint-plots).
 

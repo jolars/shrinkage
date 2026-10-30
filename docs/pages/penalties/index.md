@@ -23,7 +23,7 @@ penalty along coefficient-matrix axes.
 Each page shows the feasible region for a two-coordinate constrained problem,
 
 $$
-  \min_{b,\theta} L(y,b\mathbf{1} + \widetilde X\theta) \quad\text{subject to}\quad P(\theta)
+  \min_{\beta_0,\beta} L(y,\beta_0\mathbf{1} + \widetilde X\beta) \quad\text{subject to}\quad P(\beta)
   \leq t.
 $$
 
@@ -32,7 +32,7 @@ Axes have equal scales and represent optimization coefficients, not reported
 original-scale coefficients. Captions specify every strength, weight, and group.
 The intercept does not appear in these plots.
 
-For a penalized solution, choosing $t = P(\widehat\theta)$ makes that solution
+For a penalized solution, choosing $t = P(\widehat\beta)$ makes that solution
 optimal for the corresponding constrained problem. The budget $t$ is not the
 penalty multiplier: the appropriate correspondence depends on the data and the
 solution. Our fixed budget illustrates geometry rather than fitting a dataset.
@@ -48,8 +48,9 @@ also minimizes
 
 $$
   \operatorname{prox}_{sP}(v)
-  = \mathop{\arg\min}_{z}\left\{ \frac{\|z - v\|_2^2}{2s} + P(z) \right\}, \qquad s
-                              > 0.
+  = \mathop{\arg\min}_{z}\left\{ \frac{\|z - v\|_2^2}{2s} + P(z) \right\},
+  \qquad
+  s > 0.
 $$
 
 All seven base penalties provide this exact complete proximal map and work with

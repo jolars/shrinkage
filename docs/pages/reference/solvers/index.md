@@ -29,8 +29,8 @@ numerical tolerances are `1e-6` in their respective units.
 The PG mapping for the penalized coefficients is
 
 $$
-  G_s(\theta)
-  = \frac{\theta - \operatorname{prox}_{sP}(\theta - s\nabla_\theta L)}{s}.
+  G_s(\beta)
+  = \frac{\beta - \operatorname{prox}_{sP}(\beta - s\nabla_\beta L)}{s}.
 $$
 
 With a fitted intercept, the full check also includes the unpenalized intercept

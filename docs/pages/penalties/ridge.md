@@ -5,7 +5,7 @@ constraint region is a disk. This is a squared L2 penalty, which differs from
 the unsquared norm used by Group LASSO.
 
 $$
-  P(\theta) = \frac{\lambda}{2}\|\theta\|_2^2.
+  P(\beta) = \frac{\lambda}{2}\|\beta\|_2^2.
 $$
 
 ## Constraint region
@@ -13,7 +13,7 @@ $$
 ![Feasible region for ridge; the shaded set includes its
 boundary.](figures/ridge.svg)
 
-$\lambda = 2$: $\theta_1^2 + \theta_2^2 \leq 1$. See the [plot
+$\lambda = 2$: $\beta_1^2 + \beta_2^2 \leq 1$. See the [plot
 conventions](index.md#read-the-constraint-plots) for the fixed budget and
 coefficient scale.
 

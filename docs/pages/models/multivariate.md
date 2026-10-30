@@ -3,13 +3,14 @@
 A multivariate Gaussian model estimates $q$ responses from the same design:
 
 $$
-  \min_{b,\Theta}\;\frac{\|Y - \mathbf{1}b^\mathsf{T} - \widetilde X\Theta\|_F^2}{2n}
-  + P_{\mathrm{axis}}(\Theta).
+  \min_{\beta_0,\beta}\;\frac{\|Y - \mathbf{1}\beta_0^\mathsf{T} - \widetilde X\beta\|_F^2}{2n}
+  + P_{\mathrm{axis}}(\beta).
 $$
 
-Use an explicit $p$-feature, $q$-response coefficient layout and choose which
-vectors the penalty sees. The loss sums over responses, so adding responses does
-not divide either the loss or the penalty strengths by $q$.
+Here $\beta$ is a $p \times q$ coefficient matrix, and $\beta_0$ is a vector of
+$q$ intercepts. Use an explicit $p$-feature, $q$-response coefficient layout and
+choose which vectors the penalty sees. The loss sums over responses, so adding
+responses does not divide either the loss or the penalty strengths by $q$.
 
 ## Fit two responses
 

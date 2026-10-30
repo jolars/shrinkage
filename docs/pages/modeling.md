@@ -15,19 +15,21 @@ guide](../../packages/python/README.md) for fitting and prediction.
 For a design with $n$ observations and $p$ features, Shrinkage solves
 
 $$
-  \min_{b,\theta}\; L(y,\eta)
-  + P(\theta), \qquad \eta = b\mathbf{1} + \widetilde X\theta.
+  \min_{\beta_0,\beta}\; L(y,\eta) + P(\beta),
+  \qquad
+  \eta = \beta_0\mathbf{1} + \widetilde X\beta.
 $$
 
 The datafit $L$ averages over observations. The complete penalty $P$ includes
-its strengths, with no additional factor of $n$. The intercept $b$ is
+its strengths, with no additional factor of $n$. The intercept $\beta_0$ is
 unpenalized. Set `.fit_intercept(false)` on the datafit to omit a free
 intercept. The convenience `Lasso` builder provides the same option directly.
 
-Here $\theta$ denotes optimization-scale coefficients. Unless you select a
-different normalization, Shrinkage centers training columns when fitting an
-intercept and scales them by population standard deviations. Without a fitted
-intercept, automatic normalization scales columns without centering.
+Here $\beta = (\beta_1, \ldots, \beta_p)^\mathsf{T}$ denotes optimization-scale
+coefficients, and $\beta_0$ denotes the intercept. Unless you select a different
+normalization, Shrinkage centers training columns when fitting an intercept and
+scales them by population standard deviations. Without a fitted intercept,
+automatic normalization scales columns without centering.
 
 ## Normalization and predictions {#normalization-and-predictions}
 
@@ -36,14 +38,17 @@ training centers and $S$ is diagonal with the resolved feature scales. The
 reported coefficients and intercept satisfy
 
 $$
-  \beta = S^{-1}\theta,\qquad b_{\mathrm{original}}
-        = b - c^\mathsf{T}\beta, \qquad X\beta + b_{\mathrm{original}}\mathbf{1}
-        = \widetilde X\theta + b\mathbf{1}.
+  \begin{aligned}
+    \beta_{\mathrm{original}}   & = S^{-1}\beta,                                     \\
+    \beta_{0,\mathrm{original}} & = \beta_0 - c^\mathsf{T}\beta_{\mathrm{original}}, \\
+    X\beta_{\mathrm{original}} + \beta_{0,\mathrm{original}}\mathbf{1}
+                                & = \widetilde X\beta + \beta_0\mathbf{1}.
+  \end{aligned}
 $$
 
 The fitted result owns these original-scale parameters and retains its training
 preprocessing. Prediction reuses that preprocessing. Penalty geometry and
-cluster labels describe $\theta$; unequal feature scales can therefore produce
+cluster labels describe $\beta$; unequal feature scales can therefore produce
 unequal reported coefficients within one optimization-scale cluster.
 
 Use `.normalize(Normalization::None)` on a problem or model builder to use the

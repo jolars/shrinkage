@@ -4,8 +4,8 @@ A Gaussian linear model estimates a real-valued conditional mean. With a
 complete penalty $P$, its objective is
 
 $$
-  \min_{b,\theta}\;\frac{\|y - b\mathbf{1} - \widetilde X\theta\|_2^2}{2n}
-  + P(\theta).
+  \min_{\beta_0,\beta}\;\frac{\|y - \beta_0\mathbf{1} - \widetilde X\beta\|_2^2}{2n}
+  + P(\beta).
 $$
 
 Choose [L1](../penalties/l1.md) for sparsity, [ridge](../penalties/ridge.md) for

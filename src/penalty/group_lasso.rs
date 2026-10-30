@@ -3,7 +3,7 @@
 use crate::error::{finite, invalid};
 use crate::{DisjointGroups, FitError, Penalty, ProximalPenalty};
 
-/// Group LASSO `lambda * sum_g weights[g] * ||theta[g]||₂`.
+/// Group LASSO `lambda * sum_g weights[g] * ||beta[g]||₂`.
 ///
 /// Groups address optimization-scale coefficients and exclude intercepts. The
 /// supplied [`DisjointGroups`] fixes the coefficient count, explicit weights,

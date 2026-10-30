@@ -343,11 +343,11 @@ fn correlated_paths_reintroduce_features_and_pass_full_kkt_checks() {
                 .for_each_stored(|row, value| raw += value * residual[row]);
             let c =
                 (raw - centers[feature] * residual.iter().sum::<f64>()) / (6.0 * scales[feature]);
-            let theta = fit.coefficients()[feature] * scales[feature];
-            let violation = if theta == 0.0 {
+            let beta = fit.coefficients()[feature] * scales[feature];
+            let violation = if beta == 0.0 {
                 (c.abs() - penalty.lambda()).max(0.0)
             } else {
-                (c - penalty.lambda() * theta.signum()).abs()
+                (c - penalty.lambda() * beta.signum()).abs()
             };
             assert!(violation < 1e-7);
         }

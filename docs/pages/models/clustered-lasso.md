@@ -35,8 +35,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 The objective uses averaged squared loss and separate nonnegative strengths:
 
 $$
-  \frac{\|y - b - \widetilde X\theta\|^2}{2n}
-  + \lambda_1\sum_j|\theta_j| + \lambda_2\sum_{i<j}|\theta_i - \theta_j|.
+  \frac{\|y - \beta_0 - \widetilde X\beta\|^2}{2n}
+  + \lambda_1\sum_j|\beta_j| + \lambda_2\sum_{i<j}|\beta_i - \beta_j|.
 $$
 
 Every unordered pair contributes once. Fusion compares signed values, so

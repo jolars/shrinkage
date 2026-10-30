@@ -34,9 +34,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 The objective is
 
 $$
-  \frac{\|y - b\mathbf{1} - \widetilde X\theta\|_2^2}{2n}
-  + \lambda_1\sum_{j=1}^p|\theta_j|
-  + \lambda_2\sum_{j=1}^{p-1}w_j|\theta_{j+1} - \theta_j|.
+  \frac{\|y - \beta_0\mathbf{1} - \widetilde X\beta\|_2^2}{2n}
+  + \lambda_1\sum_{j=1}^p|\beta_j|
+  + \lambda_2\sum_{j=1}^{p-1}w_j|\beta_{j+1} - \beta_j|.
 $$
 
 Both strengths are finite and nonnegative. Unit weights are implicit unless

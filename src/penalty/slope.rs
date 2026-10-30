@@ -5,9 +5,9 @@ use std::cell::RefCell;
 use crate::error::{finite, invalid};
 use crate::{FitError, Penalty, ProximalPenalty};
 
-/// SLOPE penalty `sum_j weights[j] * |theta|_(j)` on optimization coefficients.
+/// SLOPE penalty `sum_j weights[j] * |beta|_(j)` on optimization coefficients.
 ///
-/// `|theta|_(j)` denotes the jth largest coefficient magnitude. Supply one
+/// `|beta|_(j)` denotes the jth largest coefficient magnitude. Supply one
 /// finite, nonnegative, nonincreasing weight per coefficient, including the
 /// penalty strength. Equal weights give L1; all zero weights give no penalty.
 /// An empty weight vector defines the penalty on an empty coefficient vector.

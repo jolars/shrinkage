@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
+import platform
 import sys
 import warnings
 from importlib.metadata import version
@@ -98,11 +100,21 @@ def evaluate(context):
 class LassoWorker:
     def __init__(self, implementation):
         self.implementation = implementation
+        self.version = version(implementation)
+        self.software = {
+            "python": platform.python_version(),
+            "packages": {
+                name: version(name) for name in ("numpy", "scipy", "metewand")
+            },
+        }
         if implementation == "shrinkage":
-            from shrinkage import Lasso, StoppingCriterion
+            from shrinkage import Lasso, StoppingCriterion, _shrinkage
 
             self.model = Lasso
             self.stopping = StoppingCriterion.duality_gap(relative=1e-8)
+            self.software["native_extension_sha256"] = hashlib.sha256(
+                Path(_shrinkage.__file__).read_bytes()
+            ).hexdigest()
         else:
             from sklearn.exceptions import ConvergenceWarning
             from sklearn.linear_model import Lasso
@@ -148,7 +160,8 @@ class LassoWorker:
 
         return {
             "implementation": self.implementation,
-            "version": version(self.implementation),
+            "version": self.version,
+            "software": self.software,
             "iterations": int(
                 output.iterations
                 if self.implementation == "shrinkage"

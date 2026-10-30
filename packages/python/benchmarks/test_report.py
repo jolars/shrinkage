@@ -1,4 +1,4 @@
-"""Keep convergence points distinct from metric rows and cumulative run time."""
+"""Check figure-specific assumptions using Metewand analysis observations."""
 
 from copy import deepcopy
 
@@ -6,69 +6,73 @@ import pytest
 from report import collect_observations, convergence_points
 
 
-def exported_rows():
-    rows = []
+def snapshot():
+    observations = []
     for method in ("shrinkage", "scikit-learn"):
-        for repetition in range(5):
+        for repetition in range(3):
             for budget in (1, 2, 3):
-                for metric, value in (
-                    ("relative_gap", 10.0 ** (-3 * budget)),
-                    ("duality_gap", 2 * 10.0 ** (-3 * budget)),
-                    ("objective", 0.625),
-                ):
-                    rows.append(
-                        {
-                            "record_type": "observation",
-                            "id": f"{method}-{repetition}-{budget}",
-                            "attempt_id": f"attempt-{method}-{repetition}-{budget}",
-                            "warmup": False,
-                            "valid": True,
-                            "completion": "reached" if budget == 3 else "not_reached",
-                            "profile": {
-                                "delivery": "fresh_sequence",
-                                "measurement_index": repetition,
-                                "schedule_index": budget - 1,
-                                "observation_control": {"iterations": budget},
-                            },
-                            "compatibility": {"timing_scope": "execute_only"},
-                            "provenance": {
-                                "data": {
-                                    "implementation_statistics": {
-                                        "implementation": method,
-                                        "version": "0.0.0",
-                                        "iterations": budget,
-                                        "threadpools": [{"num_threads": 1}],
-                                    }
-                                }
-                            },
-                            "implementation_time_ns": budget * 1000,
-                            "timed_wall_time_ns": budget * 2000,
-                            "metric_name": f"/{metric}",
-                            "metric_value": value,
-                        }
-                    )
-    return rows
+                observations.append(
+                    {
+                        "observation_id": f"{method}-{repetition}-{budget}",
+                        "implementation": method,
+                        "selected": True,
+                        "warmup": False,
+                        "valid": True,
+                        "completion": "reached" if budget == 3 else "not_reached",
+                        "measurement_index": repetition,
+                        "timing_scope": "execute_only",
+                        "profile": {
+                            "delivery": "fresh_sequence",
+                            "schedule_index": budget - 1,
+                            "observation_control": {"iterations": budget},
+                        },
+                        "statistics": {
+                            "version": "0.0.0",
+                            "threadpools": [{"num_threads": 1}],
+                        },
+                        "provenance_id": "shared",
+                        "implementation_time_ns": budget * 1000,
+                        "timed_wall_time_ns": budget * 2000,
+                        "metrics": {
+                            "relative_gap": 10.0 ** (-3 * budget),
+                            "duality_gap": 2 * 10.0 ** (-3 * budget),
+                        },
+                    }
+                )
+    return {
+        "schema_version": 1,
+        "completeness": {"complete": True, "issues": []},
+        "candidates": [
+            {"implementation": method, "measurement_repetitions": 3}
+            for method in ("shrinkage", "scikit-learn")
+        ],
+        "observations": observations,
+        "attempts": [],
+        "provenance": {"shared": {"dataset": {"output": {"sha256": "same"}}}},
+    }
 
 
-def test_group_metrics_by_observation_and_exclude_warmups():
-    rows = exported_rows()
-    warmup = deepcopy(rows[0])
-    warmup.update(id="warmup", warmup=True)
-    observations = collect_observations([*rows, warmup])
-    assert len(observations) == 30
-    assert all(len(row["metrics"]) == 3 for row in observations)
-    assert {row["iteration_limit"] for row in observations} == {1, 2, 3}
-    assert {row["repetition"] for row in observations} == set(range(5))
+def test_selected_observations_keep_intermediate_points_and_exclude_warmups():
+    result = snapshot()
+    warmup = deepcopy(result["observations"][0])
+    warmup["warmup"] = True
+    superseded = deepcopy(warmup)
+    superseded.update(warmup=False, selected=False, valid=False)
+    result["observations"].extend([warmup, superseded])
+    observations = collect_observations(result)
+    assert len(observations) == 18
+    assert any(row["completion"] == "not_reached" for row in observations)
 
 
-def test_reject_partial_comparison():
-    with pytest.raises(ValueError, match="did not reach the accuracy target"):
-        collect_observations(exported_rows()[:-3])
+def test_reject_incomplete_export():
+    result = snapshot()
+    result["completeness"]["complete"] = False
+    with pytest.raises(ValueError, match="incomplete"):
+        collect_observations(result)
 
 
-def test_curve_uses_independent_fit_times_and_absolute_duality_gaps():
-    snapshot = {"observations": collect_observations(exported_rows())}
-    points = convergence_points(snapshot, "shrinkage")
+def test_curve_uses_each_fit_timer_and_declared_repetition_count():
+    points = convergence_points(snapshot(), "shrinkage")
     assert [point["time_ms"] for point in points] == pytest.approx(
         [0.001, 0.002, 0.003]
     )
@@ -77,20 +81,29 @@ def test_curve_uses_independent_fit_times_and_absolute_duality_gaps():
     )
 
 
-def test_reject_invalid_solution():
-    rows = exported_rows()
-    rows[0]["valid"] = False
-    with pytest.raises(ValueError, match="invalid"):
-        collect_observations(rows)
+def test_reject_control_without_enough_measurements_for_error_bars():
+    result = snapshot()
+    result["observations"].pop()
+    with pytest.raises(ValueError, match="declared repetitions"):
+        convergence_points(result, "scikit-learn")
 
 
-def test_reject_missing_repetition():
-    rows = [row for row in exported_rows() if not row["id"].startswith("shrinkage-4-")]
-    with pytest.raises(ValueError, match="Expected 5 curves"):
-        collect_observations(rows)
+def test_successful_retry_can_follow_a_failed_attempt():
+    result = snapshot()
+    result["attempts"].append({"state": "failed", "failure_code": "timeout"})
+    assert len(collect_observations(result)) == 18
 
 
-def test_reject_failed_attempt_even_with_complete_observations():
-    failure = {"record_type": "attempt", "failure_code": "timeout"}
-    with pytest.raises(ValueError, match="Failed attempt: timeout"):
-        collect_observations([*exported_rows(), failure])
+def test_reject_multiple_datasets():
+    result = snapshot()
+    result["provenance"]["different"] = {"dataset": {"output": {"sha256": "other"}}}
+    result["observations"][0]["provenance_id"] = "different"
+    with pytest.raises(ValueError, match="same dataset"):
+        collect_observations(result)
+
+
+def test_reject_multiple_threads():
+    result = snapshot()
+    result["observations"][0]["statistics"]["threadpools"][0]["num_threads"] = 2
+    with pytest.raises(ValueError, match="one thread"):
+        collect_observations(result)

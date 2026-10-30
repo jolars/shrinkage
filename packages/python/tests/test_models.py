@@ -60,19 +60,19 @@ def objective(
     else:
         loss = float(np.mean(np.logaddexp(0, eta) - y * eta))
     scales = fit.preprocessing.scales
-    theta = fit.coefficients * (1 if scales is None else scales)
+    beta = fit.coefficients * (1 if scales is None else scales)
     if isinstance(penalty, Slope):
-        return loss + float(np.asarray(penalty.weights) @ np.sort(abs(theta))[::-1])
-    value = penalty.l1 * float(abs(theta).sum())
+        return loss + float(np.asarray(penalty.weights) @ np.sort(abs(beta))[::-1])
+    value = penalty.l1 * float(abs(beta).sum())
     if isinstance(penalty, ClusteredLasso):
         value += penalty.fusion * sum(
-            abs(float(theta[i] - theta[j]))
-            for i in range(len(theta))
-            for j in range(i + 1, len(theta))
+            abs(float(beta[i] - beta[j]))
+            for i in range(len(beta))
+            for j in range(i + 1, len(beta))
         )
     else:
         weights = 1 if penalty.weights is None else np.asarray(penalty.weights)
-        value += penalty.fusion * float(np.sum(weights * abs(np.diff(theta))))
+        value += penalty.fusion * float(np.sum(weights * abs(np.diff(beta))))
     return loss + value
 
 
