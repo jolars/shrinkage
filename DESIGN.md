@@ -44,17 +44,16 @@ explicit, with generic methods complementing specialized implementations.
 The primal problem minimizes the composite objective
 
 $$
-  \min_{\beta_0,\beta} P(\beta_0,\beta),
-  \qquad
-  P(\beta_0,\beta) = F(\beta_0,\beta) + R(\beta),
+  \min_{\beta_0,\beta} P(\beta_0,\beta), \qquad P(\beta_0,\beta)
+  = F(\beta_0,\beta) + R(\beta),
 $$
 
 with
 
 $$
-  F(\beta_0,\beta) = F(Y, X\beta + \mathbf{1}\beta_0^\mathsf{T} + O; M),
-  \qquad
-  R(\beta) = \sum_{k=1}^{K}\lambda_k R_k(\beta),
+  F(\beta_0,\beta)
+  = F(Y, X\beta + \mathbf{1}\beta_0^\mathsf{T} + O; M), \qquad R(\beta)
+                   = \sum_{k=1}^{K}\lambda_k R_k(\beta),
 $$
 
 where `X` is a design operator, `beta` is a coefficient vector or matrix,
@@ -1002,9 +1001,8 @@ scale on which penalties are defined. With normalized coefficients `beta`,
 return original-scale coefficients using
 
 $$
-  \beta_{\mathrm{original}} = S^{-1}\beta,
-  \qquad
-  \beta_{0,\mathrm{original}} = \beta_0 - \beta_{\mathrm{original}}^\mathsf Tc.
+  \beta_{\mathrm{original}} = S^{-1}\beta, \qquad \beta_{0,\mathrm{original}}
+                            = \beta_0 - \beta_{\mathrm{original}}^\mathsf Tc.
 $$
 
 Retain fitted preprocessing metadata and verify prediction equivalence. With no
@@ -1376,8 +1374,7 @@ weighted TV $T$ and nonnegative node weights $\alpha$, the exact prox is
 
 $$
   \operatorname{prox}_{\tau(T+\sum_j\alpha_j|\cdot_j|)}(v)
-  = [\operatorname{prox}_{\tau T}(v - \tau\alpha)]_+
-    + [\operatorname{prox}_{\tau T}(v + \tau\alpha)]_-.
+  = [\operatorname{prox}_{\tau T}(v - \tau\alpha)]_+ + [\operatorname{prox}_{\tau T}(v + \tau\alpha)]_-.
 $$
 
 TV's prox preserves order, and clipping preserves its edge subgradients. The

@@ -36,9 +36,9 @@ pass both methods the same Fortran-contiguous NumPy `float64` arrays.
 Both methods minimize
 
 $$
-  \frac{1}{2n}\lVert y - X\beta\rVert_2^2 + \alpha\lVert\beta\rVert_1,
-  \qquad
-  \alpha = 0.1\,\frac{\lVert X^T y\rVert_\infty}{n}.
+  \frac{1}{2n}\lVert y - X\beta\rVert_2^2
+  + \alpha\lVert\beta\rVert_1, \qquad \alpha
+  = 0.1\,\frac{\lVert X^T y\rVert_\infty}{n}.
 $$
 
 The plotted gap is the primal objective minus a feasible dual objective. It

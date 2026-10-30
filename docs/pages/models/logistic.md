@@ -4,12 +4,9 @@ A binomial model relates a linear predictor to a probability through the
 logistic function:
 
 $$
-  \eta_i = \beta_0 + \widetilde x_i^\mathsf{T}\beta,
-  \qquad
-  p_i = \frac{1}{1 + e^{-\eta_i}},
-  \qquad
-  \min_{\beta_0,\beta}\;\frac1n\sum_i[\log(1 + e^{\eta_i}) - y_i\eta_i]
-  + R(\beta).
+  \eta_i = \beta_0 + \widetilde x_i^\mathsf{T}\beta, \qquad p_i
+         = \frac{1}{1 + e^{-\eta_i}}, \qquad \min_{\beta_0,\beta}\;\frac1n\sum_i[\log(1 + e^{\eta_i}) - y_i\eta_i]
+           + R(\beta).
 $$
 
 Responses lie in $[0,1]$, with zeros and ones representing binary observations.
