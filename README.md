@@ -134,12 +134,12 @@ experimental file-backed input through Zarr.
 
 ## Documentation
 
-- [Documentation website](https://shrinkage.cc/)—installation and API
+- [Documentation website](https://shrinkage.cc/): installation and API
   references.
-- [Examples](examples)—runnable Rust models and matrix integrations.
-- [Design](DESIGN.md)—architecture, statistical conventions, and extension
+- [Examples](examples): runnable Rust models and matrix integrations.
+- [Design](DESIGN.md): architecture, statistical conventions, and extension
   contracts.
-- [Python package](packages/python/README.md)—binding status and installation.
+- [Python package](packages/python/README.md): binding status and installation.
 
 ## Citation
 
