@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/jolars/shrinkage/compare/shrinkage-python-v0.2.0...shrinkage-python-v0.3.0) (2026-10-30)
+
+### Features
+
+- **python:** add hybrid fitting and prediction ([`7bd8c6c`](https://github.com/jolars/shrinkage/commit/7bd8c6c5f3a3814551f8edf481d198914c912f13))
+- add default working-set policies ([`3404fb2`](https://github.com/jolars/shrinkage/commit/3404fb2e3f092ed2e0e861d31a09c110c424a7aa))
+
 ## [0.2.0](https://github.com/jolars/shrinkage/compare/shrinkage-python-v0.1.0...shrinkage-python-v0.2.0) (2026-10-23)
 
 ### Features
