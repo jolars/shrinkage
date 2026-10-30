@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/jolars/shrinkage/compare/v0.3.0...v0.4.0) (2026-10-30)
+
+### Features
+
+- **python:** add hybrid fitting and prediction ([`7bd8c6c`](https://github.com/jolars/shrinkage/commit/7bd8c6c5f3a3814551f8edf481d198914c912f13))
+- add cross-validation with warm-start paths ([`6f70587`](https://github.com/jolars/shrinkage/commit/6f705874351453b2ce23b21eb5422abaf5838a7a))
+- lower MSRV to 1.84 ([`97500f6`](https://github.com/jolars/shrinkage/commit/97500f69b4e7422bcd8423821f2d65989feec2fe))
+- add warm-started paths for all solvers ([`d1a94e7`](https://github.com/jolars/shrinkage/commit/d1a94e79a0b3fefe3ee49f05696fe534d76d1ceb))
+- add default working-set policies ([`3404fb2`](https://github.com/jolars/shrinkage/commit/3404fb2e3f092ed2e0e861d31a09c110c424a7aa))
+- add dynamic Gap Safe zero screening ([`71f5ec9`](https://github.com/jolars/shrinkage/commit/71f5ec948e974a7887ef3e7f2286fe81eb0d2616))
+
 ## [0.3.0](https://github.com/jolars/shrinkage/compare/v0.2.0...v0.3.0) (2026-10-27)
 
 ### Features
