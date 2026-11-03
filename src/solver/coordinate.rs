@@ -187,15 +187,6 @@ fn diagnostics<M: RawColumns<f64>>(
 ) -> Result<Diagnostics, NumericalFailure> {
     let (datafit, penalty) = components;
     let (coefficients, intercept, dual_certificate, correlations, primal_correlations) = parameters;
-    let kkt_violation = kkt_violation(
-        matrix,
-        coefficients,
-        residual,
-        summaries,
-        (datafit, penalty),
-        iteration,
-        primal_correlations,
-    )?;
     let penalty_value = finite(
         penalty.value_unchecked(coefficients),
         "computing the penalty",
@@ -216,12 +207,12 @@ fn diagnostics<M: RawColumns<f64>>(
     } else {
         0.0
     };
+    let mut reuse_correlations = !datafit.fit_intercept;
     for (&base, dual) in residual.base.iter().zip(dual_certificate.iter_mut()) {
-        *dual = finite(
-            (base + residual.offset - mean) / n,
-            "constructing a dual certificate",
-            iteration,
-        )?;
+        let value = base + residual.offset - mean;
+        *dual = finite(value / n, "constructing a dual certificate", iteration)?;
+        // Subnormal division can discard residual information needed by KKT checks.
+        reuse_correlations &= value == 0.0 || dual.is_normal();
     }
     if datafit.fit_intercept {
         let last = dual_certificate.len() - 1;
@@ -233,6 +224,19 @@ fn diagnostics<M: RawColumns<f64>>(
         "summing a dual certificate",
         iteration,
     )?;
+    let mut kkt_violation = if reuse_correlations {
+        0.0
+    } else {
+        kkt_violation(
+            matrix,
+            coefficients,
+            residual,
+            summaries,
+            (datafit, penalty),
+            iteration,
+            primal_correlations,
+        )?
+    };
     let mut max_correlation: f64 = 0.0;
     for (j, entry) in correlations.iter_mut().enumerate() {
         let correlation = finite(
@@ -242,6 +246,16 @@ fn diagnostics<M: RawColumns<f64>>(
         )?;
         max_correlation = max_correlation.max(correlation.abs());
         *entry = correlation;
+        if reuse_correlations {
+            // Before feasibility scaling, a fixed-intercept candidate is r / n.
+            // Its actual matrix products also supply the primal KKT correlations.
+            primal_correlations[j] = correlation;
+            kkt_violation = kkt_violation.max(finite(
+                coordinate_violation(coefficients[j], correlation, penalty.lambda),
+                "checking coordinate optimality",
+                iteration,
+            )?);
+        }
     }
     let factor = if max_correlation > 0.0 {
         (penalty.lambda / max_correlation).min(1.0) * (1.0 - 16.0 * f64::EPSILON)

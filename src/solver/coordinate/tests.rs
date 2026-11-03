@@ -51,6 +51,146 @@ fn close(a: f64, b: f64) {
 }
 
 #[test]
+fn fixed_intercept_diagnostics_share_one_correlation_pass() {
+    let raw = Sparse {
+        nrows: 5,
+        columns: vec![vec![(0, 2.0), (3, -1.0)], vec![(1, 4.0), (4, 3.0)]],
+        visits: Cell::new(0),
+    };
+    let y = [2.0, -1.0, 4.0, 0.0, 3.0];
+    for (centers, scales) in [
+        (None, None),
+        (None, Some(vec![0.8, 2.0])),
+        (Some(vec![0.2, 1.4]), Some(vec![0.8, 2.0])),
+    ] {
+        let matrix = LazyMatrix::from_parts(&raw, centers, scales);
+        for fit_intercept in [false, true] {
+            for lambda in [0.0, 0.2, 100.0] {
+                let datafit = Gaussian::new(&y).fit_intercept(fit_intercept);
+                let mut work = Workspace::new(&matrix, datafit).unwrap();
+                work.coefficients.copy_from_slice(&[0.3, -0.6]);
+                work.intercept = if fit_intercept { 0.5 } else { 0.0 };
+                work.residual
+                    .refresh(
+                        &matrix,
+                        &y,
+                        &work.coefficients,
+                        work.intercept,
+                        &work.summaries,
+                        1,
+                    )
+                    .unwrap();
+                raw.visits.set(0);
+                let check = diagnostics(
+                    &matrix,
+                    &y,
+                    (
+                        &work.coefficients,
+                        work.intercept,
+                        &mut work.dual_certificate,
+                        &mut work.dual_correlations,
+                        &mut work.correlations,
+                    ),
+                    &work.residual,
+                    &work.summaries,
+                    (datafit, L1::new(lambda)),
+                    1,
+                )
+                .unwrap();
+                let stored_entries: usize = raw.columns.iter().map(Vec::len).sum();
+                assert_eq!(
+                    raw.visits.get(),
+                    stored_entries * if fit_intercept { 2 } else { 1 },
+                    "fit_intercept={fit_intercept}, lambda={lambda}"
+                );
+
+                let residual: Vec<_> = work
+                    .residual
+                    .base
+                    .iter()
+                    .map(|base| base + work.residual.offset)
+                    .collect();
+                let mut violation = if fit_intercept {
+                    (residual.iter().sum::<f64>() / 5.0).abs()
+                } else {
+                    0.0
+                };
+                for j in 0..2 {
+                    let center = matrix.centers().map_or(0.0, |values| values[j]);
+                    let scale = matrix.scales().map_or(1.0, |values| values[j]);
+                    let column: Vec<_> = (0..5)
+                        .map(|i| {
+                            let raw_value: f64 = raw.columns[j]
+                                .iter()
+                                .filter(|&&(row, _)| row == i)
+                                .map(|&(_, value)| value)
+                                .sum();
+                            (raw_value - center) / scale
+                        })
+                        .collect();
+                    let primal: f64 = column
+                        .iter()
+                        .zip(&residual)
+                        .map(|(value, residual)| value * residual)
+                        .sum::<f64>()
+                        / 5.0;
+                    let dual: f64 = column
+                        .iter()
+                        .zip(&work.dual_certificate)
+                        .map(|(value, theta)| value * theta)
+                        .sum();
+                    close(work.correlations[j], primal);
+                    close(work.dual_correlations[j], dual);
+                    assert!(dual.abs() <= lambda + 1e-12);
+                    violation =
+                        violation.max(coordinate_violation(work.coefficients[j], primal, lambda));
+                }
+                close(check.kkt_violation, violation);
+                let dual = y
+                    .iter()
+                    .zip(&work.dual_certificate)
+                    .map(|(target, theta)| target * theta)
+                    .sum::<f64>()
+                    - 2.5
+                        * work
+                            .dual_certificate
+                            .iter()
+                            .map(|theta| theta * theta)
+                            .sum::<f64>();
+                close(check.dual_objective, dual);
+                close(check.duality_gap, check.objective - dual);
+                if fit_intercept {
+                    close(work.dual_certificate.iter().sum(), 0.0);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn subnormal_dual_candidates_preserve_residual_kkt_correlations() {
+    let raw = Sparse {
+        nrows: 4,
+        columns: vec![vec![(0, 1e150)]],
+        visits: Cell::new(0),
+    };
+    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    for target in [f64::from_bits(1), f64::from_bits(3), f64::MIN_POSITIVE] {
+        let fit = solve(
+            &matrix,
+            Gaussian::new(&[target, 0.0, 0.0, 0.0]).fit_intercept(false),
+            L1::new(0.0),
+            &CoordinateDescent::new().tolerance(1e-190).max_iterations(1),
+        )
+        .unwrap();
+        assert_eq!(fit.termination, Termination::IterationLimit);
+        assert_eq!(fit.iterations, 1);
+        assert_eq!(fit.coefficients, [0.0]);
+        assert_eq!(fit.kkt_violation, (1e150 * target) / 4.0);
+    }
+}
+
+#[test]
 fn coordinate_update_and_cached_dot_visit_only_stored_entries() {
     for nrows in [10, 100_000] {
         let raw = Sparse {
