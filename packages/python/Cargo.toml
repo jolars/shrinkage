@@ -27,6 +27,14 @@ path = "../.."
 default-features = false
 features = [ "ndarray_v0_17" ]
 
+[target.'cfg(target_os = "linux")'.dependencies]
+bytemuck = "1"
+memmap2 = "0.9.12"
+
+[profile.release]
+# Column visitors must inline into reductions to keep accumulators in registers.
+codegen-units = 1
+
 [workspace]
 [lints.rust]
 unsafe_code = "forbid"

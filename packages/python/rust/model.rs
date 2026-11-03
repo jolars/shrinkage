@@ -153,6 +153,7 @@ impl Method {
         normalization: Normalization,
         penalty: Penalty,
     ) -> Result<NativeFit, DetachedError> {
+        let matrix = data.design.matrix();
         match self {
             Self::Hybrid(solver) => {
                 // Only these six specialized combinations are instantiated for the hybrid.
@@ -160,14 +161,14 @@ impl Method {
                     ($penalty:expr) => {
                         match family {
                             Family::Gaussian => Problem::new(
-                                &data.design.matrix,
+                                &matrix,
                                 Gaussian::new(&data.response).fit_intercept(fit_intercept),
                                 $penalty,
                             )
                             .normalize(normalization)
                             .fit_with(&solver),
                             Family::Binomial => Problem::new(
-                                &data.design.matrix,
+                                &matrix,
                                 Binomial::new(&data.response).fit_intercept(fit_intercept),
                                 $penalty,
                             )
@@ -194,7 +195,7 @@ impl Method {
                     }
                 };
                 let problem = RuntimeProblem::new(
-                    Box::new(MatrixDesign::<_, Array1<f64>>::new(&data.design.matrix)),
+                    Box::new(MatrixDesign::<_, Array1<f64>>::new(&matrix)),
                     datafit,
                     penalty.boxed(),
                 )
@@ -479,8 +480,8 @@ impl PyModelFit {
     fn predict(&self, py: Python<'_>, x: &Bound<'_, PyAny>, copy: bool) -> PyResult<Vec<f64>> {
         let data = DenseDesign::from_python(x, copy)?;
         py.detach(|| match &self.fit {
-            NativeFit::Hybrid(fit) => fit.predict(&data.matrix),
-            NativeFit::Proximal(fit) => fit.predict(&data.matrix),
+            NativeFit::Hybrid(fit) => fit.predict(&data.matrix()),
+            NativeFit::Proximal(fit) => fit.predict(&data.matrix()),
         })
         .map_err(fit_error)
     }

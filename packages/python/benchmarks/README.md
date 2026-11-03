@@ -39,6 +39,11 @@ the retained run directory. The reporting code checks the assumptions specific
 to this figure: shared data, one-thread execution, fit timers, and enough
 measurements for its error bars.
 
+The manifest fixes `dataset_seed` at `7363749798296254`, the NumPy seed derived
+for the original experiment. This keeps the data unchanged when Metewand's
+derived run seed changes with software or runner revisions. Experiment seed 42
+still controls the benchmark's execution order.
+
 The saved `docs/figures/lasso.json` is Metewand's `results.json` analysis
 export. The report copies it directly, then plots selected observations with
 complete metric dictionaries. Repetition counts and observation settings come
@@ -48,12 +53,13 @@ the workers outside the fit timer.
 The `fresh_sequence` profile runs five repetitions per method, with increasing
 iteration limits from 1 through 40 sweeps. Each point starts a new model from
 zero coefficients. Shrinkage sweeps its current working set and checks the full
-problem every ten sweeps and at the iteration limit. An independent evaluator
-computes both the absolute duality gap for plotting and its ratio to the
-null-model loss for stopping. Metewand stops each profile when that ratio
-reaches `1e-8`. Early points with larger gaps are valid observations. The
-reporting tests check that these points survive export processing and that each
-plotted time belongs to its own fit.
+problem every ten sweeps and at the iteration limit. Its initial working-set
+budget uses the number of initial KKT violations, bounded between 10 and 64. An
+independent evaluator computes both the absolute duality gap for plotting and
+its ratio to the null-model loss for stopping. Metewand stops each profile when
+that ratio reaches `1e-8`. Early points with larger gaps are valid observations.
+The reporting tests check that these points survive export processing and that
+each plotted time belongs to its own fit.
 
 Each marker shows the median time and gap at one iteration limit. Horizontal
 error bars span the middle half of five timings. Lines connect the limits in

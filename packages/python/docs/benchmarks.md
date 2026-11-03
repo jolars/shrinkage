@@ -30,9 +30,11 @@ timer.
 
 The dataset has 5,000 observations and 1,000 independent standard Gaussian
 features. The response uses 20 nonzero coefficients, alternating between 1 and
-−1, plus standard Gaussian noise. Metewand generates one shared dataset from
-experiment seed 42. We center the features and response once before fitting and
-pass both methods the same Fortran-contiguous NumPy `float64` arrays.
+−1, plus standard Gaussian noise. The manifest fixes NumPy's dataset seed at
+`7363749798296254`, preserving the original dataset derived from experiment seed 42.
+This keeps the arrays stable when the benchmark runner or software changes. We
+center the features and response once before fitting and pass both methods the
+same Fortran-contiguous NumPy `float64` arrays.
 
 Both methods minimize
 
@@ -65,15 +67,23 @@ for its objective and stopping rules.
 
 Shrinkage checks full convergence at initialization, every ten coordinate
 sweeps, and at the iteration limit. Working sets update at these checks. The
-profile allows up to 40 sweeps to accommodate this cadence.
+initial budget uses the number of initial KKT violations, bounded between 10 and
+64 features. The profile allows up to 40 sweeps to accommodate this cadence.
 
-The run uses a release build of shrinkage, one thread per numerical library,
-serial execution, one discarded warm-up per worker, and five measured profiles
-per implementation. Metewand's `fresh_sequence` profile supports these fits at
-increasing iteration limits without adding callbacks to either solver. It
-randomizes method order within comparison blocks. Workers retain their imports,
-but every fit creates a new model. A single `compute bench` reservation covers
-both methods.
+On Linux, shrinkage copies matrices of at least 4 MiB into anonymous Rust-owned
+mappings with transparent huge-page advice. Smaller inputs, other platforms, and
+unsuccessful mapping or advice requests use ordinary Rust allocations. Both
+paths preserve the same input-copy and ownership contract. NumPy also [uses
+huge-page advice on
+Linux](https://numpy.org/doc/stable/reference/global_state.html#madvise-hugepage-on-linux).
+
+The run uses a release build of shrinkage with one code-generation unit, one
+thread per numerical library, serial execution, one discarded warm-up per
+worker, and five measured profiles per implementation. Metewand's
+`fresh_sequence` profile supports these fits at increasing iteration limits
+without adding callbacks to either solver. It randomizes method order within
+comparison blocks. Workers retain their imports, but every fit creates a new
+model. A single `compute bench` reservation covers both methods.
 
 The [retained measurements](figures/lasso.json) are Metewand's JSON analysis
 export. They contain complete observation metrics, effective settings, profile

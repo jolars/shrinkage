@@ -1,13 +1,18 @@
 //! Validated, owned dense input for the Python numerical boundary.
 
-use ndarray::{Array2, ShapeBuilder};
+mod storage;
+
+use ndarray::{ArrayView2, ShapeBuilder};
 use pyo3::buffer::PyBuffer;
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 
+use storage::DenseStorage;
+
 /// A column-major snapshot with no borrowed Python storage.
 pub(crate) struct DenseDesign {
-    pub(crate) matrix: Array2<f64>,
+    columns: DenseStorage,
+    shape: (usize, usize),
 }
 
 impl DenseDesign {
@@ -22,11 +27,15 @@ impl DenseDesign {
 
     fn from_buffer(buffer: &PyBuffer<f64>, py: Python<'_>) -> PyResult<Self> {
         let shape = (buffer.shape()[0], buffer.shape()[1]);
-        let columns = buffer.to_fortran_vec(py)?;
-        validate_finite("X", &columns)?;
-        let matrix = Array2::from_shape_vec(shape.f(), columns)
+        let columns = DenseStorage::copy_from(buffer, py)?;
+        validate_finite("X", columns.as_slice())?;
+        ArrayView2::from_shape(shape.f(), columns.as_slice())
             .map_err(|error| PyValueError::new_err(error.to_string()))?;
-        Ok(Self { matrix })
+        Ok(Self { columns, shape })
+    }
+
+    pub(crate) fn matrix(&self) -> ArrayView2<'_, f64> {
+        ArrayView2::from_shape(self.shape.f(), self.columns.as_slice()).unwrap()
     }
 }
 
@@ -80,14 +89,14 @@ impl DenseInputs {
 impl DenseInputs {
     #[getter]
     fn shape(&self) -> (usize, usize) {
-        self.design.matrix.dim()
+        self.design.shape
     }
 
     /// Inspect the owned buffers while exercising detached native access.
     fn _snapshot(&self, py: Python<'_>) -> (Vec<f64>, Vec<f64>) {
         py.detach(|| {
             (
-                self.design.matrix.as_slice_memory_order().unwrap().to_vec(),
+                self.design.columns.as_slice().to_vec(),
                 self.response.clone(),
             )
         })

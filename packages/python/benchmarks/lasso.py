@@ -35,7 +35,7 @@ from metewand import (  # noqa: E402
 
 
 def materialize(context):
-    rng = np.random.default_rng(context.seed)
+    rng = np.random.default_rng(context.parameters["dataset_seed"])
     n, p = context.parameters["n_samples"], context.parameters["n_features"]
     x = np.asfortranarray(rng.standard_normal((n, p)))
     beta = np.zeros(p)

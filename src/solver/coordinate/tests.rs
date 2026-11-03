@@ -51,6 +51,21 @@ fn close(a: f64, b: f64) {
 }
 
 #[test]
+fn identity_column_summaries_reuse_the_raw_sum() {
+    let raw = Sparse {
+        nrows: 5,
+        columns: vec![vec![(0, 2.0), (3, -1.0)]],
+        visits: Cell::new(0),
+    };
+    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let summary = ColumnSummary::new(&matrix.column(0)).unwrap();
+    close(summary.raw_sum, 1.0);
+    close(summary.sum, 1.0);
+    close(summary.norm_squared, 5.0);
+    assert_eq!(raw.visits.get(), 4);
+}
+
+#[test]
 fn fixed_intercept_diagnostics_share_one_correlation_pass() {
     let raw = Sparse {
         nrows: 5,
@@ -462,6 +477,45 @@ fn full_checks_include_iteration_limits_between_ten_sweep_boundaries() {
 }
 
 #[test]
+fn automatic_initial_set_includes_the_initial_kkt_violators() {
+    let raw = Sparse {
+        nrows: 64,
+        columns: (0..64).map(|j| vec![(j, 1.0)]).collect(),
+        visits: Cell::new(0),
+    };
+    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let mut y = [0.0; 64];
+    y[..24].fill(1.0);
+    for (policy, expected_nonzeros) in [
+        (crate::WorkingSetPolicy::Auto, 24),
+        (
+            crate::WorkingSetPolicy::Adaptive {
+                initial_size: 10,
+                prune: true,
+            },
+            10,
+        ),
+    ] {
+        let fit = solve(
+            &matrix,
+            Gaussian::new(&y).fit_intercept(false),
+            L1::new(0.01),
+            &CoordinateDescent::new()
+                .working_set_policy(policy)
+                .tolerance(1e-12)
+                .max_iterations(1),
+        )
+        .unwrap();
+        assert_eq!(
+            fit.coefficients.iter().filter(|&&beta| beta != 0.0).count(),
+            expected_nonzeros,
+            "{policy:?}"
+        );
+        assert_eq!(fit.working_set.full_checks, 2);
+    }
+}
+
+#[test]
 fn scheduled_full_checks_expand_the_working_set_until_all_violations_are_resolved() {
     let raw = Sparse {
         nrows: 24,
@@ -473,7 +527,12 @@ fn scheduled_full_checks_expand_the_working_set_until_all_violations_are_resolve
         &matrix,
         Gaussian::new(&[1.0; 24]).fit_intercept(false),
         L1::new(0.01),
-        &CoordinateDescent::new().tolerance(1e-12),
+        &CoordinateDescent::new()
+            .working_set_policy(crate::WorkingSetPolicy::Adaptive {
+                initial_size: 10,
+                prune: true,
+            })
+            .tolerance(1e-12),
     )
     .unwrap();
     assert_eq!(fit.termination, Termination::Converged);

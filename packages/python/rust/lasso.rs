@@ -46,7 +46,7 @@ impl PyLasso {
     ) -> PyResult<PyLassoFit> {
         let data = DenseInputs::from_python(x, y, copy)?;
         // All buffer exports have ended, and the closure reads only Rust-owned data.
-        let fit = py.detach(|| self.model.fit(&data.design.matrix, &data.response));
+        let fit = py.detach(|| self.model.fit(&data.design.matrix(), &data.response));
         fit.map(|fit| PyLassoFit { fit }).map_err(fit_error)
     }
 }
@@ -130,7 +130,7 @@ impl PyLassoFit {
     #[pyo3(signature = (x, *, copy = true))]
     fn predict(&self, py: Python<'_>, x: &Bound<'_, PyAny>, copy: bool) -> PyResult<Vec<f64>> {
         let data = DenseDesign::from_python(x, copy)?;
-        py.detach(|| self.fit.predict(&data.matrix))
+        py.detach(|| self.fit.predict(&data.matrix()))
             .map_err(fit_error)
     }
 }

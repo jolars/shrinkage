@@ -20,9 +20,15 @@ struct ColumnSummary {
 
 impl ColumnSummary {
     fn new<C: RawColumn<f64>>(column: &LazyColumn<C, f64>) -> Result<Self, NumericalFailure> {
+        let raw_sum = finite(column.raw().raw_sum(), "summing a column", 0)?;
+        let sum = if column.center() == 0.0 && column.scale() == 1.0 {
+            raw_sum
+        } else {
+            finite(column.sum(), "summing a normalized column", 0)?
+        };
         Ok(Self {
-            raw_sum: finite(column.raw().raw_sum(), "summing a column", 0)?,
-            sum: finite(column.sum(), "summing a normalized column", 0)?,
+            raw_sum,
+            sum,
             norm_squared: finite(column.norm_squared(), "computing a column norm", 0)?,
         })
     }
@@ -560,6 +566,20 @@ pub(crate) fn solve_with_workspace_observed<M: RawColumns<f64>, T: SolverObserve
         .begin(options.working_set_policy, work.path, &work.coefficients);
     let mut check = work.diagnose(matrix, datafit, penalty, 0)?;
     work.screen(penalty, options, &check);
+    if options.working_set_policy == crate::WorkingSetPolicy::Auto && !work.path {
+        // Initialization already identifies violated coordinates. A fixed tiny
+        // budget would postpone most of them until later full matrix checks.
+        work.working.diagnostics.policy = crate::WorkingSetPolicy::Adaptive {
+            initial_size: work
+                .working
+                .scores
+                .iter()
+                .filter(|&&score| score > stationarity_tolerance)
+                .count()
+                .clamp(10, 64),
+            prune: true,
+        };
+    }
     work.working.select(
         &work.coefficients,
         &work.screened,

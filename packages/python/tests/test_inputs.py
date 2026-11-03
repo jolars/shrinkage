@@ -53,6 +53,34 @@ class DenseInputTests(unittest.TestCase):
         np.testing.assert_array_equal(columns, self.x.T.ravel())
         np.testing.assert_array_equal(response, self.y)
 
+    def test_large_snapshots_preserve_layout_and_ownership(self) -> None:
+        x = np.arange(1024 * 640, dtype=np.float64).reshape(1024, 640)
+        y = np.arange(1024, dtype=np.float64)
+        for source in (
+            x,
+            np.asfortranarray(x),
+            x[::-1, ::-1],
+            np.broadcast_to(x[:1], x.shape),
+        ):
+            with self.subTest(strides=source.strides):
+                self.assert_snapshot(source, y)
+
+        expected = x.ravel(order="F").copy()
+        data = _shrinkage._prepare_dense_inputs(x, y)
+        x[:] = -100
+        y[:] = -200
+        del x, y
+        gc.collect()
+        columns, response = data._snapshot()
+        np.testing.assert_array_equal(columns, expected)
+        np.testing.assert_array_equal(response, np.arange(1024))
+
+    def test_large_snapshots_reject_nonfinite_values(self) -> None:
+        x = np.zeros((1024, 640), dtype=np.float64, order="F")
+        x[-1, -1] = np.nan
+        with self.assertRaisesRegex(ValueError, "X.*finite"):
+            _shrinkage._prepare_dense_inputs(x, np.zeros(1024))
+
     def test_readonly_and_writable_arrays_are_unchanged(self) -> None:
         for writable in (True, False):
             with self.subTest(writable=writable):

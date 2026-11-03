@@ -13,6 +13,7 @@ datasets:
       n_samples: {type: integer, minimum: 1, default: 5000}
       n_features: {type: integer, minimum: 20, default: 1000}
       alpha_fraction: {type: number, exclusiveMinimum: 0, default: 0.1}
+      dataset_seed: {type: integer, minimum: 0, default: 7363749798296254}
 
 problems:
   lasso:

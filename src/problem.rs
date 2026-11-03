@@ -422,13 +422,20 @@ pub(crate) fn validate_matrix<M: RawColumns<f64> + ?Sized, E>(x: &M) -> Result<(
                 "matrix backend returned invalid dimensions for column {j}"
             )));
         }
-        let mut invalid_row = None;
+        let mut valid = true;
         column.for_each_stored(|i, value| {
-            if (i >= x.nrows() || !value.is_finite()) && invalid_row.is_none() {
-                invalid_row = Some(i);
-            }
+            valid &= i < x.nrows() && value.is_finite();
         });
-        if let Some(i) = invalid_row {
+        if !valid {
+            // Keep error-location tracking out of the valid-input reduction so
+            // dense backends can vectorize their finite-value checks.
+            let mut invalid_row = None;
+            column.for_each_stored(|i, value| {
+                if (i >= x.nrows() || !value.is_finite()) && invalid_row.is_none() {
+                    invalid_row = Some(i);
+                }
+            });
+            let i = invalid_row.unwrap();
             return Err(invalid(format!(
                 "invalid matrix entry at row {i}, column {j}: expected an in-bounds, finite value"
             )));

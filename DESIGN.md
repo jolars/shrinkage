@@ -1244,9 +1244,12 @@ available, with original backend errors in its source chain.
 
 ### Working-set policies
 
-`WorkingSetPolicy::Auto` resolves to
-`Adaptive { initial_size: 10, prune: true }` for single fits and `EverActive`
-for existing coordinate and IRLS paths. The three solvers and the `Lasso`
+`WorkingSetPolicy::Auto` resolves to adaptive pruning for single fits and
+`EverActive` for existing coordinate and IRLS paths. Gaussian coordinate descent
+sizes its initial budget from the number of initial KKT violations, with a
+minimum of 10 and a maximum of 64. The cap limits unnecessary early sweeps when
+many correlated features initially violate KKT conditions. Other solvers use
+`Adaptive { initial_size: 10, prune: true }`. The three solvers and the `Lasso`
 builder expose `.working_set_policy(...)` and `.working_sets(...)`; the last
 setter wins, and enabling restores `Auto`. Current nonzeros always remain
 eligible. EverActive retains activation history across path points. Adaptive
