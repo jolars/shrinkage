@@ -115,13 +115,24 @@ class LassoWorker:
             self.software["native_extension_sha256"] = hashlib.sha256(
                 Path(_shrinkage.__file__).read_bytes()
             ).hexdigest()
-        else:
+        elif implementation == "scikit-learn":
             from sklearn.exceptions import ConvergenceWarning
             from sklearn.linear_model import Lasso
 
             # Truncated fits supply the intermediate convergence points.
             warnings.filterwarnings("ignore", category=ConvergenceWarning)
             self.model = Lasso
+        elif implementation == "skglm":
+            from skglm import Lasso
+            from sklearn.exceptions import ConvergenceWarning
+
+            warnings.filterwarnings("ignore", category=ConvergenceWarning)
+            self.model = Lasso
+            self.software["packages"].update(
+                {name: version(name) for name in ("numba", "llvmlite", "scikit-learn")}
+            )
+        else:
+            raise ValueError(f"Unknown implementation: {implementation}")
 
     def prepare(self, context):
         return load_data(context.dataset_dir)
@@ -136,6 +147,18 @@ class LassoWorker:
                 normalization="none",
                 stopping=self.stopping,
                 max_iterations=iterations,
+            ).fit(x, y)
+        if self.implementation == "skglm":
+            # skglm stops on a subdifferential norm; the evaluator checks the gap.
+            return self.model(
+                alpha=alpha,
+                fit_intercept=False,
+                tol=1e-10,
+                max_iter=iterations,
+                max_epochs=50_000,
+                p0=10,
+                ws_strategy="subdiff",
+                warm_start=False,
             ).fit(x, y)
         # sklearn scales its gap threshold by ||y||^2/n, twice the null loss.
         return self.model(

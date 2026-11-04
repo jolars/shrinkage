@@ -3,12 +3,12 @@
 from copy import deepcopy
 
 import pytest
-from report import collect_observations, convergence_points
+from report import METHODS, collect_observations, convergence_points
 
 
 def snapshot():
     observations = []
-    for method in ("shrinkage", "scikit-learn"):
+    for method in METHODS:
         for repetition in range(3):
             for budget in (1, 2, 3):
                 observations.append(
@@ -44,7 +44,7 @@ def snapshot():
         "completeness": {"complete": True, "issues": []},
         "candidates": [
             {"implementation": method, "measurement_repetitions": 3}
-            for method in ("shrinkage", "scikit-learn")
+            for method in METHODS
         ],
         "observations": observations,
         "attempts": [],
@@ -60,7 +60,7 @@ def test_selected_observations_keep_intermediate_points_and_exclude_warmups():
     superseded.update(warmup=False, selected=False, valid=False)
     result["observations"].extend([warmup, superseded])
     observations = collect_observations(result)
-    assert len(observations) == 18
+    assert len(observations) == 27
     assert any(row["completion"] == "not_reached" for row in observations)
 
 
@@ -85,13 +85,13 @@ def test_reject_control_without_enough_measurements_for_error_bars():
     result = snapshot()
     result["observations"].pop()
     with pytest.raises(ValueError, match="declared repetitions"):
-        convergence_points(result, "scikit-learn")
+        convergence_points(result, "skglm")
 
 
 def test_successful_retry_can_follow_a_failed_attempt():
     result = snapshot()
     result["attempts"].append({"state": "failed", "failure_code": "timeout"})
-    assert len(collect_observations(result)) == 18
+    assert len(collect_observations(result)) == 27
 
 
 def test_reject_multiple_datasets():

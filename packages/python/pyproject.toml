@@ -36,6 +36,7 @@ benchmark = [
     "matplotlib>=3.10",
     "metewand",
     "scikit-learn>=1.7",
+    "skglm>=0.5",
 ]
 
 [tool.uv.sources]

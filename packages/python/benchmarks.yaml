@@ -67,12 +67,15 @@ implementations:
   scikit-learn:
     <<: *implementation
     args: [scikit-learn]
+  skglm:
+    <<: *implementation
+    args: [skglm]
 
 experiments:
   - name: single-alpha
     problem: lasso
     datasets: [gaussian]
-    implementations: [shrinkage, scikit-learn]
+    implementations: [shrinkage, scikit-learn, skglm]
     execution-policy: repeated
     observation-policy: convergence
     measurement-repetitions: 5
@@ -110,3 +113,4 @@ observation-policies:
           step: 1
           count: 40
       scikit-learn: *sweeps
+      skglm: *sweeps

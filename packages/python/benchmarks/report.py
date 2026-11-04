@@ -16,7 +16,7 @@ from statistics import median, quantiles
 ROOT = Path(__file__).resolve().parents[3]
 PACKAGE = ROOT / "packages/python"
 OUTPUT = PACKAGE / "docs/figures"
-METHODS = ("shrinkage", "scikit-learn")
+METHODS = ("shrinkage", "scikit-learn", "skglm")
 
 
 def candidate(snapshot, method):
@@ -35,7 +35,7 @@ def collect_observations(snapshot):
         row for row in snapshot["observations"] if row["selected"] and not row["warmup"]
     ]
     if {row["implementation"] for row in rows} != set(METHODS):
-        raise ValueError("Expected measurements for both lasso implementations.")
+        raise ValueError("Expected measurements for all lasso implementations.")
     hashes = {
         snapshot["provenance"][row["provenance_id"]]["dataset"]["output"]["sha256"]
         for row in rows
@@ -136,7 +136,7 @@ def render(snapshot):
     observations = collect_observations(snapshot)
     with plt.rc_context({"font.family": "DejaVu Sans", "font.size": 11}):
         figure, ax = plt.subplots(figsize=(7.2, 4.6), layout="constrained")
-        colors = ("#2563a6", "#bb5725")
+        colors = ("#2563a6", "#bb5725", "#328252")
         for method, color in zip(METHODS, colors, strict=True):
             points = convergence_points(snapshot, method)
             times = np.array([point["time_ms"] for point in points])
