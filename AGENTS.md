@@ -9,7 +9,7 @@ wrappers live in `src/model/`. Typed composition, datafits, penalties, and
 fitted results live in their respective modules. Keep individual datafits in
 `src/datafit/` and fitted result types in `src/fit/`. Model fitting follows
 `DESIGN.md`. The `normalization` and `lasso` examples exercise dense and sparse
-CSC input through LazyMatrix 0.9.0. Optional `faer_v0_24`, `nalgebra_v0_34`,
+CSC input through LazyMatrix 0.10.0. Optional `faer_v0_24`, `nalgebra_v0_34`,
 `ndarray_v0_17`, and `sprs_v0_11` features expose its matrix integrations. The
 short names `faer`, `nalgebra`, `ndarray`, and `sprs` are aliases. sprs input
 uses LazyMatrix's checked `SprsCsc` wrapper.
@@ -58,8 +58,13 @@ Cloudflare Worker configuration.
 
 ## Validation
 
-Use `devenv shell` for the pinned Rust 1.89.0 toolchain. Run `task check` for
-the complete check. Its Rust commands are:
+Use `devenv shell` for the pinned Rust 1.89.0 toolchain. Match validation to the
+changed behavior and affected features. Start with focused checks, and expand
+coverage when failures, compatibility risks, or the scope of the change warrant
+it. Rerun successful checks only when later edits could affect them.
+
+`task check` runs the complete suite. Use it when broad validation is justified
+or explicitly requested. Its Rust commands are:
 
 ```sh
 cargo fmt --all -- --check
@@ -96,8 +101,10 @@ unless a deliberate compatibility change raises it.
 `task check` also checks the Python package, installed wheels, a source
 distribution rebuilt outside the checkout, and independent Versionary release
 scenarios. Use `task python:check` for binding checks and `task docs:check` for
-the shared site and Worker package. Documentation uses a separate pinned Rust
-extraction toolchain; do not raise the library's MSRV to match it.
+the shared site and Worker package. Run wheel, source distribution, and release
+scenario checks when packaging or release behavior changes. Documentation uses a
+separate pinned Rust extraction toolchain; do not raise the library's MSRV to
+match it.
 
 ## Generated files and releases
 

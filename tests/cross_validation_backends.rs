@@ -12,10 +12,14 @@ mod matrix;
 
 use std::convert::Infallible;
 
-use shrinkage::lazymatrix::{MatTransposeVecInto, MatVecInto, MatrixShape};
+use shrinkage::lazymatrix::{
+    IndexedRowSource, IndexedRows, MatTransposeVecInto, MatVecInto, MatrixShape, RawColumn,
+    RawColumns, VectorViewMut,
+};
 use shrinkage::{
     Binomial, ChainFusedLasso, ClusteredLasso, CrossValidation, FoldAssignments, Gaussian, Hybrid,
-    Lasso, PathOptions, Problem, ProximalVector, RowSubset, Slope,
+    L1, Lasso, Normalization, PathOptions, Problem, ProximalGradient, ProximalVector, RowSubset,
+    Slope, Termination,
 };
 
 const ROWS: [[f64; 3]; 8] = [
@@ -33,9 +37,12 @@ const BINARY: [f64; 8] = [0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0];
 
 fn verify<M, V>(x: &M)
 where
-    M: RowSubset<Error = Infallible> + MatVecInto<V> + MatTransposeVecInto<V>,
+    M: RowSubset<Error = Infallible>
+        + IndexedRowSource<f64>
+        + MatVecInto<V>
+        + MatTransposeVecInto<V>,
     M::Subset: MatVecInto<V> + MatTransposeVecInto<V>,
-    V: ProximalVector,
+    V: ProximalVector + VectorViewMut<f64>,
 {
     let reference =
         matrix::Matrix::from_rows(&ROWS.iter().map(|r| r.as_slice()).collect::<Vec<_>>());
@@ -63,6 +70,22 @@ where
     assert!(x.select_rows(&[1, 1]).is_err());
     assert!(x.select_rows(&[ROWS.len()]).is_err());
     assert_eq!(x.select_rows(&[]).unwrap().nrows(), 0);
+    for rows in [&[][..], &[1][..], &[0, 2, 5, 7][..]] {
+        let selected = x.select_rows(rows).unwrap();
+        assert_eq!(selected.nrows(), rows.len());
+        assert_eq!(selected.ncols(), ROWS[0].len());
+        for j in 0..selected.ncols() {
+            let mut values = vec![0.0; rows.len()];
+            selected
+                .raw_column(j)
+                .for_each_stored(|i, value| values[i] += value);
+            compare(
+                &values,
+                &rows.iter().map(|&i| ROWS[i][j]).collect::<Vec<_>>(),
+            );
+        }
+    }
+    verify_indexed::<M, V>(x);
     for fit_intercept in [false, true] {
         for normalization in [
             shrinkage::Normalization::None,
@@ -124,6 +147,51 @@ where
     family!(Binomial, &BINARY);
 }
 
+fn verify_indexed<M, V>(x: &M)
+where
+    M: RowSubset<Error = Infallible> + IndexedRowSource<f64>,
+    V: ProximalVector + VectorViewMut<f64>,
+{
+    let rows = [0, 2, 5, 7];
+    let selected = IndexedRows::new(x, &rows);
+    let owned = x.select_rows(&rows).unwrap();
+    let response = rows.iter().map(|&i| Y[i]).collect::<Vec<_>>();
+    for intercept in [false, true] {
+        for normalization in [
+            Normalization::None,
+            Normalization::Standardize,
+            Normalization::Custom {
+                center: shrinkage::Centering::Median,
+                scale: shrinkage::Scaling::QuantileRange(shrinkage::QuantileRange::default()),
+            },
+        ] {
+            let model = Lasso::new(0.1)
+                .fit_intercept(intercept)
+                .normalize(normalization)
+                .tolerance(1e-9);
+            let expected = model.fit(&owned, &response).unwrap();
+            let actual = model.fit(&selected, &response).unwrap();
+            assert_eq!(actual.termination(), Termination::Converged);
+            assert_eq!(
+                actual.preprocessing().centers(),
+                expected.preprocessing().centers()
+            );
+            compare(actual.coefficients(), expected.coefficients());
+            compare(&actual.predict(x).unwrap(), &expected.predict(x).unwrap());
+            let proximal = Problem::new(
+                &selected,
+                Gaussian::new(&response).fit_intercept(intercept),
+                L1::new(0.1),
+            )
+            .normalize(normalization)
+            .fit_with(&ProximalGradient::<V>::new().tolerance(1e-9))
+            .unwrap();
+            assert_eq!(proximal.termination(), Termination::Converged);
+            compare(&proximal.predict(x).unwrap(), &expected.predict(x).unwrap());
+        }
+    }
+}
+
 fn compare(a: &[f64], b: &[f64]) {
     assert_eq!(a.len(), b.len());
     for (&a, &b) in a.iter().zip(b) {
@@ -152,6 +220,7 @@ fn faer_dense_views_and_csc() {
     let csc =
         faer::sparse::SparseColMat::<usize, f64>::try_new_from_triplets(8, 3, &triplets).unwrap();
     verify::<_, faer::Col<f64>>(&csc);
+    verify::<_, faer::Col<f64>>(&csc.as_ref());
 }
 
 #[cfg(feature = "nalgebra_v0_34")]

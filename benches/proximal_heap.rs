@@ -41,11 +41,12 @@ fn main() {
     let input_slice = vec![0.5; 64];
     let mut prox_output = vec![0.0; 64];
     let penalty = ElasticNet::new(0.03, 0.1);
-    let normalized_dense = LazyMatrix::from_parts(&dense, Some(vec![0.1; 64]), Some(vec![2.0; 64]));
+    let normalized_dense =
+        LazyMatrix::from_column_parts(&dense, Some(vec![0.1; 64]), Some(vec![2.0; 64]));
     let normalized_sparse =
-        LazyMatrix::from_parts(&sparse, Some(vec![0.1; 64]), Some(vec![2.0; 64]));
-    let unscaled_dense = LazyMatrix::from_parts(&dense, None, None);
-    let unscaled_sparse = LazyMatrix::from_parts(&sparse, None, None);
+        LazyMatrix::from_column_parts(&sparse, Some(vec![0.1; 64]), Some(vec![2.0; 64]));
+    let unscaled_dense = LazyMatrix::from_column_parts(&dense, None, None);
+    let unscaled_sparse = LazyMatrix::from_column_parts(&sparse, None, None);
     println!("operation,calls,allocations,allocated_bytes,peak_live_bytes");
     measure(
         "dense_forward",

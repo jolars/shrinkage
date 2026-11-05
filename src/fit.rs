@@ -21,7 +21,7 @@ use lazymatrix::{RawColumn, RawColumns};
 /// Training normalization retained by a fitted model.
 #[derive(Clone, Debug)]
 pub struct Preprocessing {
-    pub(crate) spec: lazymatrix::Normalization,
+    pub(crate) spec: lazymatrix::ColumnNormalization,
     pub(crate) centers: Option<Vec<f64>>,
     pub(crate) scales: Option<Vec<f64>>,
     pub(crate) supplied_centers: bool,

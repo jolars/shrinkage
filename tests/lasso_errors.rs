@@ -5,8 +5,8 @@ use std::error::Error;
 use std::fmt;
 
 use shrinkage::lazymatrix::{
-    ColumnStats, MatrixErrorType, MatrixShape, Normalization as MatrixNormalization,
-    NormalizationStats, QuantileRange, RawColumn, RawColumns,
+    ColumnNormalization as MatrixNormalization, ColumnNormalizationStats, ColumnStats,
+    MatrixErrorType, MatrixShape, QuantileRange, RawColumn, RawColumns,
 };
 use shrinkage::{Centering, Lasso, LassoError, Normalization, Scaling};
 
@@ -23,7 +23,7 @@ impl Error for ReadFailure {}
 struct Source {
     values: [f64; 2],
     calls: Cell<usize>,
-    statistics: Result<NormalizationStats<f64>, ReadFailure>,
+    statistics: Result<ColumnNormalizationStats<f64>, ReadFailure>,
 }
 
 impl MatrixShape for Source {
@@ -114,7 +114,7 @@ impl ColumnStats<f64> for Source {
     fn normalization_stats(
         &self,
         _: MatrixNormalization,
-    ) -> Result<NormalizationStats<f64>, Self::Error> {
+    ) -> Result<ColumnNormalizationStats<f64>, Self::Error> {
         self.calls.set(self.calls.get() + 1);
         self.statistics.as_ref().cloned().map_err(|_| ReadFailure)
     }

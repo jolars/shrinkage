@@ -120,17 +120,22 @@ example](examples/binomial.rs) for logistic regression.
 No matrix backend is enabled by default. Match your matrix dependency to one of
 these features:
 
-  | Feature    | Versioned feature | Supported input                                     |
-  | ---------- | ----------------- | --------------------------------------------------- |
-  | `faer`     | `faer_v0_24`      | Dense matrices, views, and sparse CSC matrices      |
-  | `nalgebra` | `nalgebra_v0_34`  | Dense matrices, views, and nalgebra-sparse 0.11 CSC |
-  | `ndarray`  | `ndarray_v0_17`   | Two-dimensional arrays and views                    |
-  | `sprs`     | `sprs_v0_11`      | Sparse CSC matrices and views through `SprsCsc`     |
+  | Feature    | Versioned feature | Supported input                                         |
+  | ---------- | ----------------- | ------------------------------------------------------- |
+  | `faer`     | `faer_v0_24`      | Dense and sparse CSC matrices, including borrowed views |
+  | `nalgebra` | `nalgebra_v0_34`  | Dense matrices, views, and nalgebra-sparse 0.11 CSC     |
+  | `ndarray`  | `ndarray_v0_17`   | Two-dimensional arrays and views                        |
+  | `sprs`     | `sprs_v0_11`      | Sparse CSC matrices and views through `SprsCsc`         |
 
 The short names are aliases for the listed versioned features. Matrix access and
 normalization use [LazyMatrix](https://crates.io/crates/lazymatrix). The
 [installation guide](https://shrinkage.cc/installation/) also covers
 experimental file-backed input through Zarr.
+
+Fitting also accepts `shrinkage::lazymatrix::IndexedRows` to borrow a raw row
+selection and estimate normalization on that selection alone. Built-in
+cross-validation keeps owned fold matrices so repeated sweeps reuse the selected
+storage.
 
 ## Documentation
 

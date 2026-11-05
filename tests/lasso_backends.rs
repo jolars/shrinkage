@@ -288,6 +288,7 @@ fn sprs_matrix() -> sprs::CsMat<f64> {
 fn faer_dense_csc_and_strided_view_agree() {
     let (dense, sparse) = faer_matrices();
     compare(&dense, &sparse);
+    compare(&dense, &sparse.as_ref());
     let transposed = faer::Mat::from_fn(4, 6, |i, j| ROWS[j][i]);
     compare(&transposed.transpose(), &sparse);
 }

@@ -184,7 +184,7 @@ fn magnitude_order_signs_zeros_and_permutations_reconstruct_predictions() {
         let mut state = State::new(2, 7);
         state
             .rebuild(
-                &LazyMatrix::from_parts(&x, None, None),
+                &LazyMatrix::from_column_parts(&x, None, None),
                 &beta,
                 &residual(&rows, &y, &beta, 0.5),
                 &penalty,
@@ -339,7 +339,7 @@ fn sweeps_match_rebuilding_every_restriction_and_preserve_state() {
                 let mut state = State::new(6, 7);
                 state
                     .rebuild(
-                        &LazyMatrix::from_parts(&x, None, None),
+                        &LazyMatrix::from_column_parts(&x, None, None),
                         &beta,
                         &residual(&rows, &y, &beta, intercept),
                         &penalty,
@@ -391,7 +391,7 @@ fn sign_flip_merges_recompute_cross_terms_and_retire_absorbed_ids() {
     let mut state = State::new(1, 3);
     state
         .rebuild(
-            &LazyMatrix::from_parts(&x, None, None),
+            &LazyMatrix::from_column_parts(&x, None, None),
             &beta,
             &residual(&rows, &y, &beta, 0.0),
             &penalty,
@@ -411,7 +411,7 @@ fn sign_flip_merges_recompute_cross_terms_and_retire_absorbed_ids() {
 #[test]
 fn zero_curvature_projects_onto_flat_minima_and_does_not_reactivate_zeros() {
     let x = Matrix::empty(2, 3);
-    let matrix = LazyMatrix::from_parts(&x, None, None);
+    let matrix = LazyMatrix::from_column_parts(&x, None, None);
     for (weights, expected) in [
         (vec![0.0; 3], [3.0, -1.0, 0.0]),
         (vec![1.0, 0.0, 0.0], [0.0; 3]),
@@ -438,7 +438,7 @@ fn zero_curvature_projects_onto_flat_minima_and_does_not_reactivate_zeros() {
     assert!(
         State::new(1, 1)
             .rebuild(
-                &LazyMatrix::from_parts(&tiny, None, None),
+                &LazyMatrix::from_column_parts(&tiny, None, None),
                 &[1.0],
                 &[0.0],
                 &Slope::new(vec![0.0]),
@@ -458,7 +458,7 @@ fn opposite_signs_can_cancel_an_aggregate_without_zero_design_columns() {
     let mut state = State::new(2, 3);
     state
         .rebuild(
-            &LazyMatrix::from_parts(&x, None, None),
+            &LazyMatrix::from_column_parts(&x, None, None),
             &beta,
             &y,
             &penalty,
@@ -478,7 +478,7 @@ fn opposite_signs_can_cancel_an_aggregate_without_zero_design_columns() {
 #[test]
 fn rebuilds_reuse_storage_when_signs_and_membership_change() {
     let x = Matrix::from_rows(&[&[1.0, 2.0, 3.0], &[2.0, -1.0, 1.0]]);
-    let matrix = LazyMatrix::from_parts(&x, None, None);
+    let matrix = LazyMatrix::from_column_parts(&x, None, None);
     let penalty = Slope::new(vec![1.0; 3]);
     let mut state = State::new(2, 3);
     state

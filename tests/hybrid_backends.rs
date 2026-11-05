@@ -279,6 +279,37 @@ fn faer_dense() {
     dense::verify_paths::<_, faer::Col<f64>>(&x);
 }
 
+#[cfg(feature = "faer_v0_24")]
+#[test]
+fn faer_borrowed_csc() {
+    use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem};
+    let triplets = dense::ROWS
+        .iter()
+        .enumerate()
+        .flat_map(|(i, row)| {
+            row.iter().enumerate().filter_map(move |(j, &value)| {
+                (value != 0.0).then_some(faer::sparse::Triplet::new(i, j, value))
+            })
+        })
+        .collect::<Vec<_>>();
+    let csc =
+        faer::sparse::SparseColMat::<usize, f64>::try_new_from_triplets(5, 3, &triplets).unwrap();
+    let x = csc.as_ref();
+    dense::compare(
+        Problem::new(
+            &x,
+            Gaussian::new(&dense::Y),
+            ClusteredLasso::new(0.03, 0.02),
+        )
+        .fit_with(&Hybrid::<faer::Col<f64>>::new().tolerance(1e-10))
+        .unwrap(),
+    );
+    dense::verify_chain::<_, faer::Col<f64>>(&x);
+    dense::verify_slope::<_, faer::Col<f64>>(&x);
+    dense::verify_logistic::<_, faer::Col<f64>>(&x);
+    dense::verify_paths::<_, faer::Col<f64>>(&x);
+}
+
 #[cfg(feature = "nalgebra_v0_34")]
 #[test]
 fn nalgebra_dense() {

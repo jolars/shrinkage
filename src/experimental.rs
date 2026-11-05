@@ -6,8 +6,8 @@
 use std::cell::RefCell;
 
 use lazymatrix::{
-    ColumnStats, DenseBlock, MatTransposeVecInto, MatVecInto, MatrixErrorType, MatrixShape,
-    NormalizationStats, QuantileRange, ReadBlock,
+    ColumnNormalizationStats, ColumnStats, DenseBlock, MatTransposeVecInto, MatVecInto,
+    MatrixErrorType, MatrixShape, QuantileRange, ReadBlock,
 };
 
 use crate::error::invalid;
@@ -179,8 +179,8 @@ macro_rules! delegate_stats {
 impl<M: ColumnStats<f64> + ?Sized> ColumnStats<f64> for BufferedDesign<'_, M> {
     fn normalization_stats(
         &self,
-        spec: lazymatrix::Normalization,
-    ) -> Result<NormalizationStats<f64>, Self::Error> {
+        spec: lazymatrix::ColumnNormalization,
+    ) -> Result<ColumnNormalizationStats<f64>, Self::Error> {
         self.matrix.normalization_stats(spec)
     }
     delegate_stats!(

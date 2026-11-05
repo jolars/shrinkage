@@ -112,7 +112,7 @@ fn feature_order_cuts_signed_zero_and_unequal_adjacent_floats() {
         vec![2.0, -2.0, -1.0, 1.0, 2.0, 3.0, 2.0],
     ];
     let x = Matrix::from_rows(&rows.iter().map(Vec::as_slice).collect::<Vec<_>>());
-    let matrix = LazyMatrix::from_parts(&x, None, None);
+    let matrix = LazyMatrix::from_column_parts(&x, None, None);
     let beta = [
         0.0,
         -0.0,
@@ -141,7 +141,7 @@ fn feature_order_cuts_signed_zero_and_unequal_adjacent_floats() {
     state = State::new(2, 0);
     state
         .rebuild(
-            &LazyMatrix::from_parts(&empty, None, None),
+            &LazyMatrix::from_column_parts(&empty, None, None),
             &[],
             &y,
             &ChainFusedLasso::new(0.0, 0.0),
@@ -223,7 +223,7 @@ fn sweeps_match_independently_rebuilt_restricted_problems() {
             })
             .collect();
         let x = Matrix::from_rows(&rows.iter().map(Vec::as_slice).collect::<Vec<_>>());
-        let matrix = LazyMatrix::from_parts(&x, None, None);
+        let matrix = LazyMatrix::from_column_parts(&x, None, None);
         let y = [2.0, -1.0, 3.0, 0.5, -2.0, 1.0];
         for (l1, fusion) in [(0.0, 0.0), (0.2, 0.0), (0.0, 0.3), (0.2, 0.3), (0.2, 100.0)] {
             for weights in [vec![1.0; 6], vec![0.5, 0.0, 2.0, 1.0, 0.25, 0.0]] {
@@ -284,7 +284,7 @@ fn adjacent_merges_include_cross_terms_and_preserve_the_moving_identity() {
     let mut state = State::new(1, 3);
     state
         .rebuild(
-            &LazyMatrix::from_parts(&x, None, None),
+            &LazyMatrix::from_column_parts(&x, None, None),
             &[1.0, 0.0, 1.0],
             &[0.0],
             &penalty,
@@ -310,7 +310,7 @@ fn zero_curvature_uses_weighted_medians_and_positive_curvature_never_rounds_to_z
     let mut state = State::new(2, 4);
     state
         .rebuild(
-            &LazyMatrix::from_parts(&x, None, None),
+            &LazyMatrix::from_column_parts(&x, None, None),
             &beta,
             &[1.0, -1.0],
             &penalty,
@@ -330,7 +330,7 @@ fn zero_curvature_uses_weighted_medians_and_positive_curvature_never_rounds_to_z
     assert!(
         State::new(1, 1)
             .rebuild(
-                &LazyMatrix::from_parts(&tiny, None, None),
+                &LazyMatrix::from_column_parts(&tiny, None, None),
                 &[0.0],
                 &[0.0],
                 &ChainFusedLasso::new(0.0, 0.0),
@@ -381,7 +381,7 @@ fn pg_splits_blocks_and_diagnostics_do_not_advance_the_sweep_schedule() {
 #[test]
 fn rebuilds_reuse_columns_even_when_only_segment_boundaries_change() {
     let x = Matrix::from_rows(&[&[1.0, 2.0, 3.0], &[2.0, -1.0, 1.0]]);
-    let matrix = LazyMatrix::from_parts(&x, None, None);
+    let matrix = LazyMatrix::from_column_parts(&x, None, None);
     let penalty = ChainFusedLasso::new(0.0, 1.0);
     let mut state = State::new(2, 3);
     state

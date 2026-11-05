@@ -510,6 +510,7 @@ fn faer_dense_view_and_csc_use_native_columns() {
         .collect();
     let sparse = SparseColMat::<usize, f64>::try_new_from_triplets(5, 3, &triplets).unwrap();
     verify::<_, Col<f64>>(&sparse);
+    verify::<_, Col<f64>>(&sparse.as_ref());
 }
 
 #[cfg(feature = "nalgebra_v0_34")]

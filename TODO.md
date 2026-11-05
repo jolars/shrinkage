@@ -361,6 +361,15 @@ These milestones record the tested capabilities already available to build on.
 
 ### Composition proof
 
+- [x] Upgrade to LazyMatrix 0.10.0's column normalization API. Reuse upstream
+  indexed sparse row filtering, accept borrowed faer CSC views, and
+  demonstrate shared fitted parameter views. Keep owned cross-validation
+  folds.
+- [ ] Design prediction semantics before exposing LazyMatrix row normalization
+  or ordered normalization recipes through fitting. Consider borrowed fitted
+  parameters for consumers that need normalized operators on new samples.
+- [ ] Evaluate optional ndarray BLAS forwarding with explicit provider linkage
+  and feature checks.
 - [x] Extract small problem, datafit, penalty, result, and solver capabilities
   from the working lasso implementation. Keep matrix operations in
   LazyMatrix and solver state in Shrinkage.

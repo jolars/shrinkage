@@ -117,22 +117,21 @@ struct SelectedCsc {
     feature = "nalgebra_v0_34",
     feature = "sprs_v0_11"
 ))]
-fn sparse<M: RawColumns<f64> + lazymatrix::MatrixErrorType>(
+fn sparse<M: RawColumns<f64> + lazymatrix::IndexedRowSource<f64>>(
     matrix: &M,
     rows: &[usize],
 ) -> Result<SelectedCsc, FitError<M::Error>> {
     use lazymatrix::RawColumn;
     validate(rows, matrix.nrows())?;
+    let selected = lazymatrix::IndexedRows::new(matrix, rows);
     let mut offsets = Vec::with_capacity(matrix.ncols() + 1);
     let mut indices = Vec::new();
     let mut values = Vec::new();
     for j in 0..matrix.ncols() {
         offsets.push(indices.len());
-        matrix.raw_column(j).for_each_stored(|row, value| {
-            if let Ok(index) = rows.binary_search(&row) {
-                indices.push(index);
-                values.push(value);
-            }
+        selected.raw_column(j).for_each_stored(|row, value| {
+            indices.push(row);
+            values.push(value);
         });
     }
     offsets.push(indices.len());
@@ -152,8 +151,16 @@ impl RowSubset for faer::sparse::SparseColMat<usize, f64> {
 }
 
 #[cfg(feature = "faer_v0_24")]
+impl RowSubset for faer::sparse::SparseColMatRef<'_, usize, f64> {
+    type Subset = faer::sparse::SparseColMat<usize, f64>;
+    fn select_rows(&self, rows: &[usize]) -> Result<Self::Subset, FitError> {
+        faer_sparse(self, rows)
+    }
+}
+
+#[cfg(feature = "faer_v0_24")]
 fn faer_sparse<
-    M: RawColumns<f64> + lazymatrix::MatrixErrorType<Error = std::convert::Infallible>,
+    M: RawColumns<f64> + lazymatrix::IndexedRowSource<f64, Error = std::convert::Infallible>,
 >(
     matrix: &M,
     rows: &[usize],
@@ -191,7 +198,9 @@ impl RowSubset for nalgebra_sparse::CscMatrix<f64> {
 #[cfg(feature = "sprs_v0_11")]
 impl<M> RowSubset for lazymatrix::SprsCsc<M>
 where
-    Self: RawColumns<f64> + ColumnStats<f64, Error = std::convert::Infallible>,
+    Self: RawColumns<f64>
+        + ColumnStats<f64, Error = std::convert::Infallible>
+        + lazymatrix::IndexedRowSource<f64>,
 {
     type Subset = lazymatrix::SprsCsc<sprs::CsMat<f64>>;
     fn select_rows(&self, rows: &[usize]) -> Result<Self::Subset, FitError> {

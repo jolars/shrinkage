@@ -313,7 +313,7 @@ where
     };
     let centered_scale = supplied_centers.is_some()
         && matches!(scale_rule, Scaling::L1 | Scaling::L2 | Scaling::MaxAbs);
-    let stats_spec = lazymatrix::Normalization::new(
+    let stats_spec = lazymatrix::ColumnNormalization::new(
         center_rule,
         if centered_scale {
             Scaling::None
@@ -373,7 +373,7 @@ where
         }
     }
     Ok(Prepared {
-        matrix: LazyMatrix::from_parts(x, centers, scales),
+        matrix: LazyMatrix::from_column_parts(x, centers, scales),
         spec,
         supplied_centers: supplied_centers.is_some(),
         supplied_scales: supplied_scales.is_some(),
@@ -382,7 +382,7 @@ where
 
 pub(crate) struct Prepared<M> {
     pub matrix: LazyMatrix<M>,
-    spec: lazymatrix::Normalization,
+    spec: lazymatrix::ColumnNormalization,
     supplied_centers: bool,
     supplied_scales: bool,
 }
@@ -393,9 +393,9 @@ impl<M: lazymatrix::MatrixShape> Prepared<M> {
         self,
         transform: impl FnOnce(M) -> N,
     ) -> Prepared<N> {
-        let (matrix, centers, scales) = self.matrix.into_parts();
+        let (matrix, params) = self.matrix.into_parts();
         Prepared {
-            matrix: LazyMatrix::from_parts(transform(matrix), centers, scales),
+            matrix: LazyMatrix::from_parts(transform(matrix), params),
             spec: self.spec,
             supplied_centers: self.supplied_centers,
             supplied_scales: self.supplied_scales,
@@ -403,7 +403,8 @@ impl<M: lazymatrix::MatrixShape> Prepared<M> {
     }
 
     pub fn into_preprocessing(self) -> Preprocessing {
-        let (_, centers, scales) = self.matrix.into_parts();
+        let (_, params) = self.matrix.into_parts();
+        let (_, centers, scales) = params.into_parts();
         Preprocessing {
             spec: self.spec,
             centers,

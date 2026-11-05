@@ -2,7 +2,7 @@
 
 use faer::sparse::{SparseColMat, Triplet};
 use faer::{Col, Mat};
-use shrinkage::lazymatrix::{LazyMatrix, MatVec, Normalization};
+use shrinkage::lazymatrix::{ColumnNormalization, MatVec};
 
 fn main() {
     let raw = [[1.0, 0.0], [0.0, 3.0], [4.0, 2.0]];
@@ -19,9 +19,11 @@ fn main() {
     )
     .expect("valid CSC triplets");
 
-    let spec = Normalization::standardize();
-    let dense = LazyMatrix::new(&dense, spec).expect("in-memory statistics are infallible");
-    let sparse = LazyMatrix::new(&sparse, spec).expect("in-memory statistics are infallible");
+    let params = ColumnNormalization::standardize()
+        .fit(&dense)
+        .expect("in-memory statistics are infallible");
+    let dense = params.view().apply(&dense);
+    let sparse = params.view().apply(sparse.as_ref());
     let beta = Col::from_fn(2, |j| [0.75, -1.25][j]);
     let beta_0 = 0.5;
     let dense_prediction = dense
@@ -31,8 +33,12 @@ fn main() {
         .matvec(&beta)
         .expect("in-memory product is infallible");
 
-    let centers = dense.centers().expect("mean centering is enabled");
+    let centers = dense
+        .normalization()
+        .centers()
+        .expect("mean centering is enabled");
     let scales = dense
+        .normalization()
         .scales()
         .expect("standard-deviation scaling is enabled");
     let beta_original = [beta[0] / scales[0], beta[1] / scales[1]];

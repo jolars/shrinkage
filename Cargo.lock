@@ -252,6 +252,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "crc32c"
+version = "0.6.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f132a176423ee852e8f0a35d43088d1850966b50745be818a88b76f64b1c6cb"
+dependencies = [
+ "rustc_version",
+]
+
+[[package]]
 name = "crc32fast"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -951,9 +960,9 @@ checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "lazymatrix"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "534ff56e819d80a6eaaa0ed7e7231b5e2eeb21284d424af250d6522f77994ae0"
+checksum = "86fbce463ed11a6642ba9d5c5a0e0962920bf36280c781a739dbe50f7c0b4f12"
 dependencies = [
  "faer",
  "faer-traits",
@@ -2104,6 +2113,7 @@ dependencies = [
  "base64",
  "bytemuck",
  "bytes",
+ "crc32c",
  "derive_more",
  "flate2",
  "getrandom 0.3.4",

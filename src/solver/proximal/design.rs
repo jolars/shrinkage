@@ -527,7 +527,7 @@ mod tests {
     #[test]
     fn column_norms_avoid_intermediate_underflow_and_overflow() {
         let matrix = matrix::Matrix::from_rows(&[&[1e-200, 1e200], &[2e-200, 2e200]]);
-        let matrix = LazyMatrix::from_parts(&matrix, None, None);
+        let matrix = LazyMatrix::from_column_parts(&matrix, None, None);
         let mut norms = [0.0; 2];
         column_norms(&matrix, &mut norms).unwrap();
         for (actual, expected) in norms
@@ -538,8 +538,11 @@ mod tests {
         }
 
         let matrix = matrix::Matrix::from_rows(&[&[1e308, 1e150], &[1e308, 1e150]]);
-        let matrix =
-            LazyMatrix::from_parts(&matrix, Some(vec![-1e308, 1e150]), Some(vec![1e308, 1.0]));
+        let matrix = LazyMatrix::from_column_parts(
+            &matrix,
+            Some(vec![-1e308, 1e150]),
+            Some(vec![1e308, 1.0]),
+        );
         column_norms(&matrix, &mut norms).unwrap();
         assert_eq!(norms, [8.0_f64.sqrt(), 0.0]);
         let mut errors = [0.0; 2];
@@ -548,7 +551,7 @@ mod tests {
         assert!((errors[1] / (2.0 * 2.0_f64.sqrt() * 1e150) - 1.0).abs() < 1e-15);
 
         let matrix = matrix::Matrix::from_rows(&[&[1e-100], &[1e-100]]);
-        let matrix = LazyMatrix::from_parts(&matrix, None, Some(vec![1e308]));
+        let matrix = LazyMatrix::from_column_parts(&matrix, None, Some(vec![1e308]));
         column_norms(&matrix, &mut norms[..1]).unwrap();
         assert!(norms[0] > 0.0);
     }
@@ -589,7 +592,8 @@ mod tests {
             vec![(0, 2.0), (0, 2.0), (2, -1.0)],
             vec![(2, -1.0), (0, 4.0)],
         ] {
-            let matrix = LazyMatrix::from_parts(Matrix(entries), Some(vec![0.25]), Some(vec![2.0]));
+            let matrix =
+                LazyMatrix::from_column_parts(Matrix(entries), Some(vec![0.25]), Some(vec![2.0]));
             let mut norm = [0.0];
             let mut errors = [0.0];
             column_norms(&matrix, &mut norm).unwrap();

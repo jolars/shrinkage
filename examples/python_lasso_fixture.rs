@@ -3,7 +3,7 @@
 //! Run with `--check` to verify the committed fixture, or redirect stdout to
 //! `packages/python/tests/fixtures/lasso_rust.json` to regenerate it.
 
-use ndarray::Array2;
+use ndarray::{Array2, ShapeBuilder};
 use serde_json::{Value, json};
 use shrinkage::{Lasso, Normalization, StoppingCriterion, Termination};
 
@@ -20,9 +20,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let y = [1.0, 2.3, 0.8, 3.9, 4.2, 2.7, 6.1, 5.4];
     let predict_rows = vec![vec![1.5, -0.5, 3.0, 1.0], vec![8.0, 2.0, 3.0, 0.0]];
-    let x = Array2::from_shape_vec((8, 4), rows.iter().flatten().copied().collect())?;
-    let predict_x =
-        Array2::from_shape_vec((2, 4), predict_rows.iter().flatten().copied().collect())?;
+    // Match the binding's column-major storage to use the same reduction order.
+    let x = Array2::from_shape_fn((8, 4).f(), |(i, j)| rows[i][j]);
+    let predict_x = Array2::from_shape_fn((2, 4).f(), |(i, j)| predict_rows[i][j]);
     let mut cases = Vec::new();
     for (name, normalization) in [
         ("auto", Normalization::Auto),

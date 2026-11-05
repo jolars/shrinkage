@@ -156,7 +156,7 @@ fn canonical_signed_membership_and_canceling_aggregates() {
         vec![2.0, -2.0, 1.0, -1.0, 1.0, 2.0],
     ];
     let x = Matrix::from_rows(&rows.iter().map(Vec::as_slice).collect::<Vec<_>>());
-    let matrix = LazyMatrix::from_parts(&x, None, None);
+    let matrix = LazyMatrix::from_column_parts(&x, None, None);
     let beta = [
         0.0,
         -0.0,
@@ -198,7 +198,7 @@ fn sweeps_match_rebuilding_each_scalar_restriction() {
             .map(|i| ((i * 7 + seed * 3) % 13) as f64 - 6.0)
             .collect();
         let x = Matrix::from_rows(&rows.iter().map(Vec::as_slice).collect::<Vec<_>>());
-        let matrix = LazyMatrix::from_parts(&x, None, None);
+        let matrix = LazyMatrix::from_column_parts(&x, None, None);
         for (l1, fusion) in [(0.1, 0.05), (0.0, 0.05), (0.1, 0.0), (0.0, 0.0)] {
             let mut beta = vec![1.0, 1.0, 0.0, 0.0, -2.0, -2.0, 3.0];
             let mut state = State::new(6, 7);
@@ -295,7 +295,7 @@ fn pg_splits_nonzero_blocks_and_stages_cache_rebuilds() {
     assert!(
         work.pending
             .rebuild(
-                &LazyMatrix::from_parts(&bad, None, None),
+                &LazyMatrix::from_column_parts(&bad, None, None),
                 &work.candidate,
                 &[0.0, 0.0],
                 1
@@ -353,7 +353,7 @@ fn unchanged_cluster_sweeps_wait_for_the_scheduled_pg_split() {
 #[test]
 fn a_moving_zero_block_merges_and_recomputes_curvature_cross_terms() {
     let x = Matrix::from_rows(&[&[1.0, 2.0]]);
-    let matrix = LazyMatrix::from_parts(&x, None, None);
+    let matrix = LazyMatrix::from_column_parts(&x, None, None);
     let mut beta = [0.0, 1.0];
     let mut state = State::new(1, 2);
     state.rebuild(&matrix, &beta, &[1.0], 0).unwrap();
@@ -377,7 +377,7 @@ fn a_moving_zero_block_merges_and_recomputes_curvature_cross_terms() {
 #[test]
 fn rebuilds_reuse_columns_and_invalidate_membership_even_at_equal_cluster_counts() {
     let x = Matrix::from_rows(&[&[1.0, 2.0, 3.0], &[2.0, -1.0, 0.0]]);
-    let matrix = LazyMatrix::from_parts(&x, None, None);
+    let matrix = LazyMatrix::from_column_parts(&x, None, None);
     let mut state = State::new(2, 3);
     state
         .rebuild(&matrix, &[1.0, 1.0, 2.0], &[0.0; 2], 0)

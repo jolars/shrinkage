@@ -45,8 +45,8 @@ pub enum Normalization {
 }
 
 impl Normalization {
-    pub(crate) fn specification(self, fit_intercept: bool) -> lazymatrix::Normalization {
-        use lazymatrix::Normalization as Spec;
+    pub(crate) fn specification(self, fit_intercept: bool) -> lazymatrix::ColumnNormalization {
+        use lazymatrix::ColumnNormalization as Spec;
 
         match self {
             Self::Auto => Spec::new(

@@ -5,8 +5,8 @@ use std::{hint::black_box, time::Duration};
 use criterion::{Criterion, criterion_group, criterion_main};
 use faer::Col;
 use shrinkage::lazymatrix::{
-    ColumnStats, LazyMatrix, MatTransposeVecInto, MatVecInto, Normalization as MatrixNormalization,
-    RawColumns,
+    ColumnNormalization as MatrixNormalization, ColumnStats, LazyMatrix, MatTransposeVecInto,
+    MatVecInto, RawColumns,
 };
 use shrinkage::{MatrixDesign, Normalization, ProximalVector, RuntimeDesign};
 

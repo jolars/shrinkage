@@ -57,7 +57,7 @@ fn identity_column_summaries_reuse_the_raw_sum() {
         columns: vec![vec![(0, 2.0), (3, -1.0)]],
         visits: Cell::new(0),
     };
-    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let matrix = LazyMatrix::from_column_parts(&raw, None, None);
     let summary = ColumnSummary::new(&matrix.column(0)).unwrap();
     close(summary.raw_sum, 1.0);
     close(summary.sum, 1.0);
@@ -78,7 +78,7 @@ fn fixed_intercept_diagnostics_share_one_correlation_pass() {
         (None, Some(vec![0.8, 2.0])),
         (Some(vec![0.2, 1.4]), Some(vec![0.8, 2.0])),
     ] {
-        let matrix = LazyMatrix::from_parts(&raw, centers, scales);
+        let matrix = LazyMatrix::from_column_parts(&raw, centers, scales);
         for fit_intercept in [false, true] {
             for lambda in [0.0, 0.2, 100.0] {
                 let datafit = Gaussian::new(&y).fit_intercept(fit_intercept);
@@ -131,8 +131,14 @@ fn fixed_intercept_diagnostics_share_one_correlation_pass() {
                     0.0
                 };
                 for j in 0..2 {
-                    let center = matrix.centers().map_or(0.0, |values| values[j]);
-                    let scale = matrix.scales().map_or(1.0, |values| values[j]);
+                    let center = matrix
+                        .normalization()
+                        .centers()
+                        .map_or(0.0, |values| values[j]);
+                    let scale = matrix
+                        .normalization()
+                        .scales()
+                        .map_or(1.0, |values| values[j]);
                     let column: Vec<_> = (0..5)
                         .map(|i| {
                             let raw_value: f64 = raw.columns[j]
@@ -189,7 +195,7 @@ fn subnormal_dual_candidates_preserve_residual_kkt_correlations() {
         columns: vec![vec![(0, 1e150)]],
         visits: Cell::new(0),
     };
-    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let matrix = LazyMatrix::from_column_parts(&raw, None, None);
     for target in [f64::from_bits(1), f64::from_bits(3), f64::MIN_POSITIVE] {
         let fit = solve(
             &matrix,
@@ -213,7 +219,7 @@ fn coordinate_update_and_cached_dot_visit_only_stored_entries() {
             columns: vec![vec![(1, 2.0), (5, -3.0), (8, 0.0)]],
             visits: Cell::new(0),
         };
-        let matrix = LazyMatrix::from_parts(&raw, Some(vec![0.25]), Some(vec![2.0]));
+        let matrix = LazyMatrix::from_column_parts(&raw, Some(vec![0.25]), Some(vec![2.0]));
         let column = matrix.column(0);
         let summary = ColumnSummary::new(&column).unwrap();
         let mut residual = Residual::new(&vec![1.0; nrows], 0.0).unwrap();
@@ -249,7 +255,7 @@ fn repeated_updates_and_refresh_match_materialized_residuals() {
         columns: vec![vec![(0, 2.0), (3, -1.0)], vec![(1, 4.0), (4, 3.0)]],
         visits: Cell::new(0),
     };
-    let matrix = LazyMatrix::from_parts(&raw, Some(vec![0.2, 1.4]), Some(vec![0.8, 2.0]));
+    let matrix = LazyMatrix::from_column_parts(&raw, Some(vec![0.2, 1.4]), Some(vec![0.8, 2.0]));
     let summaries: Vec<_> = (0..2)
         .map(|j| ColumnSummary::new(&matrix.column(j)).unwrap())
         .collect();
@@ -334,7 +340,7 @@ fn path_workspace_retains_storage_and_rebuilds_screening_at_each_strength() {
         ],
         visits: Cell::new(0),
     };
-    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let matrix = LazyMatrix::from_column_parts(&raw, None, None);
     let y = [-3.1, -2.9, 2.9, 3.1];
     let datafit = Gaussian::new(&y).fit_intercept(false);
     let options = CoordinateDescent::new().tolerance(1e-10);
@@ -387,7 +393,7 @@ fn path_iteration_limits_keep_optimization_parameters() {
         columns: vec![vec![(0, 1.0), (1, 2.0), (2, 3.0)]],
         visits: Cell::new(0),
     };
-    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let matrix = LazyMatrix::from_column_parts(&raw, None, None);
     let datafit = Gaussian::new(&[2.0, 4.0, 8.0]);
     let options = CoordinateDescent::new().tolerance(1e-12).max_iterations(1);
     let mut work = Workspace::new(&matrix, datafit).unwrap();
@@ -408,7 +414,7 @@ fn full_checks_wait_for_ten_sweeps_even_when_coordinates_stop_moving() {
         columns: vec![vec![(0, -1.0), (1, 1.0)]],
         visits: Cell::new(0),
     };
-    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let matrix = LazyMatrix::from_column_parts(&raw, None, None);
     for policy in [
         crate::WorkingSetPolicy::Disabled,
         crate::WorkingSetPolicy::EverActive,
@@ -444,7 +450,7 @@ fn full_checks_include_iteration_limits_between_ten_sweep_boundaries() {
         columns: vec![vec![(0, 1.0), (1, 1.0)], vec![(0, 1.0), (1, 1.01)]],
         visits: Cell::new(0),
     };
-    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let matrix = LazyMatrix::from_column_parts(&raw, None, None);
     for limit in [1, 7, 10, 11, 23] {
         let fit = solve(
             &matrix,
@@ -483,7 +489,7 @@ fn automatic_initial_set_includes_the_initial_kkt_violators() {
         columns: (0..64).map(|j| vec![(j, 1.0)]).collect(),
         visits: Cell::new(0),
     };
-    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let matrix = LazyMatrix::from_column_parts(&raw, None, None);
     let mut y = [0.0; 64];
     y[..24].fill(1.0);
     for (policy, expected_nonzeros) in [
@@ -522,7 +528,7 @@ fn scheduled_full_checks_expand_the_working_set_until_all_violations_are_resolve
         columns: (0..24).map(|j| vec![(j, 1.0)]).collect(),
         visits: Cell::new(0),
     };
-    let matrix = LazyMatrix::from_parts(&raw, None, None);
+    let matrix = LazyMatrix::from_column_parts(&raw, None, None);
     let fit = solve(
         &matrix,
         Gaussian::new(&[1.0; 24]).fit_intercept(false),

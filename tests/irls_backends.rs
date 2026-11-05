@@ -119,6 +119,7 @@ fn faer_dense_csc_and_transposed_views_agree() {
     let sparse =
         faer::sparse::SparseColMat::<usize, f64>::try_new_from_triplets(6, 4, &triplets).unwrap();
     compare(&dense, &sparse);
+    compare(&dense, &sparse.as_ref());
     let transposed = faer::Mat::from_fn(4, 6, |i, j| ROWS[j][i]);
     compare(&transposed.transpose(), &sparse);
 }

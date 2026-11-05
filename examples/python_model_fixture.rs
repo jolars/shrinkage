@@ -1,6 +1,6 @@
 //! Generate installed-Python parity fixtures from typed public Rust fits.
 
-use ndarray::{Array1, Array2};
+use ndarray::{Array1, Array2, ShapeBuilder};
 use serde_json::{Value, json};
 use shrinkage::{
     Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, Hybrid, HybridFit, HybridStep,
@@ -63,9 +63,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let gaussian = [1.0, 2.3, 0.8, 3.9, 4.2, 2.7, 6.1, 5.4];
     let binomial = [0.1, 0.2, 0.25, 0.3, 0.65, 0.7, 0.8, 0.9];
     let predict_rows = vec![vec![1.5, -0.5, 3.0, 1.0], vec![8.0, 2.0, 3.0, 0.0]];
-    let x = Array2::from_shape_vec((8, 4), rows.iter().flatten().copied().collect())?;
-    let predict_x =
-        Array2::from_shape_vec((2, 4), predict_rows.iter().flatten().copied().collect())?;
+    // Match the binding's column-major storage to use the same reduction order.
+    let x = Array2::from_shape_fn((8, 4).f(), |(i, j)| rows[i][j]);
+    let predict_x = Array2::from_shape_fn((2, 4).f(), |(i, j)| predict_rows[i][j]);
     let mut configurations = Vec::new();
     for family in ["gaussian", "binomial"] {
         for penalty in 0..3 {

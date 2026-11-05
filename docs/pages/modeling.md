@@ -81,6 +81,14 @@ as `QuantileRange::new(0.1, 0.9)`. LazyMatrix computes these statistics for
 dense, sparse, and file-backed input; Shrinkage retains the fitted values for
 prediction and replaces computed zero scales with one.
 
+Rust callers can fit a borrowed raw row selection with
+`shrinkage::lazymatrix::IndexedRows::new(&x, &rows)`, where `rows` contains
+strictly increasing, unique indices within the source matrix. Pass the selected
+design and its matching response to `Lasso::fit` or `Problem::new`.
+Normalization then uses only the selected observations. Indexed columns filter
+the source on each traversal, trading matrix copies for repeated row lookups.
+Built-in cross-validation retains owned fold matrices for its repeated sweeps.
+
 ## Regularization paths {#regularization-paths}
 
 All solver families support warm-started paths for their compatible problems.

@@ -20,6 +20,8 @@
 //!
 //! LazyMatrix implements each enabled backend release independently, so
 //! feature unification retains support for the selected matrix types.
+//! faer CSC inputs also accept borrowed `SparseColMatRef` views, including
+//! cross-validation, without first cloning the source matrix.
 //!
 //! With `ndarray_v0_17` or its `ndarray` alias, fit directly against an array or
 //! borrowed view:
@@ -56,6 +58,28 @@
 //! For CSR input, explicitly convert with `to_csc()` before wrapping. ndarray
 //! supports row-major, column-major, and strided arrays; column-major storage
 //! keeps each column contiguous for coordinate descent.
+//!
+//! [`lazymatrix::IndexedRows`] borrows a raw row selection. Normalization uses
+//! only those observations, and predictions retain the original feature scale:
+//!
+//! ```
+//! # #[cfg(feature = "ndarray_v0_17")] {
+//! use ndarray::array;
+//! use shrinkage::{Lasso, lazymatrix::IndexedRows};
+//!
+//! let x = array![[0.0], [100.0], [2.0]];
+//! let rows = [0, 2];
+//! let training = IndexedRows::new(&x, &rows);
+//! let fit = Lasso::new(0.1).fit(&training, &[1.0, 5.0])?;
+//! assert_eq!(fit.preprocessing().centers(), Some([1.0].as_slice()));
+//! let predictions = fit.predict(&x)?;
+//! # }
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! Indexed columns filter the source on each traversal. Built-in
+//! cross-validation instead copies selected entries into owned fold matrices
+//! once, keeping repeated solver sweeps on that storage.
 
 pub mod cross_validation;
 pub mod datafit;

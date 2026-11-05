@@ -5014,10 +5014,10 @@
           2
         ],
         "cluster_values": [
-          1.442069784396047,
-          0.041264324456794337,
-          0.013476308482004144,
-          1.3877787807813816e-17
+          1.4420697843960466,
+          0.04126432445679427,
+          0.013476308482004158,
+          6.938893903906908e-18
         ],
         "coefficient_signs": [
           1.0,
@@ -5026,25 +5026,25 @@
           1.0
         ],
         "coefficients": [
-          0.6293708518479556,
-          0.022056709202000164,
-          1.3877787807813816e-17,
-          0.01625303956141516
+          0.6293708518479554,
+          0.022056709202000126,
+          6.938893903906908e-18,
+          0.01625303956141518
         ],
         "coordinate_sweeps": 7,
         "diagnostic_checks": 7,
         "dual_certificate": null,
         "dual_objective": null,
         "duality_gap": null,
-        "intercept": 1.0629555296590938,
+        "intercept": 1.0629555296590945,
         "iterations": 12,
-        "objective": 0.6043200018552278,
+        "objective": 0.6043200018552277,
         "outer_backtracks": 0,
         "outer_iterations": 0,
         "pg_steps": 5,
         "predictions": [
           2.0122364923914424,
-          6.1420357628467395
+          6.142035762846739
         ],
         "scales": [
           2.29128784747792,
@@ -5066,13 +5066,13 @@
         },
         "step_size": 0.24999999999998845,
         "stopping_threshold": 1e-9,
-        "stopping_value": 1.4416801086270637e-12,
+        "stopping_value": 1.44195766438322e-12,
         "termination": "converged",
         "working_set_diagnostics": {
           "active_dimension": 4,
-          "block_visits": 23,
+          "block_visits": 21,
           "expansions": 2,
-          "feature_visits": 38,
+          "feature_visits": 36,
           "full_checks": 7,
           "peak_active_dimension": 4,
           "policy": {
@@ -5128,36 +5128,36 @@
         ],
         "cluster_values": [
           1.4420697843960468,
-          0.04126432445751375,
-          0.0134763084820623,
+          0.04126432445751362,
+          0.013476308482061931,
           3.469446951953614e-17
         ],
         "coefficient_signs": [
           1.0,
           1.0,
-          -1.0,
+          1.0,
           1.0
         ],
         "coefficients": [
           0.6293708518479555,
-          0.022056709202384703,
-          -3.469446951953614e-17,
-          0.0162530395614853
+          0.022056709202384638,
+          3.469446951953614e-17,
+          0.016253039561484856
         ],
         "coordinate_sweeps": 7,
         "diagnostic_checks": 7,
         "dual_certificate": null,
         "dual_objective": null,
         "duality_gap": null,
-        "intercept": 1.0629555296586575,
+        "intercept": 1.0629555296586572,
         "iterations": 12,
-        "objective": 0.6043200018552279,
+        "objective": 0.6043200018552278,
         "outer_backtracks": 0,
         "outer_iterations": 0,
         "pg_steps": 5,
         "predictions": [
-          2.0122364923908838,
-          6.142035762847071
+          2.012236492390883,
+          6.14203576284707
         ],
         "scales": [
           2.29128784747792,
@@ -5181,13 +5181,13 @@
         },
         "step_size": 0.625,
         "stopping_threshold": 1e-9,
-        "stopping_value": 7.269296276035675e-13,
+        "stopping_value": 7.269740365245525e-13,
         "termination": "converged",
         "working_set_diagnostics": {
           "active_dimension": 4,
-          "block_visits": 21,
+          "block_visits": 23,
           "expansions": 2,
-          "feature_visits": 36,
+          "feature_visits": 38,
           "full_checks": 7,
           "peak_active_dimension": 4,
           "policy": {
@@ -5244,10 +5244,10 @@
           2
         ],
         "cluster_values": [
-          1.442069784396047,
-          0.041264324456794337,
-          0.013476308482004144,
-          1.3877787807813816e-17
+          1.4420697843960466,
+          0.04126432445679427,
+          0.013476308482004158,
+          6.938893903906908e-18
         ],
         "coefficient_signs": [
           1.0,
@@ -5256,10 +5256,10 @@
           1.0
         ],
         "coefficients": [
-          0.6293708518479556,
-          0.022056709202000164,
-          1.3877787807813816e-17,
-          0.01625303956141516
+          0.6293708518479554,
+          0.022056709202000126,
+          6.938893903906908e-18,
+          0.01625303956141518
         ],
         "coordinate_sweeps": 7,
         "diagnostic_checks": 7,
@@ -5274,16 +5274,16 @@
           -0.003054759273709351
         ],
         "dual_objective": 0.604320001849985,
-        "duality_gap": 8.888943086314874e-12,
-        "intercept": 1.0629555296590938,
+        "duality_gap": 8.888970841890491e-12,
+        "intercept": 1.0629555296590945,
         "iterations": 12,
-        "objective": 0.6043200018552278,
+        "objective": 0.6043200018552277,
         "outer_backtracks": 0,
         "outer_iterations": 0,
         "pg_steps": 5,
         "predictions": [
           2.0122364923914424,
-          6.1420357628467395
+          6.142035762846739
         ],
         "scales": [
           2.29128784747792,
@@ -5305,13 +5305,13 @@
         },
         "step_size": 0.24999999999998845,
         "stopping_threshold": 1e-9,
-        "stopping_value": 1.4416801086270637e-12,
+        "stopping_value": 1.44195766438322e-12,
         "termination": "converged",
         "working_set_diagnostics": {
           "active_dimension": 4,
-          "block_visits": 23,
+          "block_visits": 21,
           "expansions": 2,
-          "feature_visits": 38,
+          "feature_visits": 36,
           "full_checks": 7,
           "peak_active_dimension": 4,
           "policy": {
@@ -5367,21 +5367,21 @@
         ],
         "cluster_values": [
           1.4420697843960468,
-          0.04126432445751375,
-          0.0134763084820623,
+          0.04126432445751362,
+          0.013476308482061931,
           3.469446951953614e-17
         ],
         "coefficient_signs": [
           1.0,
           1.0,
-          -1.0,
+          1.0,
           1.0
         ],
         "coefficients": [
           0.6293708518479555,
-          0.022056709202384703,
-          -3.469446951953614e-17,
-          0.0162530395614853
+          0.022056709202384638,
+          3.469446951953614e-17,
+          0.016253039561484856
         ],
         "coordinate_sweeps": 7,
         "diagnostic_checks": 7,
@@ -5396,16 +5396,16 @@
           -0.003054759273574348
         ],
         "dual_objective": 0.6043200018505477,
-        "duality_gap": 8.326295935028446e-12,
-        "intercept": 1.0629555296586575,
+        "duality_gap": 8.326295935028444e-12,
+        "intercept": 1.0629555296586572,
         "iterations": 12,
-        "objective": 0.6043200018552279,
+        "objective": 0.6043200018552278,
         "outer_backtracks": 0,
         "outer_iterations": 0,
         "pg_steps": 5,
         "predictions": [
-          2.0122364923908838,
-          6.142035762847071
+          2.012236492390883,
+          6.14203576284707
         ],
         "scales": [
           2.29128784747792,
@@ -5429,13 +5429,13 @@
         },
         "step_size": 0.625,
         "stopping_threshold": 1e-9,
-        "stopping_value": 7.269296276035675e-13,
+        "stopping_value": 7.269740365245525e-13,
         "termination": "converged",
         "working_set_diagnostics": {
           "active_dimension": 4,
-          "block_visits": 21,
+          "block_visits": 23,
           "expansions": 2,
-          "feature_visits": 36,
+          "feature_visits": 38,
           "full_checks": 7,
           "peak_active_dimension": 4,
           "policy": {

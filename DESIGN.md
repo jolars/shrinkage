@@ -325,23 +325,49 @@ normalization. Reuse its existing capabilities and backend adapters, including
 dense and sparse integrations, rather than defining a competing matrix API.
 Inspect dependency upgrades before relying on new capabilities.
 
-The crate uses `lazymatrix = "0.9.0"`, allowing compatible updates, with default
-features disabled. Shrinkage's versioned features `faer_v0_24`,
-`nalgebra_v0_34`, `ndarray_v0_17`, and `sprs_v0_11` forward to the matching
-LazyMatrix features. The short names `faer`, `nalgebra`, `ndarray`, and `sprs`
-remain aliases for these release lines. Gate tests, doctests, examples, and
-benchmarks on the versioned features so either entry point works. These retain
-faer 0.24, nalgebra 0.34 with nalgebra-sparse 0.11, ndarray 0.17, and sprs 0.11.
-ndarray arrays and borrowed views support row-major, column-major, and strided
-storage. sprs CSC matrices and views use LazyMatrix's checked `SprsCsc` wrapper;
-callers explicitly convert CSR input to CSC before fitting. Version 0.9.0
-supplies fallible statistics and products, including a combined
-normalization-statistics hook. Keep upstream development overrides local so the
-regular fitting APIs build without the sibling repository.
+The crate uses LazyMatrix 0.10.0 with default features disabled. Shrinkage's
+versioned features `faer_v0_24`, `nalgebra_v0_34`, `ndarray_v0_17`, and
+`sprs_v0_11` forward to the matching LazyMatrix features. The short names
+`faer`, `nalgebra`, `ndarray`, and `sprs` remain aliases for these release
+lines. Gate tests, doctests, examples, and benchmarks on the versioned features
+so either entry point works. These retain faer 0.24, nalgebra 0.34 with
+nalgebra-sparse 0.11, ndarray 0.17, and sprs 0.11. ndarray arrays and borrowed
+views support row-major, column-major, and strided storage. sprs CSC matrices
+and views use LazyMatrix's checked `SprsCsc` wrapper; callers explicitly convert
+CSR input to CSC before fitting. faer CSC storage also accepts borrowed
+`SparseColMatRef` views for fitting and cross-validation. LazyMatrix supplies
+fallible statistics and products, including a combined normalization-statistics
+hook. Keep upstream development overrides local so the regular fitting APIs
+build without the sibling repository.
 
-Shrinkage exposes one release line per backend. LazyMatrix 0.9.0 implements
-every enabled release independently, retaining older matrix types when feature
+Shrinkage exposes one release line per backend. LazyMatrix implements every
+enabled release independently, retaining older matrix types when feature
 unification enables another release.
+
+The API names column recipes and fitted parameters `ColumnNormalization` and
+`ColumnNormalizationParams`. `LazyMatrix<M>` still defaults to owned `f64`
+column parameters. Explicit vectors use `from_column_parts`; `from_parts`
+accepts a fitted parameter object. Prepared data replacement moves that object
+without copying vectors or refitting. Shrinkage keeps its combined statistics
+call and validates dimensions, finite values, and scales before constructing the
+operator. Upstream recipe fitting can panic when a backend returns parameter
+vectors with incorrect dimensions.
+
+`IndexedRows` restricts raw observations before normalization and supplies the
+sparse fold helper's row filtering and local index mapping. The helper validates
+indices first so malformed selections remain errors. Fold matrices still own
+their selected entries, preserving efficient repeated sweeps and the public
+`RowSubset` interface. Callers can fit a borrowed `IndexedRows` directly when
+avoiding a matrix copy matters more than repeated filtering costs.
+
+The normalization example fits column parameters once and applies borrowed views
+to equivalent dense and CSC storage. Row normalization and ordered recipes
+remain future work: their sample-specific transformations need a prediction
+contract beyond coefficient back-transformation. Optional ndarray BLAS support
+also remains deferred until provider linkage and feature validation are defined.
+Upstream's dense statistics and weighted column reductions apply through the
+existing matrix calls. IRLS's `weighted_norm_squared` calls can use the new
+contiguous dense reduction path without a separate Shrinkage kernel.
 
 The `experimental-block-reader` feature prototypes caller-buffered rectangular
 access with the published LazyMatrix `ReadBlock` trait.
@@ -425,14 +451,14 @@ File-backed failures must propagate as errors rather than panic or corrupt a
 fit.
 
 Products, column statistics, and computed normalization return `Result` in
-LazyMatrix 0.9.0. The lasso uses the combined `normalization_stats` hook and
-preserves preprocessing errors with their operation context and source type.
-Borrowed column views remain infallible and must not hide I/O or decoding. The
-separate `ReadBlock` capability binds each successful block to caller-owned
-storage. The experimental consumer reuses a bounded buffer and tests injected
-read failures during preprocessing, backtracking, and later solver iterations.
-Failed blocks never reach accumulation or loss evaluation. Broader file-format
-support remains a later milestone.
+LazyMatrix. The lasso uses the combined `normalization_stats` hook and preserves
+preprocessing errors with their operation context and source type. Borrowed
+column views remain infallible and must not hide I/O or decoding. The separate
+`ReadBlock` capability binds each successful block to caller-owned storage. The
+experimental consumer reuses a bounded buffer and tests injected read failures
+during preprocessing, backtracking, and later solver iterations. Failed blocks
+never reach accumulation or loss evaluation. Broader file-format support remains
+a later milestone.
 
 ## 6. Datafits, penalties, and solver oracles
 
@@ -1201,10 +1227,11 @@ size. Fractional binomial responses use supplied or ordinary shuffled folds.
 `RegularizationPathSolver` implementations. `Lasso` exposes equivalent
 convenience methods. `CrossValidationDatafit` rebuilds Gaussian and binomial
 families on training responses, preserving the intercept setting. `RowSubset`
-gathers raw observations into owned dense or CSC backend storage; statistics and
-products remain in LazyMatrix. Dense views and strided ndarray views select into
-owned matrices. Custom backends can implement the same capability. No matrix
-backend is enabled by default.
+gathers raw observations into owned dense or CSC backend storage, using
+LazyMatrix's `IndexedRows` for sparse filtering; statistics and products remain
+in LazyMatrix. Dense views and strided ndarray views select into owned matrices.
+Custom backends can implement the same capability. No matrix backend is enabled
+by default.
 
 Each fold selects rows before fitting normalization and calls its path solver
 once. Its path retains preprocessing, solver buffers, screening, and working
