@@ -226,7 +226,7 @@ where
     P: ProximalPenalty,
 {
     let threshold = options.validate()?;
-    if problem.datafit().nobs() != problem.design().nrows() {
+    if problem.datafit().n_obs() != problem.design().nrows() {
         return Err(invalid(
             "datafit observation count must match training rows",
         ));

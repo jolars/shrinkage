@@ -138,8 +138,8 @@ impl<D: SmoothDatafit + ?Sized> SmoothDatafit for Box<D> {
         (**self).gap_safe()
     }
 
-    fn nobs(&self) -> usize {
-        (**self).nobs()
+    fn n_obs(&self) -> usize {
+        (**self).n_obs()
     }
     fn fits_intercept(&self) -> bool {
         (**self).fits_intercept()

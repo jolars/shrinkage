@@ -413,8 +413,8 @@ fn a_failed_backtracking_read_never_reaches_loss_evaluation() {
         }
     }
     impl SmoothDatafit for CountingLoss<'_> {
-        fn nobs(&self) -> usize {
-            self.gaussian.nobs()
+        fn n_obs(&self) -> usize {
+            self.gaussian.n_obs()
         }
         fn fits_intercept(&self) -> bool {
             self.gaussian.fits_intercept()

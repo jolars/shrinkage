@@ -22,7 +22,7 @@ where
         let n = problem.design().nrows();
         let p = problem.design().ncols();
         let datafit = *problem.datafit();
-        if n == 0 || datafit.nobs() != n {
+        if n == 0 || datafit.n_obs() != n {
             return Err(invalid(
                 "datafit observation count must match nonempty training rows",
             ));
@@ -70,7 +70,7 @@ where
         let n = problem.design().nrows();
         let p = problem.design().ncols();
         let datafit = *problem.datafit();
-        if n == 0 || datafit.nobs() != n {
+        if n == 0 || datafit.n_obs() != n {
             return Err(invalid(
                 "datafit observation count must match nonempty training rows",
             ));

@@ -421,7 +421,7 @@ impl Datafit for Exponential {
     }
 }
 impl SmoothDatafit for Exponential {
-    fn nobs(&self) -> usize {
+    fn n_obs(&self) -> usize {
         1
     }
     fn fits_intercept(&self) -> bool {
@@ -538,7 +538,7 @@ impl Datafit for InvalidHessian {
     }
 }
 impl SmoothDatafit for InvalidHessian {
-    fn nobs(&self) -> usize {
+    fn n_obs(&self) -> usize {
         2
     }
     fn fits_intercept(&self) -> bool {

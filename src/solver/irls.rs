@@ -197,7 +197,7 @@ pub(crate) fn validate_rows<D: DiagonalHessianDatafit, E>(
     nrows: usize,
     datafit: &D,
 ) -> Result<(), FitError<E>> {
-    if nrows == 0 || datafit.nobs() != nrows {
+    if nrows == 0 || datafit.n_obs() != nrows {
         return Err(invalid(
             "datafit observation count must match nonempty training rows",
         ));

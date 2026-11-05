@@ -183,7 +183,7 @@ where
 }
 
 fn validate_rows<D: SmoothDatafit, E>(nrows: usize, datafit: &D) -> Result<(), FitError<E>> {
-    if datafit.nobs() != nrows {
+    if datafit.n_obs() != nrows {
         return Err(invalid(
             "datafit observation count must match training rows",
         ));

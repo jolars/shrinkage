@@ -152,8 +152,8 @@ fn custom_losses_without_deviance_keep_the_full_sequence() {
         }
     }
     impl SmoothDatafit for Custom<'_> {
-        fn nobs(&self) -> usize {
-            self.0.nobs()
+        fn n_obs(&self) -> usize {
+            self.0.n_obs()
         }
         fn fits_intercept(&self) -> bool {
             self.0.fits_intercept()

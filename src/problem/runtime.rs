@@ -272,7 +272,7 @@ impl ProximalGradient<Vec<f64>> {
         penalties: &[Box<dyn ProximalPenalty + '_>],
     ) -> Result<Vec<ProximalFit>, FitError<BackendError>> {
         let threshold = self.validate()?;
-        if problem.datafit().nobs() != problem.design().nrows() {
+        if problem.datafit().n_obs() != problem.design().nrows() {
             return Err(invalid(
                 "datafit observation count must match training rows",
             ));
@@ -312,7 +312,7 @@ impl<D: SmoothDatafit, P: ProximalPenalty> Solver<Problem<Box<dyn RuntimeDesign 
         problem: &Problem<Box<dyn RuntimeDesign + '_>, D, P>,
     ) -> Result<Self::Fit, Self::Error> {
         let threshold = self.validate()?;
-        if problem.datafit().nobs() != problem.design().nrows() {
+        if problem.datafit().n_obs() != problem.design().nrows() {
             return Err(invalid(
                 "datafit observation count must match training rows",
             ));

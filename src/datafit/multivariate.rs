@@ -146,7 +146,7 @@ impl Datafit for StackedGaussian<'_> {
 }
 
 impl SmoothDatafit for StackedGaussian<'_> {
-    fn nobs(&self) -> usize {
+    fn n_obs(&self) -> usize {
         self.0.response.len()
     }
     fn fits_intercept(&self) -> bool {

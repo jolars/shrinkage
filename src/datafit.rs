@@ -38,7 +38,7 @@ pub trait SmoothDatafit: Datafit<Error = FitError> {
     }
 
     /// Number of training observations.
-    fn nobs(&self) -> usize;
+    fn n_obs(&self) -> usize;
 
     /// Whether the solver should fit a free, unpenalized intercept.
     fn fits_intercept(&self) -> bool;

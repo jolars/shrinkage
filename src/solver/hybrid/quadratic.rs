@@ -128,9 +128,9 @@ impl Datafit for Model<'_> {
 }
 
 impl SmoothDatafit for Model<'_> {
-    fn nobs(&self) -> usize {
+    fn n_obs(&self) -> usize {
         match self {
-            Self::Gaussian(datafit) => datafit.nobs(),
+            Self::Gaussian(datafit) => datafit.n_obs(),
             Self::Newton { anchor, .. } => anchor.len(),
         }
     }

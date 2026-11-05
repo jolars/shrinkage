@@ -179,7 +179,7 @@ impl<V> ProximalGradient<V> {
         V: ProximalVector,
     {
         let threshold = self.validate()?;
-        if problem.datafit().nobs() != problem.design().nrows() {
+        if problem.datafit().n_obs() != problem.design().nrows() {
             return Err(invalid(
                 "datafit observation count must match training rows",
             ));
@@ -255,7 +255,7 @@ where
 
     fn solve(&self, problem: &Problem<&M, D, P>) -> Result<Self::Fit, Self::Error> {
         let threshold = self.validate()?;
-        if problem.datafit().nobs() != problem.design().nrows() {
+        if problem.datafit().n_obs() != problem.design().nrows() {
             return Err(invalid(
                 "datafit observation count must match training rows",
             ));
@@ -287,7 +287,7 @@ where
         observer: &mut O,
     ) -> Result<Self::Fit, Self::Error> {
         let threshold = self.validate()?;
-        if problem.datafit().nobs() != problem.design().nrows() {
+        if problem.datafit().n_obs() != problem.design().nrows() {
             return Err(invalid(
                 "datafit observation count must match training rows",
             ));

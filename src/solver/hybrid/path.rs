@@ -120,7 +120,7 @@ impl HybridPathDatafit for Binomial<'_> {
 }
 
 fn validate<D: SmoothDatafit, E>(n: usize, datafit: &D) -> Result<(), FitError<E>> {
-    if n == 0 || datafit.nobs() != n {
+    if n == 0 || datafit.n_obs() != n {
         return Err(invalid(
             "datafit observation count must match nonempty training rows",
         ));

@@ -110,7 +110,7 @@ impl SmoothDatafit for Binomial<'_> {
         Some(self)
     }
 
-    fn nobs(&self) -> usize {
+    fn n_obs(&self) -> usize {
         self.response.len()
     }
 

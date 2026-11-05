@@ -21,8 +21,8 @@ impl Datafit for TwiceGaussian<'_> {
 }
 
 impl SmoothDatafit for TwiceGaussian<'_> {
-    fn nobs(&self) -> usize {
-        self.0.nobs()
+    fn n_obs(&self) -> usize {
+        self.0.n_obs()
     }
 
     fn fits_intercept(&self) -> bool {
