@@ -22,12 +22,18 @@ jobs:
       - name: Install minimum Rust toolchains
         run: rustup toolchain install 1.84.0 1.85.0 --profile minimal
 
+      - uses: actions/setup-python@v7
+        id: python
+        with:
+          python-version: "3.11"
+
+      # PyO3 caches library paths that include the Python patch version.
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             .
             packages/python
-          key: msrv
+          key: msrv-python-${{ steps.python.outputs.python-version }}
 
       - name: Build without backends
         run: cargo +1.84.0 build --locked --lib --no-default-features
@@ -38,14 +44,10 @@ jobs:
             cargo +1.84.0 build --locked --lib --no-default-features --features "$features"
           done
 
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.11"
-
       - name: Build Python bindings
         run: cargo +1.85.0 build --locked --lib --manifest-path packages/python/Cargo.toml
         env:
-          PYO3_PYTHON: python
+          PYO3_PYTHON: ${{ steps.python.outputs.python-path }}
 
   check:
     runs-on: ubuntu-latest
