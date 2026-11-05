@@ -67,5 +67,35 @@ fn main() {
             first, complete,
             "coordinate sweeps must reuse their workspaces"
         );
+        let model = Problem::new(
+            &dense,
+            Binomial::new(&y).with_link(shrinkage::Probit),
+            penalty,
+        );
+        let first = measure("probit_dense_one_step", n, p, false, || {
+            model.fit_with(&Irls::new().max_iterations(1)).unwrap()
+        });
+        let complete = measure("probit_dense", n, p, true, || {
+            model.fit_with(&Irls::new()).unwrap()
+        });
+        assert_eq!(
+            first, complete,
+            "probit outer steps must reuse their workspaces"
+        );
+        let model = Problem::new(
+            &sparse,
+            Binomial::new(&y).with_link(shrinkage::Probit),
+            penalty,
+        );
+        let first = measure("probit_csc_one_step", n, p, false, || {
+            model.fit_with(&Irls::new().max_iterations(1)).unwrap()
+        });
+        let complete = measure("probit_csc", n, p, true, || {
+            model.fit_with(&Irls::new()).unwrap()
+        });
+        assert_eq!(
+            first, complete,
+            "probit coordinate sweeps must reuse their workspaces"
+        );
     }
 }

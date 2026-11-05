@@ -8,15 +8,17 @@ use lazymatrix::{ColumnStats, LazyMatrix, MatrixErrorType, RawColumn, RawColumns
 
 use crate::error::{finite, invalid, unsupported};
 use crate::{
-    CoordinatePenalty, DiagonalHessianDatafit, FitError, IrlsFit, Problem, Solver,
+    CoordinatePenalty, FitError, IrlsFit, Problem, QuadraticModelDatafit, Solver,
     StoppingCriterion, Termination,
 };
 
 /// Iteratively reweighted least squares with coordinate-descent inner solves.
 ///
-/// Fits convex losses with diagonal predictor Hessians and separable convex
-/// penalties. Backtracking evaluates the original penalized objective. The
-/// quadratic model floors predictor curvature at `1e-12 / nobs`, leaving the
+/// Fits differentiable losses with nonnegative diagonal working curvature and
+/// separable convex penalties. For nonconvex losses, KKT checks certify
+/// stationarity rather than global optimality. Backtracking evaluates the
+/// original penalized objective. The quadratic model floors predictor curvature
+/// at `1e-12 / nobs`, leaving the
 /// original loss, gradient, and convergence check unchanged. Working sets use
 /// restricted checks between complete KKT checks. No safe screening or dual
 /// certificate is provided.
@@ -136,7 +138,7 @@ impl Default for Irls {
 impl<M, D, P> Solver<Problem<&M, D, P>> for Irls
 where
     M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
-    D: DiagonalHessianDatafit,
+    D: QuadraticModelDatafit,
     P: CoordinatePenalty,
 {
     type Fit = IrlsFit;
@@ -147,6 +149,7 @@ where
         validate_rows(problem.design().nrows(), problem.datafit())?;
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
         let mut work = Workspace::new(prepared.matrix.nrows(), prepared.matrix.ncols());
+        initialize(problem.datafit(), &mut work)?;
         let solution = iterate(
             &prepared.matrix,
             problem.datafit(),
@@ -161,7 +164,7 @@ where
 impl<M, D, P> ObservedSolver<Problem<&M, D, P>> for Irls
 where
     M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
-    D: DiagonalHessianDatafit,
+    D: QuadraticModelDatafit,
     P: CoordinatePenalty,
 {
     fn solve_from_with_observer<O: SolverObserver + ?Sized>(
@@ -174,6 +177,9 @@ where
         validate_rows(problem.design().nrows(), problem.datafit())?;
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
         let mut work = Workspace::new(prepared.matrix.nrows(), prepared.matrix.ncols());
+        if initial.is_none() {
+            initialize(problem.datafit(), &mut work)?;
+        }
         if let Some(initial) = initial {
             initial.apply(
                 &mut work.coefficients,
@@ -193,7 +199,7 @@ where
     }
 }
 
-pub(crate) fn validate_rows<D: DiagonalHessianDatafit, E>(
+pub(crate) fn validate_rows<D: QuadraticModelDatafit, E>(
     nrows: usize,
     datafit: &D,
 ) -> Result<(), FitError<E>> {
@@ -203,6 +209,25 @@ pub(crate) fn validate_rows<D: DiagonalHessianDatafit, E>(
         ));
     }
     Ok(())
+}
+
+pub(crate) fn initialize<D: QuadraticModelDatafit, E>(
+    datafit: &D,
+    work: &mut Workspace,
+) -> Result<(), FitError<E>> {
+    work.intercept = cold_intercept(datafit)?;
+    Ok(())
+}
+
+pub(crate) fn cold_intercept<D: QuadraticModelDatafit, E>(datafit: &D) -> Result<f64, FitError<E>> {
+    if datafit.fits_intercept() {
+        let intercept = datafit
+            .initial_intercept()
+            .map_err(|e| FitError::from_component(e, 0))?;
+        Ok(finite(intercept, "initializing the IRLS intercept", 0)?)
+    } else {
+        Ok(0.0)
+    }
 }
 
 pub(crate) struct Solution {
@@ -269,7 +294,7 @@ impl Workspace {
     ) -> Result<(f64, f64), FitError<E>>
     where
         M: RawColumns<f64>,
-        D: DiagonalHessianDatafit,
+        D: QuadraticModelDatafit,
         P: CoordinatePenalty,
     {
         // Reconstruct rather than accumulating predictor error across outer steps.
@@ -280,6 +305,11 @@ impl Workspace {
             &mut self.eta,
             iteration,
         )?;
+        if !datafit.valid_predictor(&self.eta) {
+            return Err(invalid(
+                "initial or current predictor is outside the family or link domain",
+            ));
+        }
         let loss = datafit
             .value(&self.eta)
             .map_err(|e| FitError::from_component(e, iteration))?;
@@ -332,19 +362,19 @@ impl Workspace {
     ) -> Result<(f64, usize), FitError<E>>
     where
         M: RawColumns<f64>,
-        D: DiagonalHessianDatafit,
+        D: QuadraticModelDatafit,
         P: CoordinatePenalty,
         O: SolverObserver + ?Sized,
     {
         let (target, iteration) = control;
         datafit
-            .hessian_diagonal(&self.eta, &mut self.weights)
+            .working_curvature(&self.eta, &mut self.weights)
             .map_err(|e| FitError::from_component(e, iteration))?;
         let floor = 1e-12 / self.eta.len() as f64;
         for weight in &mut self.weights {
             if !weight.is_finite() || *weight < 0.0 {
                 return Err(invalid(
-                    "predictor Hessian entries must be finite and nonnegative",
+                    "working curvature entries must be finite and nonnegative",
                 ));
             }
             *weight = weight.max(floor);
@@ -682,7 +712,7 @@ pub(crate) fn iterate<M, D, P>(
 ) -> Result<Solution, FitError<M::Error>>
 where
     M: RawColumns<f64> + MatrixErrorType,
-    D: DiagonalHessianDatafit,
+    D: QuadraticModelDatafit,
     P: CoordinatePenalty,
 {
     iterate_observed(matrix, datafit, penalty, options, work, &mut NoObserver)
@@ -699,7 +729,7 @@ pub(crate) fn iterate_observed<M, D, P, T>(
 where
     T: SolverObserver + ?Sized,
     M: RawColumns<f64> + MatrixErrorType,
-    D: DiagonalHessianDatafit,
+    D: QuadraticModelDatafit,
     P: CoordinatePenalty,
 {
     let threshold = options.validate()?;
@@ -809,7 +839,8 @@ where
                     .trial
                     .iter()
                     .chain(&work.trial_eta)
-                    .all(|v| v.is_finite());
+                    .all(|v| v.is_finite())
+                && datafit.valid_predictor(&work.trial_eta);
             if valid {
                 let value = (|| {
                     let loss = datafit

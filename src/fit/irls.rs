@@ -4,7 +4,7 @@ use crate::{FitError, Preprocessing, StoppingCriterion, Termination};
 
 /// Original-scale parameters and full-loss KKT diagnostics from [`crate::Irls`].
 ///
-/// Predictions are linear predictors, including logits for binomial models.
+/// Predictions are linear predictors, including logits for default binomial models.
 /// Objectives and KKT violations use optimization-scale coefficients. A finite
 /// KKT tolerance certifies approximate stationarity, not existence of a finite
 /// exact optimum for a separated or constant-boundary binomial model.

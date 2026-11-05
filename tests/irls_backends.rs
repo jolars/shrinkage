@@ -34,6 +34,22 @@ where
     A::Error: std::fmt::Debug,
     B::Error: std::fmt::Debug,
 {
+    compare_datafit(a, b, |intercept| Binomial::new(&Y).fit_intercept(intercept));
+    compare_datafit(a, b, |intercept| {
+        Binomial::new(&Y)
+            .fit_intercept(intercept)
+            .with_link(shrinkage::Probit)
+    });
+}
+
+fn compare_datafit<A, B, D>(a: &A, b: &B, datafit: impl Fn(bool) -> D)
+where
+    A: RawColumns<f64> + ColumnStats<f64>,
+    B: RawColumns<f64> + ColumnStats<f64>,
+    A::Error: std::fmt::Debug,
+    B::Error: std::fmt::Debug,
+    D: shrinkage::QuadraticModelDatafit + shrinkage::NullModelDatafit + Copy,
+{
     let solver = Irls::new().tolerance(1e-10);
     for intercept in [false, true] {
         for normalization in [
@@ -50,7 +66,7 @@ where
                 scale: Scaling::L2,
             },
         ] {
-            let datafit = Binomial::new(&Y).fit_intercept(intercept);
+            let datafit = datafit(intercept);
             let penalty = ElasticNet::new(0.03, 0.1);
             let first = Problem::new(a, datafit, penalty)
                 .normalize(normalization)
@@ -78,7 +94,7 @@ where
                 close(v, w);
             }
         }
-        let datafit = Binomial::new(&Y).fit_intercept(intercept);
+        let datafit = datafit(intercept);
         let penalty = ElasticNet::from_alpha(0.0, 0.5);
         let options = PathOptions::new().nlambda(4).lambda_min_ratio(0.05);
         let first = Problem::new(a, datafit, penalty)

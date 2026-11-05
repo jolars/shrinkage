@@ -133,11 +133,13 @@ prediction and back-transformation. `FitError` preserves backend sources;
 paths still work. These interfaces are provisional. Runtime proximal oracles and
 an experimental block-reader consumer exercise fallible storage access.
 
-`SmoothDatafit` adds a fallible predictor gradient, observation count, and
-intercept policy. `ProximalPenalty` requires an exact prox for the complete
-convex term. `L1`, `Ridge`, `ElasticNet`, and `Slope` implement this capability.
-Ridge means `lambda * ||beta||² / 2`; elastic net accepts separate strengths for
-`l1 * ||beta||₁ + l2 * ||beta||² / 2`. There is no inferred prox for a sum.
+`DifferentiableDatafit` adds a fallible predictor gradient, observation count,
+and intercept policy. `SmoothDatafit` additionally asserts convexity and may
+provide a dual certificate. `ProximalPenalty` requires an exact prox for the
+complete convex term. `L1`, `Ridge`, `ElasticNet`, and `Slope` implement this
+capability. Ridge means `lambda * ||beta||² / 2`; elastic net accepts separate
+strengths for `l1 * ||beta||₁ + l2 * ||beta||² / 2`. There is no inferred prox
+for a sum.
 
 `ProximalGradient<V>` uses LazyMatrix's fallible native-vector products and
 backtracking against the smooth quadratic upper bound. `ProximalDesign` exposes
@@ -233,12 +235,37 @@ strided storage support without hidden gathers or scalar trait-object calls.
 Build working numerical code before stabilizing abstractions. Do not introduce
 an elaborate type system or one crate per prospective feature at bootstrap.
 
-`Irls` adds a typed solver for `DiagonalHessianDatafit` and `CoordinatePenalty`.
-Gaussian and binomial losses supply exact diagonal predictor Hessians; L1,
-ridge, and elastic net supply exact scalar minimizers and coordinate KKT
-violations. External components can implement these capabilities without
-providing native matrix products or a complete proximal map. Coupled penalties
-do not acquire coordinate updates from a proximal map.
+`Irls` adds a typed solver for `QuadraticModelDatafit` and `CoordinatePenalty`.
+Default Gaussian and binomial losses use their exact diagonal predictor
+Hessians; L1, ridge, and elastic net supply exact scalar minimizers and
+coordinate KKT violations. External components can implement these capabilities
+without providing native matrix products or a complete proximal map. Coupled
+penalties do not acquire coordinate updates from a proximal map.
+
+`Gaussian::with_link` and `Binomial::with_link` return `LinkedDatafit` with a
+statically dispatched `Link`. Identity, logit, and probit are built in. Custom
+links supply forward and inverse transformations and the inverse derivative.
+`TwiceDifferentiableLink` optionally supplies the inverse second derivative;
+`DiagonalHessianDatafit` reports the exact, potentially signed observed Hessian.
+Neither capability asserts convexity. Composed datafits instead supply Fisher
+working curvature through `QuadraticModelDatafit`: `mu_prime² / nobs` for
+Gaussian and `mu_prime² / (nobs * mu * (1 - mu))` for binomial.
+
+Composed datafits initially support IRLS and explicit paths. A
+`ConvexLink<Family>` declaration enables their automatic paths, including
+Gaussian–identity, binomial–logit, and binomial–probit. General links can create
+nonconvex objectives; their KKT checks certify stationarity. Existing family
+constructors retain their specialized kernels and solver capabilities. The
+Python API, cross-validation, and hybrid fitting retain their default links.
+
+Composed cold starts try the transformed response mean, a family reference mean
+(zero for Gaussian and one half for binomial), and the link's fallback
+predictor. Supplied initial points override these choices. Without an intercept,
+zero coefficients must be feasible unless a caller supplies a valid initial
+point. Backtracking rejects trials outside the family or link domain.
+Predictions remain linear predictors; callers use the datafit's `inverse_link`
+to obtain means. Binomial evaluation and null intercepts retain separate log
+probability tails to avoid rounding away rare outcomes.
 
 IRLS solves each quadratic model with coordinate descent and an unpenalized
 intercept. It maintains gradient residuals rather than dividing by observation

@@ -1,7 +1,7 @@
 //! Gaussian loss on a linear predictor.
 
 use crate::error::{NumericalFailure, finite, invalid};
-use crate::{Datafit, DiagonalHessianDatafit, FitError, SmoothDatafit};
+use crate::{Datafit, DiagonalHessianDatafit, DifferentiableDatafit, FitError, SmoothDatafit};
 
 /// A Gaussian response with an optional unpenalized fitted intercept.
 #[derive(Clone, Copy, Debug)]
@@ -17,6 +17,27 @@ impl<'a> Gaussian<'a> {
             response,
             fit_intercept: true,
         }
+    }
+
+    /// Compose this family with a link for Fisher-scoring IRLS.
+    pub fn with_link<L: crate::Link>(self, link: L) -> crate::LinkedDatafit<Self, L> {
+        crate::LinkedDatafit::new(self, link)
+    }
+
+    /// Transform a mean with the default identity link.
+    ///
+    /// # Errors
+    /// Reject means outside the link domain or nonfinite arithmetic.
+    pub fn link(&self, mu: f64) -> Result<f64, FitError> {
+        crate::Link::link(&crate::Identity, mu)
+    }
+
+    /// Transform a predictor to a mean with the default link.
+    ///
+    /// # Errors
+    /// Reject nonfinite predictors or arithmetic.
+    pub fn inverse_link(&self, eta: f64) -> Result<f64, FitError> {
+        crate::Link::inverse_link(&crate::Identity, eta)
     }
 
     /// Enable or disable the unpenalized fitted intercept.
@@ -43,7 +64,9 @@ impl SmoothDatafit for Gaussian<'_> {
     fn gap_safe(&self) -> Option<&dyn crate::GapSafeDatafit> {
         Some(self)
     }
+}
 
+impl DifferentiableDatafit for Gaussian<'_> {
     fn n_obs(&self) -> usize {
         self.response.len()
     }
@@ -201,5 +224,11 @@ impl Datafit for Gaussian<'_> {
             predictor.len(),
             0,
         )?)
+    }
+}
+
+impl crate::QuadraticModelDatafit for Gaussian<'_> {
+    fn working_curvature(&self, predictor: &[f64], output: &mut [f64]) -> Result<(), FitError> {
+        self.hessian_diagonal(predictor, output)
     }
 }

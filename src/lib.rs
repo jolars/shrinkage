@@ -88,6 +88,7 @@ pub mod error;
 pub mod experimental;
 pub mod fit;
 pub mod layout;
+pub mod link;
 pub mod model;
 pub mod normalization;
 pub mod path;
@@ -101,7 +102,8 @@ pub use cross_validation::{
     FoldAssignments, FoldPath, RowSubset, SelectionRule, ValidationFit, ValidationMetric,
 };
 pub use datafit::{
-    Binomial, Datafit, DiagonalHessianDatafit, Gaussian, MultivariateGaussian, SmoothDatafit,
+    Binomial, Datafit, DiagonalHessianDatafit, DifferentiableDatafit, Gaussian, LinkedDatafit,
+    MultivariateGaussian, QuadraticModelDatafit, SmoothDatafit,
 };
 pub use error::FitError as LassoError;
 pub use error::{BackendError, FitError};
@@ -109,6 +111,7 @@ pub use fit::{
     HybridFit, IrlsFit, LassoFit, MultivariateFit, Preprocessing, ProximalFit, Termination,
 };
 pub use layout::CoefficientLayout;
+pub use link::{ConvexLink, Identity, Link, Logit, Probit, TwiceDifferentiableLink};
 pub use model::{Lasso, lasso};
 pub use normalization::{Centering, Normalization, QuantileRange, Scaling};
 pub use path::{

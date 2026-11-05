@@ -7,7 +7,8 @@ mod reference;
 
 use matrix::Matrix;
 use shrinkage::{
-    Binomial, Datafit, Normalization, Problem, ProximalGradient, Ridge, SmoothDatafit, Termination,
+    Binomial, Datafit, DifferentiableDatafit, Normalization, Problem, ProximalGradient, Ridge,
+    Termination,
 };
 
 #[test]

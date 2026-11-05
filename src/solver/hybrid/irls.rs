@@ -1,7 +1,7 @@
 //! Logistic globalization around reusable weighted hybrid subproblems.
 
 use super::*;
-use crate::{Binomial, Datafit, DiagonalHessianDatafit};
+use crate::{Binomial, Datafit, DiagonalHessianDatafit, DifferentiableDatafit};
 
 impl<M, V, P> Solver<Problem<&M, Binomial<'_>, P>> for Hybrid<V>
 where

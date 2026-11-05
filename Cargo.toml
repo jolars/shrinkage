@@ -15,6 +15,7 @@ keywords = ["statistics", "optimization", "regression", "regularization"]
 categories = ["mathematics", "science"]
 
 [dependencies]
+libm = "0.2.16"
 lazymatrix = { version = "0.10.0", default-features = false }
 faer = { version = "0.24", optional = true, default-features = false, features = [
   "std",

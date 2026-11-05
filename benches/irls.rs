@@ -62,6 +62,47 @@ fn benchmark(c: &mut Criterion) {
         })
     });
     group.finish();
+    let dense_problem = Problem::new(
+        &dense,
+        Binomial::new(&y).with_link(shrinkage::Probit),
+        penalty,
+    );
+    let sparse_problem = Problem::new(
+        &sparse,
+        Binomial::new(&y).with_link(shrinkage::Probit),
+        penalty,
+    );
+    for fit in [
+        dense_problem.fit_with(&irls).unwrap(),
+        sparse_problem.fit_with(&irls).unwrap(),
+    ] {
+        assert_eq!(fit.termination(), Termination::Converged);
+    }
+    let mut group = c.benchmark_group("probit_1024x64");
+    group.sample_size(20);
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(2));
+    group.bench_function("irls_dense", |b| {
+        b.iter(|| dense_problem.fit_with(black_box(&irls)).unwrap())
+    });
+    group.bench_function("irls_csc", |b| {
+        b.iter(|| sparse_problem.fit_with(black_box(&irls)).unwrap())
+    });
+    group.bench_function("irls_path_dense", |b| {
+        b.iter(|| {
+            dense_problem
+                .fit_regularization_path_with(&irls, black_box(&options))
+                .unwrap()
+        })
+    });
+    group.bench_function("irls_path_csc", |b| {
+        b.iter(|| {
+            sparse_problem
+                .fit_regularization_path_with(&irls, black_box(&options))
+                .unwrap()
+        })
+    });
+    group.finish();
 }
 
 criterion_group!(benches, benchmark);

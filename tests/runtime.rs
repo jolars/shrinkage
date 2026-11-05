@@ -4,9 +4,9 @@
 mod matrix;
 
 use shrinkage::{
-    CoordinateDescent, Datafit, ElasticNet, FitError, Gaussian, L1, MatrixDesign, Normalization,
-    Penalty, Problem, ProximalFit, ProximalGradient, ProximalPenalty, Ridge, RuntimeDesign,
-    RuntimeProblem, SmoothDatafit, StoppingCriterion, Termination,
+    CoordinateDescent, Datafit, DifferentiableDatafit, ElasticNet, FitError, Gaussian, L1,
+    MatrixDesign, Normalization, Penalty, Problem, ProximalFit, ProximalGradient, ProximalPenalty,
+    Ridge, RuntimeDesign, RuntimeProblem, SmoothDatafit, StoppingCriterion, Termination,
 };
 
 #[derive(Clone, Copy)]
@@ -20,7 +20,9 @@ impl Datafit for TwiceGaussian<'_> {
     }
 }
 
-impl SmoothDatafit for TwiceGaussian<'_> {
+impl SmoothDatafit for TwiceGaussian<'_> {}
+
+impl DifferentiableDatafit for TwiceGaussian<'_> {
     fn n_obs(&self) -> usize {
         self.0.n_obs()
     }

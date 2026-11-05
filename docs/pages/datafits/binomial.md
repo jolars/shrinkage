@@ -1,6 +1,6 @@
 # Binomial
 
-`Binomial` uses the logit link and the averaged Bernoulli negative log
+`Binomial` defaults to the logit link and the averaged Bernoulli negative log
 likelihood:
 
 $$
@@ -45,6 +45,10 @@ ridge, and elastic net. The [hybrid solver](../reference/solvers/hybrid.md)
 supports clustered lasso, chain fused lasso, and SLOPE. Unpenalized separated
 data may have no finite minimizer; inspect termination and choose a regularized
 model when appropriate.
+
+Use `.with_link(Probit)` or a custom Rust link for IRLS fitting and paths.
+Predictions then use the selected predictor scale; call the datafit's
+`.inverse_link(eta)` to obtain probabilities.
 
 API:
 [`shrinkage::Binomial`](https://shrinkage.cc/packages/rust/reference/cabade7e6bb5cb30e1afe92b7012a4d0f67c7bec0235c94ef5bca1dda3c635f8).

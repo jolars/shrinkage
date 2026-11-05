@@ -1,7 +1,7 @@
 //! Gaussian loss with explicit observation and response dimensions.
 
 use crate::error::{finite, invalid};
-use crate::{Datafit, FitError, Gaussian, SmoothDatafit};
+use crate::{Datafit, DifferentiableDatafit, FitError, Gaussian, SmoothDatafit};
 
 /// Gaussian loss `||Y - predictor||_F² / (2 * nobs)`.
 ///
@@ -145,7 +145,9 @@ impl Datafit for StackedGaussian<'_> {
     }
 }
 
-impl SmoothDatafit for StackedGaussian<'_> {
+impl SmoothDatafit for StackedGaussian<'_> {}
+
+impl DifferentiableDatafit for StackedGaussian<'_> {
     fn n_obs(&self) -> usize {
         self.0.response.len()
     }

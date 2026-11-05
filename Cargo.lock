@@ -1747,6 +1747,7 @@ dependencies = [
  "dhat",
  "faer",
  "lazymatrix",
+ "libm",
  "nalgebra",
  "nalgebra-sparse",
  "ndarray",

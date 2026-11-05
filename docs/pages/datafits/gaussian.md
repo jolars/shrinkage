@@ -30,5 +30,9 @@ problems with their respective compatible penalties. Because the loss averages
 over observations, a penalty strength is not multiplied by the sample size. See
 the [shared conventions](../modeling.md).
 
+The default identity link makes predictors equal response means. Use
+`.with_link(...)` to select a different Rust link for IRLS fitting and paths;
+convert predictions with `.inverse_link(eta)`.
+
 API:
 [`shrinkage::Gaussian`](https://shrinkage.cc/packages/rust/reference/8f2aa89a892fb708e0e09c276910730b91ed3cb252a10cacd0a458cfbe59be13).

@@ -8,8 +8,8 @@ mod matrix;
 use shrinkage::experimental::{BufferedDesign, fit_buffered};
 use shrinkage::lazymatrix::{ColumnStats, MatTransposeVecInto, MatVecInto, ZarrMatrix};
 use shrinkage::{
-    Centering, FitError, Gaussian, Normalization, Problem, ProximalGradient, QuantileRange, Ridge,
-    Scaling,
+    Centering, DifferentiableDatafit, FitError, Gaussian, Normalization, Problem, ProximalGradient,
+    QuantileRange, Ridge, Scaling,
 };
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -412,7 +412,9 @@ fn a_failed_backtracking_read_never_reaches_loss_evaluation() {
             self.gaussian.value(predictor)
         }
     }
-    impl SmoothDatafit for CountingLoss<'_> {
+    impl SmoothDatafit for CountingLoss<'_> {}
+
+    impl DifferentiableDatafit for CountingLoss<'_> {
         fn n_obs(&self) -> usize {
             self.gaussian.n_obs()
         }

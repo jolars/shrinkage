@@ -1,5 +1,8 @@
 use crate::error::{finite, invalid};
-use crate::{Binomial, Datafit, FitError, Gaussian, MultivariateGaussian, SmoothDatafit};
+use crate::{
+    Binomial, Datafit, DifferentiableDatafit, FitError, Gaussian, MultivariateGaussian,
+    SmoothDatafit,
+};
 
 /// An exact zero-coefficient model with optimized, unpenalized intercepts.
 ///
@@ -137,7 +140,9 @@ impl<D: SmoothDatafit + ?Sized> SmoothDatafit for Box<D> {
     fn gap_safe(&self) -> Option<&dyn crate::GapSafeDatafit> {
         (**self).gap_safe()
     }
+}
 
+impl<D: DifferentiableDatafit + ?Sized> DifferentiableDatafit for Box<D> {
     fn n_obs(&self) -> usize {
         (**self).n_obs()
     }

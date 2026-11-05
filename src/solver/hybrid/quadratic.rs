@@ -3,7 +3,7 @@
 use lazymatrix::LogicalColumn;
 
 use crate::error::{finite, invalid};
-use crate::{Datafit, FitError, Gaussian, SmoothDatafit};
+use crate::{Datafit, DifferentiableDatafit, FitError, Gaussian, SmoothDatafit};
 
 #[derive(Clone, Copy)]
 pub(super) enum Model<'a> {
@@ -127,7 +127,9 @@ impl Datafit for Model<'_> {
     }
 }
 
-impl SmoothDatafit for Model<'_> {
+impl SmoothDatafit for Model<'_> {}
+
+impl DifferentiableDatafit for Model<'_> {
     fn n_obs(&self) -> usize {
         match self {
             Self::Gaussian(datafit) => datafit.n_obs(),

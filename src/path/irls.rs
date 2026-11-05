@@ -1,16 +1,17 @@
 use lazymatrix::{ColumnStats, LazyMatrix, RawColumns};
 
 use crate::error::{finite, invalid};
-use crate::solver::irls::{Workspace, iterate, validate_rows};
+use crate::solver::irls::{Workspace, cold_intercept, iterate, validate_rows};
 use crate::{
-    CoordinatePenalty, DiagonalHessianDatafit, FitError, Irls, IrlsFit, NullModelDatafit, PathFit,
-    PathOptions, PathPenalty, PathSolver, PenaltyMaximum, Problem, RegularizationPathSolver,
+    CoordinatePenalty, FitError, Irls, IrlsFit, NullModelDatafit, PathFit, PathOptions,
+    PathPenalty, PathSolver, PenaltyMaximum, Problem, QuadraticModelDatafit,
+    RegularizationPathSolver,
 };
 
 impl<M, D, P, Q> PathSolver<Problem<&M, D, P>, Q> for Irls
 where
     M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
-    D: DiagonalHessianDatafit,
+    D: QuadraticModelDatafit,
     Q: CoordinatePenalty,
 {
     type Fit = IrlsFit;
@@ -24,9 +25,10 @@ where
         self.validate()?;
         validate_rows(problem.design().nrows(), problem.datafit())?;
         let zeros = vec![0.0; problem.design().ncols()];
+        let intercept = cold_intercept(problem.datafit())?;
         problem
             .datafit()
-            .value(&vec![0.0; problem.design().nrows()])
+            .value(&vec![intercept; problem.design().nrows()])
             .map_err(|e| FitError::from_component(e, 0))?;
         for penalty in &penalties {
             penalty
@@ -38,6 +40,7 @@ where
         }
         let prepared = problem.prepare(problem.datafit().fits_intercept())?;
         let mut work = Workspace::new(prepared.matrix.nrows(), prepared.matrix.ncols());
+        work.intercept = intercept;
         work.path = true;
         let solutions = penalties
             .iter()
@@ -63,7 +66,7 @@ where
 impl<M, D, P> RegularizationPathSolver<Problem<&M, D, P>> for Irls
 where
     M: RawColumns<f64> + ColumnStats<f64> + ?Sized,
-    D: DiagonalHessianDatafit + NullModelDatafit,
+    D: QuadraticModelDatafit + NullModelDatafit,
     P: PathPenalty,
     P::AtStrength: CoordinatePenalty,
 {
@@ -131,7 +134,7 @@ where
 fn null_state<M, D, E>(matrix: &LazyMatrix<M>, datafit: &D) -> Result<(f64, Vec<f64>), FitError<E>>
 where
     M: RawColumns<f64>,
-    D: DiagonalHessianDatafit + NullModelDatafit,
+    D: QuadraticModelDatafit + NullModelDatafit,
 {
     let intercepts = datafit
         .null_intercepts()

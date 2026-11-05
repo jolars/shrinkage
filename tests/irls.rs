@@ -7,9 +7,10 @@ mod reference;
 
 use matrix::Matrix;
 use shrinkage::{
-    Binomial, CoordinateDescent, CoordinatePenalty, Datafit, DiagonalHessianDatafit, ElasticNet,
-    FitError, Gaussian, Irls, IrlsFit, L1, Normalization, PathOptions, Penalty, PenaltyMaximum,
-    Problem, ProximalGradient, Ridge, SmoothDatafit, StoppingCriterion, Termination,
+    Binomial, CoordinateDescent, CoordinatePenalty, Datafit, DiagonalHessianDatafit,
+    DifferentiableDatafit, ElasticNet, FitError, Gaussian, Irls, IrlsFit, L1, Normalization,
+    PathOptions, Penalty, PenaltyMaximum, Problem, ProximalGradient, Ridge, SmoothDatafit,
+    StoppingCriterion, Termination,
 };
 
 #[test]
@@ -420,7 +421,9 @@ impl Datafit for Exponential {
         }
     }
 }
-impl SmoothDatafit for Exponential {
+impl SmoothDatafit for Exponential {}
+
+impl DifferentiableDatafit for Exponential {
     fn n_obs(&self) -> usize {
         1
     }
@@ -537,7 +540,9 @@ impl Datafit for InvalidHessian {
         Gaussian::new(&[1.0, 2.0]).value(eta)
     }
 }
-impl SmoothDatafit for InvalidHessian {
+impl SmoothDatafit for InvalidHessian {}
+
+impl DifferentiableDatafit for InvalidHessian {
     fn n_obs(&self) -> usize {
         2
     }
@@ -593,4 +598,16 @@ fn paths_retain_iteration_limit_results_and_warm_start_repeated_penalties() {
         .unwrap();
     assert_eq!(path.fits()[1].iterations(), 0);
     assert_eq!(path.fits()[1].coordinate_sweeps(), 0);
+}
+
+impl shrinkage::QuadraticModelDatafit for Exponential {
+    fn working_curvature(&self, eta: &[f64], output: &mut [f64]) -> Result<(), FitError> {
+        self.hessian_diagonal(eta, output)
+    }
+}
+
+impl shrinkage::QuadraticModelDatafit for InvalidHessian {
+    fn working_curvature(&self, eta: &[f64], output: &mut [f64]) -> Result<(), FitError> {
+        self.hessian_diagonal(eta, output)
+    }
 }

@@ -24,9 +24,9 @@ use crate::error::{finite, invalid, unsupported};
 use crate::screening::ScreeningWorkspace;
 use crate::solver::proximal::{NativeDesign, Solution as ProximalSolution};
 use crate::{
-    BackendError, ChainFusedLasso, ClusteredLasso, FitError, Gaussian, HybridFit, Problem,
-    ProximalDesign, ProximalVector, RuntimeProblem, Slope, SmoothDatafit, Solver,
-    StoppingCriterion, Termination,
+    BackendError, ChainFusedLasso, ClusteredLasso, DifferentiableDatafit, FitError, Gaussian,
+    HybridFit, Problem, ProximalDesign, ProximalVector, RuntimeProblem, Slope, SmoothDatafit,
+    Solver, StoppingCriterion, Termination,
 };
 
 trait HybridPenalty: crate::GapSafePenalty + Sized {

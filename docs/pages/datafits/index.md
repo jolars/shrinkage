@@ -15,9 +15,14 @@ nonempty training observations. Data and parameters are validated when losses
 are evaluated or models are fitted.
 
 [`shrinkage::Datafit`](https://shrinkage.cc/packages/rust/reference/9d16367f3210bbbb9bf039290cf9c94f447e51d4ea33aea446a7f30e965d873a)
-supplies loss evaluation,
+supplies loss evaluation. `DifferentiableDatafit` adds gradients and observation
+metadata.
 [`shrinkage::SmoothDatafit`](https://shrinkage.cc/packages/rust/reference/f6f2ab3078b0ea56f174e2981b999f9be72be3c00ca00ad6485be1ed341db8c1)
-adds gradients, and
+asserts convexity, and
 [`shrinkage::DiagonalHessianDatafit`](https://shrinkage.cc/packages/rust/reference/0c7a483f4e622180bfcc5efab524b3377e2104e91e0d263eb5a204d4a4ab722e)
-supplies the predictor curvature used by IRLS. These capabilities determine
+supplies exact, potentially signed second derivatives. `QuadraticModelDatafit`
+supplies nonnegative working curvature to IRLS. These capabilities determine
 which [solvers](../reference/solvers/index.md) can fit a composition.
+
+Gaussian and binomial models also support configurable links through the typed
+Rust IRLS API using `.with_link(...)`.

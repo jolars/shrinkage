@@ -4,7 +4,7 @@
 mod matrix;
 
 use matrix::Matrix;
-use shrinkage::{Lasso, PathOptions, PathTermination};
+use shrinkage::{DifferentiableDatafit, Lasso, PathOptions, PathTermination};
 
 #[test]
 fn automatic_paths_stop_by_default_and_can_fit_the_full_sequence() {
@@ -151,7 +151,9 @@ fn custom_losses_without_deviance_keep_the_full_sequence() {
             self.0.value(predictor)
         }
     }
-    impl SmoothDatafit for Custom<'_> {
+    impl SmoothDatafit for Custom<'_> {}
+
+    impl DifferentiableDatafit for Custom<'_> {
         fn n_obs(&self) -> usize {
             self.0.n_obs()
         }

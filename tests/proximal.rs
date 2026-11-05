@@ -5,9 +5,9 @@ mod matrix;
 
 use matrix::Matrix;
 use shrinkage::{
-    CoordinateDescent, Datafit, ElasticNet, FitError, Gaussian, L1, MatrixDesign, Normalization,
-    Penalty, Problem, ProximalGradient, ProximalPenalty, Ridge, RuntimeProblem, SmoothDatafit,
-    StoppingCriterion, Termination,
+    CoordinateDescent, Datafit, DifferentiableDatafit, ElasticNet, FitError, Gaussian, L1,
+    MatrixDesign, Normalization, Penalty, Problem, ProximalGradient, ProximalPenalty, Ridge,
+    RuntimeProblem, SmoothDatafit, StoppingCriterion, Termination,
 };
 
 fn close(actual: f64, expected: f64) {
@@ -338,7 +338,9 @@ impl Datafit for TwiceGaussian<'_> {
     }
 }
 
-impl SmoothDatafit for TwiceGaussian<'_> {
+impl SmoothDatafit for TwiceGaussian<'_> {}
+
+impl DifferentiableDatafit for TwiceGaussian<'_> {
     fn n_obs(&self) -> usize {
         self.0.n_obs()
     }

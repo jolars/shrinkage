@@ -20,10 +20,13 @@ file-backed demonstration through the published LazyMatrix `ReadBlock`
 capability. Solver iteration stays in `src/solver/proximal.rs`.
 
 `Irls` in `src/solver/irls.rs` fits Gaussian and binomial models through
-`DiagonalHessianDatafit` and `CoordinatePenalty`. It uses weighted coordinate
-sweeps, reusable working sets, and full original-loss KKT checks, with results
-in `IrlsFit`. Paths reuse its workspace. IRLS is exposed through the typed Rust
-API; the Gaussian `Lasso` convenience API retains its specialized solver.
+`QuadraticModelDatafit` and `CoordinatePenalty`. Composed `LinkedDatafit` models
+use configurable links and Fisher curvature. `DiagonalHessianDatafit` supplies
+exact, potentially signed second derivatives separately. IRLS uses weighted
+coordinate sweeps, reusable working sets, and full original-loss KKT checks,
+with results in `IrlsFit`. Paths reuse its workspace. IRLS is exposed through
+the typed Rust API; the Gaussian `Lasso` convenience API retains its specialized
+solver.
 
 Start with modules in this crate. Use `name.rs` and `name/child.rs`, never
 `mod.rs`. Add solver tests and benchmarks with the numerical implementations.

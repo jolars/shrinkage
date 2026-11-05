@@ -1,9 +1,10 @@
 # IRLS
 
 `Irls` fits Gaussian and binomial datafits with separable convex penalties. It
-constructs a quadratic approximation from the predictor gradient and diagonal
-Hessian, then uses weighted coordinate descent for the inner solve. Backtracking
-evaluates the original penalized objective.
+constructs a quadratic approximation from the predictor gradient and nonnegative
+working curvature, then uses weighted coordinate descent for the inner solve.
+Default links use the exact Hessian; configured links use Fisher curvature.
+Backtracking evaluates the original penalized objective.
 
 L1, ridge, and elastic net provide the required `CoordinatePenalty` capability.
 Coupled penalties such as SLOPE or fusion instead use proximal gradient or the
@@ -53,3 +54,10 @@ API:
 [`shrinkage::Irls`](https://shrinkage.cc/packages/rust/reference/38d3c0c77c3a369dc72fa82940fe75e00e04888f78613113e69bdc12b1c8d7dd)
 and
 [`shrinkage::IrlsFit`](https://shrinkage.cc/packages/rust/reference/20c675c8b6635b5652c30df90b363678987705f6c4e43dc91353d9331c3056c4).
+
+Configured links support IRLS and explicit paths. Automatic paths require a
+declared convex family–link combination. Exact observed Hessians, when
+available, may differ from the Fisher working curvature. For nonconvex losses,
+convergence certifies stationarity rather than global optimality. Predictions
+remain linear predictors, and the selected datafit's `inverse_link` converts
+them to response means.
