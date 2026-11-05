@@ -15,7 +15,9 @@ mod matrix;
     feature = "ndarray_v0_17"
 ))]
 mod dense {
-    use shrinkage::{ClusteredLasso, Gaussian, Hybrid, HybridFit, Problem, Termination};
+    use shrinkage::{
+        ClusteredLasso, Gaussian, HybridCoordinateDescent, HybridFit, Problem, Termination,
+    };
 
     pub const ROWS: [[f64; 3]; 5] = [
         [1.0, 2.0, 0.0],
@@ -39,7 +41,9 @@ mod dense {
             .nlambda(3)
             .lambda_min_ratio(0.1)
             .early_stopping(false);
-        let solver = Hybrid::<V>::new().tolerance(1e-9).max_iterations(100_000);
+        let solver = HybridCoordinateDescent::<V>::new()
+            .tolerance(1e-9)
+            .max_iterations(100_000);
         macro_rules! check {
             ($datafit:expr, $penalty:expr) => {{
                 let datafit = $datafit;
@@ -78,7 +82,7 @@ mod dense {
             &ROWS.iter().map(|r| r.as_slice()).collect::<Vec<_>>(),
         );
         let reference = Problem::new(&x, Gaussian::new(&Y), ClusteredLasso::new(0.03, 0.02))
-            .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+            .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
             .unwrap();
         assert_eq!(fit.termination(), Termination::Converged);
         assert!((fit.objective() - reference.objective()).abs() < 1e-10);
@@ -121,7 +125,7 @@ mod dense {
                     )
                     .normalize(normalization);
                     let hybrid = problem
-                        .fit_with(&Hybrid::<V>::new().tolerance(1e-9))
+                        .fit_with(&HybridCoordinateDescent::<V>::new().tolerance(1e-9))
                         .unwrap();
                     let pg = problem
                         .fit_with(&ProximalGradient::<V>::new().tolerance(1e-9))
@@ -174,7 +178,7 @@ mod dense {
                     )
                     .normalize(normalization);
                     let hybrid = problem
-                        .fit_with(&Hybrid::<V>::new().tolerance(1e-9))
+                        .fit_with(&HybridCoordinateDescent::<V>::new().tolerance(1e-9))
                         .unwrap();
                     let pg = problem
                         .fit_with(&ProximalGradient::<V>::new().tolerance(1e-9))
@@ -229,7 +233,7 @@ mod dense {
                             Problem::new(x, Binomial::new(&y).fit_intercept(intercept), $penalty)
                                 .normalize(normalization);
                         let fit = problem
-                            .fit_with(&Hybrid::<V>::new().tolerance(1e-9))
+                            .fit_with(&HybridCoordinateDescent::<V>::new().tolerance(1e-9))
                             .unwrap();
                         let reference = problem
                             .fit_with(
@@ -262,7 +266,7 @@ mod dense {
 #[cfg(feature = "faer_v0_24")]
 #[test]
 fn faer_dense() {
-    use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem};
+    use shrinkage::{ClusteredLasso, Gaussian, HybridCoordinateDescent, Problem};
     let x = faer::Mat::from_fn(5, 3, |i, j| dense::ROWS[i][j]);
     dense::compare(
         Problem::new(
@@ -270,7 +274,7 @@ fn faer_dense() {
             Gaussian::new(&dense::Y),
             ClusteredLasso::new(0.03, 0.02),
         )
-        .fit_with(&Hybrid::<faer::Col<f64>>::new().tolerance(1e-10))
+        .fit_with(&HybridCoordinateDescent::<faer::Col<f64>>::new().tolerance(1e-10))
         .unwrap(),
     );
     dense::verify_chain::<_, faer::Col<f64>>(&x);
@@ -282,7 +286,7 @@ fn faer_dense() {
 #[cfg(feature = "faer_v0_24")]
 #[test]
 fn faer_borrowed_csc() {
-    use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem};
+    use shrinkage::{ClusteredLasso, Gaussian, HybridCoordinateDescent, Problem};
     let triplets = dense::ROWS
         .iter()
         .enumerate()
@@ -301,7 +305,7 @@ fn faer_borrowed_csc() {
             Gaussian::new(&dense::Y),
             ClusteredLasso::new(0.03, 0.02),
         )
-        .fit_with(&Hybrid::<faer::Col<f64>>::new().tolerance(1e-10))
+        .fit_with(&HybridCoordinateDescent::<faer::Col<f64>>::new().tolerance(1e-10))
         .unwrap(),
     );
     dense::verify_chain::<_, faer::Col<f64>>(&x);
@@ -313,7 +317,7 @@ fn faer_borrowed_csc() {
 #[cfg(feature = "nalgebra_v0_34")]
 #[test]
 fn nalgebra_dense() {
-    use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem};
+    use shrinkage::{ClusteredLasso, Gaussian, HybridCoordinateDescent, Problem};
     let x = nalgebra::DMatrix::from_fn(5, 3, |i, j| dense::ROWS[i][j]);
     dense::compare(
         Problem::new(
@@ -321,7 +325,7 @@ fn nalgebra_dense() {
             Gaussian::new(&dense::Y),
             ClusteredLasso::new(0.03, 0.02),
         )
-        .fit_with(&Hybrid::<nalgebra::DVector<f64>>::new().tolerance(1e-10))
+        .fit_with(&HybridCoordinateDescent::<nalgebra::DVector<f64>>::new().tolerance(1e-10))
         .unwrap(),
     );
     dense::verify_chain::<_, nalgebra::DVector<f64>>(&x);
@@ -333,7 +337,7 @@ fn nalgebra_dense() {
 #[cfg(feature = "ndarray_v0_17")]
 #[test]
 fn ndarray_strided_view() {
-    use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem};
+    use shrinkage::{ClusteredLasso, Gaussian, HybridCoordinateDescent, Problem};
     let storage = ndarray::Array2::from_shape_fn((10, 6), |(i, j)| dense::ROWS[i / 2][j / 2]);
     let rows = storage.slice_axis(ndarray::Axis(0), ndarray::Slice::new(0, None, 2));
     let x = rows.slice_axis(ndarray::Axis(1), ndarray::Slice::new(0, None, 2));
@@ -343,7 +347,7 @@ fn ndarray_strided_view() {
             Gaussian::new(&dense::Y),
             ClusteredLasso::new(0.03, 0.02),
         )
-        .fit_with(&Hybrid::<ndarray::Array1<f64>>::new().tolerance(1e-10))
+        .fit_with(&HybridCoordinateDescent::<ndarray::Array1<f64>>::new().tolerance(1e-10))
         .unwrap(),
     );
     dense::verify_chain::<_, ndarray::Array1<f64>>(&x);
@@ -356,7 +360,8 @@ fn ndarray_strided_view() {
 #[test]
 fn every_normalization_preset_agrees_with_proximal_gradient() {
     use shrinkage::{
-        ClusteredLasso, Gaussian, Hybrid, Normalization, Problem, ProximalGradient, Termination,
+        ClusteredLasso, Gaussian, HybridCoordinateDescent, Normalization, Problem,
+        ProximalGradient, Termination,
     };
     let x = faer::Mat::from_fn(5, 3, |i, j| dense::ROWS[i][j]);
     for free_intercept in [false, true] {
@@ -377,7 +382,7 @@ fn every_normalization_preset_agrees_with_proximal_gradient() {
             )
             .normalize(normalization);
             let hybrid = problem
-                .fit_with(&Hybrid::<faer::Col<f64>>::new().tolerance(1e-9))
+                .fit_with(&HybridCoordinateDescent::<faer::Col<f64>>::new().tolerance(1e-9))
                 .unwrap();
             let pg = problem
                 .fit_with(&ProximalGradient::<faer::Col<f64>>::new().tolerance(1e-9))

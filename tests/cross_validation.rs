@@ -6,8 +6,8 @@ mod matrix;
 use matrix::Matrix;
 use shrinkage::{
     Binomial, ChainFusedLasso, ClusteredLasso, CrossValidation, CrossValidationError,
-    FoldAssignments, Gaussian, Hybrid, L1, Lasso, Normalization, PathOptions, Problem, RowSubset,
-    SelectionRule, Slope, Termination, ValidationMetric,
+    FoldAssignments, Gaussian, HybridCoordinateDescent, L1, Lasso, Normalization, PathOptions,
+    Problem, RowSubset, SelectionRule, Slope, Termination, ValidationMetric,
 };
 
 #[test]
@@ -278,7 +278,7 @@ fn errors_identify_invalid_inputs_degenerate_training_and_nonconvergence() {
     let x = Matrix::from_rows(&[&[0.0], &[1.0], &[2.0], &[3.0]]);
     let folds = FoldAssignments::new(vec![0, 0, 1, 1]).unwrap();
     let cv = CrossValidation::new(folds);
-    let solver = Hybrid::<Vec<f64>>::new();
+    let solver = HybridCoordinateDescent::<Vec<f64>>::new();
     let problem = Problem::new(
         &x,
         Binomial::new(&[0.0, 0.0, 1.0, 1.0]),
@@ -386,7 +386,7 @@ fn every_hybrid_penalty_and_family_matches_independent_fits() {
     let y = [-1.0, 0.0, 1.0, 3.0, 2.0, 4.0, 5.0, 1.0];
     let binary = [0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 0.0];
     let cv = CrossValidation::new(FoldAssignments::stratified_binomial(&binary, 3, 42).unwrap());
-    let solver = Hybrid::<Vec<f64>>::new()
+    let solver = HybridCoordinateDescent::<Vec<f64>>::new()
         .tolerance(1e-8)
         .max_iterations(100_000);
     let options = PathOptions::new().nlambda(3).lambda_min_ratio(0.2);

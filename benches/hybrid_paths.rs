@@ -4,8 +4,8 @@ use std::{hint::black_box, time::Instant};
 
 use faer::{Col, Mat};
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, Hybrid, HybridFit, Normalization,
-    PathPenalty, Problem, ProximalPenalty, Slope, SmoothDatafit, Termination,
+    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, HybridCoordinateDescent, HybridFit,
+    Normalization, PathPenalty, Problem, ProximalPenalty, Slope, SmoothDatafit, Termination,
 };
 
 #[path = "common/hybrid_irls.rs"]
@@ -90,7 +90,7 @@ fn main() {
     let (n, p) = (128, 16);
     let (x, binary) = fixture::dataset(n, p);
     let gaussian: Vec<_> = binary.iter().map(|&y| (y / (1.0 - y)).ln()).collect();
-    let solver = Hybrid::<Col<f64>>::new()
+    let solver = HybridCoordinateDescent::<Col<f64>>::new()
         .tolerance(TOLERANCE)
         .max_iterations(100_000);
     macro_rules! benchmark {

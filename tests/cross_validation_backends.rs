@@ -17,9 +17,9 @@ use shrinkage::lazymatrix::{
     RawColumns, VectorViewMut,
 };
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, CrossValidation, FoldAssignments, Gaussian, Hybrid,
-    L1, Lasso, Normalization, PathOptions, Problem, ProximalGradient, ProximalVector, RowSubset,
-    Slope, Termination,
+    Binomial, ChainFusedLasso, ClusteredLasso, CrossValidation, FoldAssignments, Gaussian,
+    HybridCoordinateDescent, L1, Lasso, Normalization, PathOptions, Problem, ProximalGradient,
+    ProximalVector, RowSubset, Slope, Termination,
 };
 
 const ROWS: [[f64; 3]; 8] = [
@@ -122,8 +122,8 @@ where
             }
         }
     }
-    let native_solver = Hybrid::<V>::new().tolerance(1e-8);
-    let reference_solver = Hybrid::<Vec<f64>>::new().tolerance(1e-8);
+    let native_solver = HybridCoordinateDescent::<V>::new().tolerance(1e-8);
+    let reference_solver = HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-8);
     macro_rules! check {
         ($family:ident, $response:expr, $penalty:expr) => {{
             let native = Problem::new(x, $family::new($response), $penalty)

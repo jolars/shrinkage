@@ -4,7 +4,8 @@ use std::hint::black_box;
 
 use faer::Col;
 use shrinkage::{
-    Gaussian, Hybrid, Normalization, Penalty, Problem, ProximalPenalty, Slope, Termination,
+    Gaussian, HybridCoordinateDescent, Normalization, Penalty, Problem, ProximalPenalty, Slope,
+    Termination,
 };
 
 #[path = "common/slope.rs"]
@@ -45,7 +46,7 @@ fn main() {
             let profiler = dhat::Profiler::builder().testing().build();
             let fit = problem
                 .fit_with(
-                    &Hybrid::<Col<f64>>::new()
+                    &HybridCoordinateDescent::<Col<f64>>::new()
                         .tolerance(1e-8)
                         .max_iterations(100_000),
                 )

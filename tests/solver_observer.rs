@@ -5,8 +5,8 @@
 use nalgebra::{DMatrix, DVector};
 use shrinkage::{
     Binomial, ChainFusedLasso, ClusteredLasso, CoordinateDescent, Datafit, ElasticNet, Gaussian,
-    Hybrid, Irls, L1, Normalization, Penalty, Problem, ProximalGradient, Ridge, Slope, SolverStep,
-    StepKind,
+    HybridCoordinateDescent, Irls, L1, Normalization, Penalty, Problem, ProximalGradient, Ridge,
+    Slope, SolverStep, StepKind,
 };
 
 macro_rules! check_trace {
@@ -100,19 +100,19 @@ fn observed_fits_preserve_all_solver_results_and_only_emit_accepted_iterates() {
         x,
         Gaussian::new(&y).fit_intercept(false),
         ClusteredLasso::new(0.05, 0.05),
-        Hybrid::<DVector<f64>>::new()
+        HybridCoordinateDescent::<DVector<f64>>::new()
     );
     check_trace!(
         x,
         Gaussian::new(&y).fit_intercept(false),
         ChainFusedLasso::new(0.05, 0.05),
-        Hybrid::<DVector<f64>>::new()
+        HybridCoordinateDescent::<DVector<f64>>::new()
     );
     check_trace!(
         x,
         Binomial::new(&binary).fit_intercept(false),
         Slope::new(vec![0.05, 0.025]),
-        Hybrid::<DVector<f64>>::new()
+        HybridCoordinateDescent::<DVector<f64>>::new()
     );
 }
 
@@ -149,7 +149,7 @@ fn initially_optimal_and_iteration_limited_fits_have_final_events() {
         x,
         Gaussian::new(&y).fit_intercept(false),
         Slope::new(vec![0.01, 0.005]),
-        Hybrid::<DVector<f64>>::new().max_iterations(1)
+        HybridCoordinateDescent::<DVector<f64>>::new().max_iterations(1)
     );
 }
 
@@ -271,14 +271,14 @@ fn explicit_initial_points_reach_the_same_optimum_in_every_kernel() {
                 x,
                 Gaussian::new(&y).fit_intercept(intercept),
                 ClusteredLasso::new(0.05, 0.05),
-                Hybrid::<DVector<f64>>::new(),
+                HybridCoordinateDescent::<DVector<f64>>::new(),
                 normalization
             );
             check_initial!(
                 x,
                 Binomial::new(&binary).fit_intercept(intercept),
                 Slope::new(vec![0.05, 0.025]),
-                Hybrid::<DVector<f64>>::new(),
+                HybridCoordinateDescent::<DVector<f64>>::new(),
                 normalization
             );
         }
@@ -428,28 +428,28 @@ fn inner_observations_expose_real_updates_without_changing_fits() {
         x,
         Gaussian::new(&y),
         ClusteredLasso::new(0.005, 0.005),
-        Hybrid::<DVector<f64>>::new(),
+        HybridCoordinateDescent::<DVector<f64>>::new(),
         StepKind::Block { .. }
     );
     check_inner_trace!(
         x,
         Gaussian::new(&y),
         ChainFusedLasso::new(0.005, 0.005),
-        Hybrid::<DVector<f64>>::new(),
+        HybridCoordinateDescent::<DVector<f64>>::new(),
         StepKind::Block { .. }
     );
     check_inner_trace!(
         x,
         Gaussian::new(&y),
         Slope::new(vec![0.01, 0.005]),
-        Hybrid::<DVector<f64>>::new(),
+        HybridCoordinateDescent::<DVector<f64>>::new(),
         StepKind::Block { .. }
     );
     check_inner_trace!(
         x,
         Binomial::new(&binary),
         Slope::new(vec![0.01, 0.005]),
-        Hybrid::<DVector<f64>>::new(),
+        HybridCoordinateDescent::<DVector<f64>>::new(),
         StepKind::ProximalGradient
     );
 }

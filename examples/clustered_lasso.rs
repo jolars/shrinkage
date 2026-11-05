@@ -1,7 +1,9 @@
 //! Dense Gaussian clustered lasso with native products and a free intercept.
 
 use faer::{Col, Mat};
-use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem, ProximalGradient, Termination};
+use shrinkage::{
+    ClusteredLasso, Gaussian, HybridCoordinateDescent, Problem, ProximalGradient, Termination,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(8, 3, |i, j| ((i * 7 + j * 3) % 11) as f64 - 5.0);
@@ -9,7 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|i| 2.0 + x[(i, 0)] + x[(i, 1)] - 0.5 * x[(i, 2)])
         .collect();
     let problem = Problem::new(&x, Gaussian::new(&y), ClusteredLasso::new(0.05, 0.1));
-    let fit = problem.fit_with(&Hybrid::<Col<f64>>::new().tolerance(1e-9))?;
+    let fit = problem.fit_with(&HybridCoordinateDescent::<Col<f64>>::new().tolerance(1e-9))?;
     let baseline = problem.fit_with(&ProximalGradient::<Col<f64>>::new().tolerance(1e-9))?;
     assert_eq!(fit.termination(), Termination::Converged);
     assert!((fit.objective() - baseline.objective()).abs() < 1e-8);

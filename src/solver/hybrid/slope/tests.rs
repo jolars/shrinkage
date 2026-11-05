@@ -1,6 +1,6 @@
 use super::*;
 use crate::solver::hybrid::tests::matrix::Matrix;
-use crate::solver::hybrid::{Hybrid, HybridStep, Workspace, iterate};
+use crate::solver::hybrid::{HybridCoordinateDescent, HybridStep, Workspace, iterate};
 use crate::solver::proximal::NativeDesign;
 use crate::{Gaussian, Normalization, Problem, Termination};
 
@@ -510,7 +510,7 @@ fn full_pg_splits_magnitude_clusters_and_reactivates_the_zero_block() {
         let mut design = NativeDesign::<_, Vec<f64>>::new(problem.prepare(false).unwrap());
         let mut work = Workspace::<Slope>::new(3, 3);
         work.coefficients.copy_from_slice(&[1.0, -1.0, 0.0]);
-        let options = Hybrid::<Vec<f64>>::new()
+        let options = HybridCoordinateDescent::<Vec<f64>>::new()
             .max_iterations(7)
             .check_every(check_every)
             .step_policy(HybridStep::FixedBound);
@@ -545,7 +545,7 @@ fn unchanged_sweeps_wait_for_pg_to_reactivate_a_zero_coordinate() {
             let mut design = NativeDesign::<_, Vec<f64>>::new(problem.prepare(false).unwrap());
             let mut work = Workspace::<Slope>::new(2, 2);
             work.coefficients.copy_from_slice(&[1.0, 0.0]);
-            let options = Hybrid::<Vec<f64>>::new()
+            let options = HybridCoordinateDescent::<Vec<f64>>::new()
                 .max_iterations(budget)
                 .check_every(check_every)
                 .step_policy(HybridStep::FixedBound);

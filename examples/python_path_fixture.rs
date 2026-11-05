@@ -7,8 +7,8 @@ use ndarray::{Array1, Array2, ShapeBuilder};
 use python::{assert_close, hybrid_snapshot, policy, proximal_snapshot};
 use serde_json::{Value, json};
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, FitError, Gaussian, Hybrid, HybridStep,
-    Normalization, PathFit, PathOptions, PathTermination, PenaltyMaximum, Problem,
+    Binomial, ChainFusedLasso, ClusteredLasso, FitError, Gaussian, HybridCoordinateDescent,
+    HybridStep, Normalization, PathFit, PathOptions, PathTermination, PenaltyMaximum, Problem,
     ProximalGradient, Slope, WorkingSetPolicy,
 };
 
@@ -113,7 +113,7 @@ impl Case {
             1.0
         };
         let tolerance = if limited { 1e-15 } else { 1e-9 };
-        let hybrid = Hybrid::<Array1<f64>>::new()
+        let hybrid = HybridCoordinateDescent::<Array1<f64>>::new()
             .tolerance(tolerance)
             .max_iterations(limit)
             .check_every(1)

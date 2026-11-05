@@ -8,8 +8,9 @@ use std::convert::Infallible;
 use matrix::Matrix;
 use shrinkage::lazymatrix::{RawColumn, RawColumns};
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, Datafit, FitError, Hybrid, HybridFit, HybridStep,
-    Normalization, Problem, ProximalGradient, ProximalPenalty, Slope, Solver, Termination,
+    Binomial, ChainFusedLasso, ClusteredLasso, Datafit, FitError, HybridCoordinateDescent,
+    HybridFit, HybridStep, Normalization, Problem, ProximalGradient, ProximalPenalty, Slope,
+    Solver, Termination,
 };
 
 fn close(actual: f64, expected: f64, tolerance: f64) {
@@ -82,7 +83,7 @@ fn check<P: ProximalPenalty>(fit: &HybridFit, x: &Matrix, y: &[f64], penalty: &P
 fn compare<P>(penalty: P)
 where
     P: ProximalPenalty + Clone,
-    for<'a> Hybrid<Vec<f64>>:
+    for<'a> HybridCoordinateDescent<Vec<f64>>:
         Solver<Problem<&'a Matrix, Binomial<'a>, P>, Fit = HybridFit, Error = FitError<Infallible>>,
 {
     let x = Matrix::from_rows(&[
@@ -117,7 +118,7 @@ where
             for policy in [HybridStep::default(), HybridStep::FixedBound] {
                 let fit = problem
                     .fit_with(
-                        &Hybrid::<Vec<f64>>::new()
+                        &HybridCoordinateDescent::<Vec<f64>>::new()
                             .tolerance(1e-9)
                             .step_policy(policy),
                     )
@@ -155,7 +156,7 @@ fn all_penalties_match_original_logistic_pg() {
 fn supplied_normalization<P>(penalty: P)
 where
     P: ProximalPenalty + Clone,
-    for<'a> Hybrid<Vec<f64>>:
+    for<'a> HybridCoordinateDescent<Vec<f64>>:
         Solver<Problem<&'a Matrix, Binomial<'a>, P>, Fit = HybridFit, Error = FitError<Infallible>>,
 {
     let rows = [
@@ -175,7 +176,7 @@ where
     let explicit = Matrix::from_rows(&normalized.iter().map(Vec::as_slice).collect::<Vec<_>>());
     let y = [0.1, 0.8, 0.7, 0.2, 0.9];
     for intercept in [false, true] {
-        let solver = Hybrid::<Vec<f64>>::new().tolerance(1e-10);
+        let solver = HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10);
         let fit = Problem::new(
             &x,
             Binomial::new(&y).fit_intercept(intercept),
@@ -228,7 +229,7 @@ fn scalar_fit_satisfies_analytic_stationarity() {
         ClusteredLasso::new(0.2, 0.7),
     )
     .normalize(Normalization::None)
-    .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-11))
+    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-11))
     .unwrap();
     assert_eq!(fit.termination(), Termination::Converged);
     close(fit.coefficients()[0], 4.0_f64.ln(), 1e-9);
@@ -241,7 +242,7 @@ fn limits_keep_fresh_logistic_diagnostics_and_separate_work() {
     let penalty = ClusteredLasso::new(0.02, 0.0);
     let problem = Problem::new(&x, Binomial::new(&y).fit_intercept(false), penalty.clone())
         .normalize(Normalization::None);
-    let solver = Hybrid::<Vec<f64>>::new().tolerance(1e-12);
+    let solver = HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-12);
     for options in [
         solver.clone().max_iterations(1),
         solver.clone().max_outer_iterations(1),
@@ -262,7 +263,7 @@ fn intercept_only_and_separated_models_stay_finite() {
     for y in [[0.0, 1.0, 1.0, 1.0], [0.0; 4], [1.0; 4]] {
         let penalty = Slope::new(vec![]);
         let fit = Problem::new(&x, Binomial::new(&y), penalty.clone())
-            .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+            .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
             .unwrap();
         assert_eq!(fit.termination(), Termination::Converged);
         assert!(fit.intercept().is_finite());
@@ -277,7 +278,7 @@ fn intercept_only_and_separated_models_stay_finite() {
     let fit = Problem::new(&x, Binomial::new(&y).fit_intercept(false), penalty.clone())
         .normalize(Normalization::None)
         .fit_with(
-            &Hybrid::<Vec<f64>>::new()
+            &HybridCoordinateDescent::<Vec<f64>>::new()
                 .tolerance(1e-11)
                 .max_outer_iterations(300)
                 .max_iterations(30_000),
@@ -307,9 +308,9 @@ fn invalid_options_and_data_fail_before_preparation() {
     let y = [0.0, 1.0];
     let problem = Problem::new(&x, Binomial::new(&y), ClusteredLasso::new(0.1, 0.0));
     for solver in [
-        Hybrid::<Vec<f64>>::new().max_outer_iterations(0),
-        Hybrid::new().max_inner_iterations(0),
-        Hybrid::new().tolerance(f64::NAN),
+        HybridCoordinateDescent::<Vec<f64>>::new().max_outer_iterations(0),
+        HybridCoordinateDescent::new().max_inner_iterations(0),
+        HybridCoordinateDescent::new().tolerance(f64::NAN),
     ] {
         assert!(matches!(
             problem.fit_with(&solver),
@@ -319,18 +320,18 @@ fn invalid_options_and_data_fail_before_preparation() {
     for response in [&[0.0][..], &[0.0, f64::NAN], &[0.0, 2.0]] {
         assert!(
             Problem::new(&x, Binomial::new(response), ClusteredLasso::new(0.1, 0.0))
-                .fit_with(&Hybrid::<Vec<f64>>::new())
+                .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new())
                 .is_err()
         );
     }
     assert_eq!(x.visits.get(), 0);
     assert!(matches!(
-        problem.fit_with(
-            &Hybrid::<Vec<f64>>::new().step_policy(HybridStep::Backtracking {
+        problem.fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().step_policy(
+            HybridStep::Backtracking {
                 initial_curvature: Some(1e-9),
                 max_backtracks: 0
-            })
-        ),
+            }
+        )),
         Err(FitError::LineSearchFailure { .. })
     ));
 }
@@ -355,7 +356,7 @@ fn damping_checks_original_objective_and_rebuilds_accepted_partitions() {
     for count in 1..=20 {
         let fit = problem
             .fit_with(
-                &Hybrid::<Vec<f64>>::new()
+                &HybridCoordinateDescent::<Vec<f64>>::new()
                     .tolerance(1e-8)
                     .max_outer_iterations(count),
             )
@@ -374,7 +375,7 @@ fn damping_checks_original_objective_and_rebuilds_accepted_partitions() {
     assert!(damped);
     assert!(matches!(
         problem.fit_with(
-            &Hybrid::<Vec<f64>>::new()
+            &HybridCoordinateDescent::<Vec<f64>>::new()
                 .tolerance(1e-8)
                 .max_outer_backtracks(0)
         ),

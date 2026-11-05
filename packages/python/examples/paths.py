@@ -11,7 +11,7 @@ from shrinkage import (
     ChainFusedLasso,
     ClusteredLasso,
     Gaussian,
-    Hybrid,
+    HybridCoordinateDescent,
     PathOptions,
     Problem,
     ProximalGradient,
@@ -35,7 +35,7 @@ def main() -> None:
         for datafit in (Gaussian(eta), Binomial(probabilities)):
             problem = Problem(x, datafit, penalty)
             path = problem.fit_regularization_path_with(
-                Hybrid(stopping=stopping), options
+                HybridCoordinateDescent(stopping=stopping), options
             )
             reference = problem.fit_regularization_path_with(
                 ProximalGradient(stopping=stopping), options
@@ -47,11 +47,13 @@ def main() -> None:
             np.testing.assert_allclose(path.predict(x), reference.predict(x), atol=1e-5)
             for point, tuning in zip(path.fits, path.penalties, strict=True):
                 assert point.termination == "converged"
-                cold = Problem(x, datafit, tuning).fit_with(Hybrid(stopping=stopping))
+                cold = Problem(x, datafit, tuning).fit_with(
+                    HybridCoordinateDescent(stopping=stopping)
+                )
                 np.testing.assert_allclose(point.objective, cold.objective, atol=1e-9)
                 assert point.working_set_diagnostics.policy.kind == "ever_active"
             explicit = problem.fit_path_with(
-                Hybrid(stopping=stopping), reversed(path.penalties)
+                HybridCoordinateDescent(stopping=stopping), reversed(path.penalties)
             )
             np.testing.assert_allclose(
                 explicit.predict(x), path.predict(x)[:, ::-1], atol=1e-5

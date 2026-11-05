@@ -11,7 +11,7 @@ from shrinkage import (
     ChainFusedLasso,
     ClusteredLasso,
     Gaussian,
-    Hybrid,
+    HybridCoordinateDescent,
     Problem,
     ProximalGradient,
     Slope,
@@ -32,7 +32,7 @@ def main() -> None:
     ):
         for datafit in (Gaussian(eta), Binomial(probabilities)):
             problem = Problem(x, datafit, penalty, normalization="auto")
-            hybrid = problem.fit_with(Hybrid(stopping=stopping))
+            hybrid = problem.fit_with(HybridCoordinateDescent(stopping=stopping))
             reference = problem.fit_with(ProximalGradient(stopping=stopping))
             assert hybrid.termination == reference.termination == "converged"
             np.testing.assert_allclose(hybrid.objective, reference.objective, atol=1e-9)

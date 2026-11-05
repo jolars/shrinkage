@@ -26,7 +26,13 @@ not published yet.
 
 ```python
 import numpy as np
-from shrinkage import Binomial, ClusteredLasso, Hybrid, Problem, StoppingCriterion
+from shrinkage import (
+    Binomial,
+    ClusteredLasso,
+    HybridCoordinateDescent,
+    Problem,
+    StoppingCriterion,
+)
 
 X = np.array([[-2.0, -1.0], [-1.0, -2.0], [1.0, 2.0], [2.0, 1.0]])
 y = np.array([0.1, 0.2, 0.8, 0.9])
@@ -37,7 +43,7 @@ problem = Problem(
     normalization="auto",
 )
 fit = problem.fit_with(
-    Hybrid(stopping=StoppingCriterion.proximal_gradient_mapping(1e-8))
+    HybridCoordinateDescent(stopping=StoppingCriterion.proximal_gradient_mapping(1e-8))
 )
 assert fit.termination == "converged"
 logits = fit.predict(X)
@@ -77,13 +83,15 @@ Strengths, weight lengths, and solver compatibility are checked when fitting.
 
 ### Choose a solver
 
-`Hybrid(...)` returns `HybridFit`. Gaussian models alternate PG transitions and
-exact block sweeps. Binomial models use weighted hybrid subproblems inside IRLS,
-with backtracking on the original logistic objective. Only the full
-original-loss mapping, including the free-intercept derivative, certifies
-convergence. A surrogate check or unchanged block sweep does not certify it.
+`HybridCoordinateDescent(...)` returns `HybridFit`. Gaussian models alternate PG
+transitions and exact block sweeps. Binomial models use weighted hybrid
+subproblems inside IRLS, with backtracking on the original logistic objective.
+Only the full original-loss mapping, including the free-intercept derivative,
+certifies convergence. A surrogate check or unchanged block sweep does not
+certify it.
 
-All solver arguments are keyword-only. Hybrid defaults match Rust:
+All solver arguments are keyword-only. HybridCoordinateDescent defaults match
+Rust:
 
   | Control                | Default                     | Meaning                                                                              |
   | ---------------------- | --------------------------- | ------------------------------------------------------------------------------------ |
@@ -115,7 +123,7 @@ returns `ProximalFit` and optimizes the original Gaussian or binomial loss
 directly. Its controls are `stopping=None`, `max_iterations=10_000`,
 `initial_step=1.0`, `max_backtracks=100`, and `screening=True`. `max_iterations`
 counts accepted proximal updates. The initial step must be finite and positive;
-backtracking halves it. Working sets are a Hybrid control.
+backtracking halves it. Working sets are a HybridCoordinateDescent control.
 
 Both solvers support only `StoppingCriterion.proximal_gradient_mapping(...)`,
 with a finite, strictly positive absolute tolerance. Duality-gap and KKT
@@ -140,12 +148,13 @@ original-loss checks control convergence. Outer counters are zero for Gaussian
 fits. Working-set diagnostics retain the resolved policy and feature and block
 work.
 
-Hybrid cluster metadata uses the optimization scale. `cluster_labels` is an
-integer array of shape `(n_features,)` indexing `cluster_values`, whose shape is
-`(n_clusters,)`. Clustered lasso values are signed and strictly increasing.
-Chain values follow contiguous segment order; equal values across zero-weight
-cuts can have separate labels. SLOPE values are decreasing magnitudes, and
-`coefficient_signs` has shape `(n_features,)`. Reconstruct SLOPE coefficients as
+HybridCoordinateDescent cluster metadata uses the optimization scale.
+`cluster_labels` is an integer array of shape `(n_features,)` indexing
+`cluster_values`, whose shape is `(n_clusters,)`. Clustered lasso values are
+signed and strictly increasing. Chain values follow contiguous segment order;
+equal values across zero-weight cuts can have separate labels. SLOPE values are
+decreasing magnitudes, and `coefficient_signs` has shape `(n_features,)`.
+Reconstruct SLOPE coefficients as
 `coefficient_signs * cluster_values[cluster_labels]`; other penalties use the
 indexed values directly. Dividing by the fitted training scales gives the
 reported original-scale coefficients. Unequal scales can change equalities.
@@ -165,15 +174,21 @@ and increases in strength. Points must have the same penalty type as the
 problem. Both strengths and all weights can vary independently:
 
 ```python
-from shrinkage import ClusteredLasso, Gaussian, Hybrid, PathOptions, Problem
+from shrinkage import (
+    ClusteredLasso,
+    Gaussian,
+    HybridCoordinateDescent,
+    PathOptions,
+    Problem,
+)
 
 problem = Problem(X, Gaussian(y), ClusteredLasso(l1=1.0, fusion=0.3))
 explicit = problem.fit_path_with(
-    Hybrid(),
+    HybridCoordinateDescent(),
     [ClusteredLasso(0.1, 0.02), ClusteredLasso(0.5, 0.01), ClusteredLasso(0.1, 0.02)],
 )
 automatic = problem.fit_regularization_path_with(
-    Hybrid(),
+    HybridCoordinateDescent(),
     PathOptions(nlambda=20, lambda_min_ratio=0.01, early_stopping=False),
 )
 assert automatic.coefficients.shape == (20, X.shape[1])
@@ -224,9 +239,9 @@ have explicit axes, including when a dimension is zero:
 `fits` and `penalties` are immutable tuples aligned with the parameter rows and
 prediction columns. Each `fits[i]` exposes its solver's full single-fit API,
 including preprocessing, stopping and dual diagnostics, screening, and
-prediction. Hybrid entries also expose clusters and working sets. Arrays are
-float64 snapshots; cluster labels remain integers. Changing returned arrays
-cannot affect any point or subsequent prediction.
+prediction. HybridCoordinateDescent entries also expose clusters and working
+sets. Arrays are float64 snapshots; cluster labels remain integers. Changing
+returned arrays cannot affect any point or subsequent prediction.
 
 Automatic metadata also includes `maximum_penalty`, `lambda_start`, and
 `null_deviance`. `maximum_penalty` is the true zero threshold, including `inf`
@@ -411,12 +426,12 @@ evaluated objectives and analytical Gaussian and logistic solutions, input
 ownership, concurrent fits, GIL release during fitting and prediction, and all
 diagnostics from public Rust fixtures. The model fixtures cover all twelve
 combinations of penalty, family, and solver, every normalization preset, both
-Hybrid step policies, working sets, screening settings, and iteration limits.
-Path fixtures compare explicit and automatic paths, complete tuning settings,
-every point's diagnostics, iteration-limit warm starts, both early stopping
-reasons, unbounded thresholds, invalid points, and line-search and null-model
-failures against public Rust paths. Path tests also cover empty shapes,
-ownership, and GIL release for fitting and bulk prediction.
+HybridCoordinateDescent step policies, working sets, screening settings, and
+iteration limits. Path fixtures compare explicit and automatic paths, complete
+tuning settings, every point's diagnostics, iteration-limit warm starts, both
+early stopping reasons, unbounded thresholds, invalid points, and line-search
+and null-model failures against public Rust paths. Path tests also cover empty
+shapes, ownership, and GIL release for fitting and bulk prediction.
 
 Regenerate the fixtures after an intentional numerical change:
 

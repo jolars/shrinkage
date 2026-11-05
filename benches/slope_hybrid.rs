@@ -5,7 +5,8 @@ use std::{hint::black_box, time::Duration};
 use criterion::{Criterion, criterion_group, criterion_main};
 use faer::Col;
 use shrinkage::{
-    Gaussian, Hybrid, HybridStep, Normalization, Problem, ProximalGradient, Termination,
+    Gaussian, HybridCoordinateDescent, HybridStep, Normalization, Problem, ProximalGradient,
+    Termination,
 };
 
 #[path = "common/slope.rs"]
@@ -34,7 +35,7 @@ fn solves(c: &mut Criterion) {
                 ("hybrid_backtracking", HybridStep::default()),
                 ("hybrid_fixed", HybridStep::FixedBound),
             ] {
-                let solver = Hybrid::<Col<f64>>::new()
+                let solver = HybridCoordinateDescent::<Col<f64>>::new()
                     .tolerance(1e-8)
                     .max_iterations(100_000)
                     .step_policy(policy);
@@ -59,7 +60,7 @@ fn solves(c: &mut Criterion) {
                 });
             }
             for (label, budget) in [("setup_and_first_pg", 1), ("setup_sweeps_and_second_pg", 7)] {
-                let solver = Hybrid::<Col<f64>>::new()
+                let solver = HybridCoordinateDescent::<Col<f64>>::new()
                     .tolerance(1e-14)
                     .max_iterations(budget);
                 group.bench_function(label, |b| {

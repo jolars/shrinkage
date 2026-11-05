@@ -376,8 +376,8 @@ mod tests {
     use crate::solver::hybrid::{ReducedCoordinatePenalty, Workspace, iterate_quadratic};
     use crate::solver::proximal::NativeDesign;
     use crate::{
-        ChainFusedLasso, ClusteredLasso, Hybrid, Normalization, Penalty, Problem, ProximalGradient,
-        ProximalPenalty, Slope, Termination,
+        ChainFusedLasso, ClusteredLasso, HybridCoordinateDescent, Normalization, Penalty, Problem,
+        ProximalGradient, ProximalPenalty, Slope, Termination,
     };
 
     struct WithIntercept<P>(P);
@@ -490,7 +490,7 @@ mod tests {
                         &mut design,
                         model,
                         &penalty,
-                        &Hybrid::<()>::new()
+                        &HybridCoordinateDescent::<()>::new()
                             .step_policy(policy)
                             .max_iterations(100_000),
                         1e-10,

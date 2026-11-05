@@ -5,7 +5,7 @@ use std::{hint::black_box, time::Duration};
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use faer::Col;
 use shrinkage::{
-    ClusteredLasso, Gaussian, Hybrid, HybridStep, Normalization, Penalty, Problem,
+    ClusteredLasso, Gaussian, HybridCoordinateDescent, HybridStep, Normalization, Penalty, Problem,
     ProximalGradient, ProximalPenalty, Termination,
 };
 
@@ -68,7 +68,7 @@ fn benchmark_solves(c: &mut Criterion) {
                 ("hybrid_backtracking", HybridStep::default()),
                 ("hybrid_fixed", HybridStep::FixedBound),
             ] {
-                let solver = Hybrid::<Col<f64>>::new()
+                let solver = HybridCoordinateDescent::<Col<f64>>::new()
                     .tolerance(1e-8)
                     .step_policy(policy);
                 let fit = problem.fit_with(&solver).unwrap();

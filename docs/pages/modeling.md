@@ -16,8 +16,11 @@ For a design with $n$ observations and $p$ features, Shrinkage minimizes the
 composite primal objective
 
 $$
-  \min_{\beta_0,\beta} P(\beta_0,\beta), \qquad P(\beta_0,\beta)
-  = F(\beta_0,\beta) + R(\beta), \qquad \eta = \beta_0\mathbf{1} + \widetilde X\beta.
+  \min_{\beta_0,\beta} P(\beta_0,\beta),
+  \qquad
+  P(\beta_0,\beta) = F(\beta_0,\beta) + R(\beta),
+  \qquad
+  \eta = \beta_0\mathbf{1} + \widetilde X\beta.
 $$
 
 The datafit $F$ averages over observations. The complete penalty $R$ includes
@@ -94,9 +97,10 @@ Built-in cross-validation retains owned fold matrices for its repeated sweeps.
 All solver families support warm-started paths for their compatible problems.
 `problem.fit_path_with(&solver, penalties)` fits complete penalties in caller
 order, including repeated or increasing strengths. Every supplied point is
-fitted. Hybrid supports Gaussian and binomial paths with clustered lasso, chain
-fused lasso, and SLOPE. Its paths reuse preprocessing, partitions, and IRLS
-buffers while refreshing screening and working sets at every point.
+fitted. HybridCoordinateDescent supports Gaussian and binomial paths with
+clustered lasso, chain fused lasso, and SLOPE. Its paths reuse preprocessing,
+partitions, and IRLS buffers while refreshing screening and working sets at
+every point.
 
 `problem.fit_regularization_path_with(&solver, &PathOptions::new())` generates
 up to 100 decreasing, log-spaced strengths. Clustered and chain fused paths

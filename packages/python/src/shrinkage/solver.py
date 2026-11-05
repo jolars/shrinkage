@@ -8,7 +8,12 @@ from typing import Literal
 from . import _shrinkage
 from ._common import StoppingCriterion, stopping_spec
 
-__all__ = ["Hybrid", "HybridStep", "ProximalGradient", "WorkingSetPolicy"]
+__all__ = [
+    "HybridCoordinateDescent",
+    "HybridStep",
+    "ProximalGradient",
+    "WorkingSetPolicy",
+]
 
 
 @dataclass(frozen=True)
@@ -17,7 +22,8 @@ class HybridStep:
 
     Use ``backtracking`` or ``fixed_bound``. A fixed bound uses the design's
     Frobenius bound. Backtracking doubles curvature after rejected trials.
-    Logistic outer step halvings have a separate budget on :class:`Hybrid`.
+    Logistic outer step halvings have a separate budget on
+    :class:`HybridCoordinateDescent`.
     """
 
     kind: Literal["backtracking", "fixed_bound"]
@@ -73,8 +79,8 @@ class WorkingSetPolicy:
 
 
 @dataclass(frozen=True)
-class Hybrid:
-    """Hybrid PG and exact block sweeps, with IRLS for binomial models.
+class HybridCoordinateDescent:
+    """Coordinate descent with periodic proximal-gradient steps and binomial IRLS.
 
     Start with a PG transition, then alternate ``cluster_sweeps`` block sweeps
     with PG. ``max_iterations`` counts committed PG transitions plus sweeps;
@@ -128,7 +134,7 @@ class ProximalGradient:
     iteration, with zero permitting only the first trial. ``stopping=None``
     uses absolute full-space mapping tolerance ``1e-6``. Gap and KKT criteria
     are rejected. Screening is enabled by default; heuristic working sets
-    are available through :class:`Hybrid`.
+    are available through :class:`HybridCoordinateDescent`.
     """
 
     stopping: StoppingCriterion | None = field(default=None, kw_only=True)

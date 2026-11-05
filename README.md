@@ -109,10 +109,11 @@ cargo run --locked --example regularization_path --features faer
   seeded folds, explicit candidates, and training-only automatic anchors. See
   the [cross-validation example](examples/cross_validation.rs).
 
-Solvers include coordinate descent, proximal gradient, Hybrid, and iteratively
-reweighted least squares (IRLS). Supported combinations vary by loss and
-penalty. The [Rust API reference](https://shrinkage.cc/packages/rust/) covers
-these combinations and how to add custom losses and penalties. See the [binomial
+Solvers include coordinate descent, proximal gradient, hybrid coordinate
+descent, and iteratively reweighted least squares (IRLS). Supported combinations
+vary by loss and penalty. The [Rust API
+reference](https://shrinkage.cc/packages/rust/) covers these combinations and
+how to add custom losses and penalties. See the [binomial
 example](examples/binomial.rs) for logistic regression.
 
 ## Matrix backends

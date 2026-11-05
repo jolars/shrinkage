@@ -16,7 +16,7 @@ use crate::{FitError, Penalty, ProximalPenalty};
 /// The exact complete prox uses weighted taut strings followed by uniform L1
 /// soft-thresholding. Value and prox take `O(p)` time; the prox reuses `O(p)`
 /// CPU storage. [`crate::ProximalGradient`] supports typed and runtime problems,
-/// and [`crate::Hybrid`] adds exact Gaussian segment-coordinate sweeps.
+/// and [`crate::HybridCoordinateDescent`] adds exact Gaussian segment-coordinate sweeps.
 ///
 /// ```
 /// use shrinkage::{ChainFusedLasso, Penalty, ProximalPenalty};

@@ -84,7 +84,7 @@ tasks:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench hybrid_irls_heap
 
   bench:paths:
-    desc: Compare complete warm Hybrid paths and cold fits, including heap usage
+    desc: Compare complete warm HybridCoordinateDescent paths and cold fits, including heap usage
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench hybrid_paths
 

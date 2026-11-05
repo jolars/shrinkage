@@ -6,9 +6,9 @@ mod matrix;
 use matrix::Matrix;
 use serde_json::Value;
 use shrinkage::{
-    ChainFusedLasso, ClusteredLasso, FitError, Gaussian, Hybrid, HybridStep, MatrixDesign,
-    Normalization, Problem, ProximalGradient, RuntimeProblem, Slope, StoppingCriterion,
-    Termination,
+    ChainFusedLasso, ClusteredLasso, FitError, Gaussian, HybridCoordinateDescent, HybridStep,
+    MatrixDesign, Normalization, Problem, ProximalGradient, RuntimeProblem, Slope,
+    StoppingCriterion, Termination,
 };
 
 fn close(actual: f64, expected: f64, tolerance: f64) {
@@ -82,7 +82,7 @@ fn orthogonal_fit_retains_opposite_signs_in_one_magnitude_cluster() {
         Slope::new(vec![3.0, 1.0]),
     )
     .normalize(Normalization::None)
-    .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
     .unwrap();
     assert_eq!(fit.termination(), Termination::Converged);
     assert_eq!(fit.coefficients(), [-0.5, 0.5]);
@@ -124,7 +124,7 @@ fn hybrid_and_pg_match_independent_qp_fixtures_and_certificates() {
         for policy in [HybridStep::default(), HybridStep::FixedBound] {
             let fit = problem
                 .fit_with(
-                    &Hybrid::<Vec<f64>>::new()
+                    &HybridCoordinateDescent::<Vec<f64>>::new()
                         .tolerance(1e-9)
                         .max_iterations(100_000)
                         .step_policy(policy),
@@ -252,7 +252,7 @@ fn explicit_and_lazy_normalization_preserve_predictions_and_magnitude_clusters()
                         .with_scales(vec![2.0, 3.0, 0.5]);
                 }
                 let fit = problem
-                    .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+                    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
                     .unwrap();
                 assert_eq!(fit.termination(), Termination::Converged);
                 let centers = fit
@@ -281,7 +281,7 @@ fn explicit_and_lazy_normalization_preserve_predictions_and_magnitude_clusters()
                 )
                 .normalize(Normalization::None);
                 let reference = reference_problem
-                    .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+                    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
                     .unwrap();
                 let pg = reference_problem
                     .fit_with(&ProximalGradient::<Vec<f64>>::new().tolerance(1e-10))
@@ -332,7 +332,7 @@ fn normalization_can_change_original_scale_magnitude_equalities() {
     )
     .normalize(Normalization::None)
     .with_scales(vec![1.0, 2.0])
-    .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
     .unwrap();
     assert_eq!(fit.cluster_labels(), [0, 0]);
     assert_eq!(fit.cluster_values(), [0.5]);
@@ -349,7 +349,7 @@ fn empty_features_zero_design_and_single_feature_limits() {
             Gaussian::new(&[1.0, 2.0, 3.0]).fit_intercept(free_intercept),
             Slope::new(vec![]),
         )
-        .fit_with(&Hybrid::<Vec<f64>>::new())
+        .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new())
         .unwrap();
         assert_eq!(fit.termination(), Termination::Converged);
         assert!(fit.cluster_values().is_empty());
@@ -361,7 +361,7 @@ fn empty_features_zero_design_and_single_feature_limits() {
             Gaussian::new(&[1.0, 2.0, 3.0]).fit_intercept(free_intercept),
             Slope::new(vec![0.1, 0.0]),
         )
-        .fit_with(&Hybrid::<Vec<f64>>::new())
+        .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new())
         .unwrap();
         assert_eq!(fit.termination(), Termination::Converged);
         assert_eq!(fit.cluster_values(), [0.0]);
@@ -376,7 +376,7 @@ fn empty_features_zero_design_and_single_feature_limits() {
             Slope::new(vec![weight]),
         )
         .normalize(Normalization::None)
-        .fit_with(&Hybrid::<Vec<f64>>::new())
+        .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new())
         .unwrap();
         close(fit.coefficients()[0], -(2.0_f64 - weight).max(0.0), 1e-12);
     }
@@ -399,7 +399,7 @@ fn budgets_and_diagnostics_preserve_the_committed_schedule() {
     .normalize(Normalization::None);
     for sweeps in [1, 5] {
         for budget in 1..=9 {
-            let options = Hybrid::<Vec<f64>>::new()
+            let options = HybridCoordinateDescent::<Vec<f64>>::new()
                 .tolerance(1e-30)
                 .cluster_sweeps(sweeps)
                 .max_iterations(budget)
@@ -435,18 +435,18 @@ fn invalid_inputs_fail_before_preparation_and_runtime_selection_stays_unsupporte
     ] {
         assert!(matches!(
             Problem::new(&x, Gaussian::new(&[1.0, 2.0]), Slope::new(weights))
-                .fit_with(&Hybrid::<Vec<f64>>::new()),
+                .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new()),
             Err(FitError::InvalidInput { .. })
         ));
         assert_eq!(x.visits.get(), 0);
     }
     let problem = Problem::new(&x, Gaussian::new(&[1.0, 2.0]), Slope::new(vec![0.2, 0.1]));
     for solver in [
-        Hybrid::new().cluster_sweeps(0),
-        Hybrid::new().max_iterations(0),
-        Hybrid::new().check_every(0),
-        Hybrid::new().tolerance(0.0),
-        Hybrid::new().tolerance(f64::NAN),
+        HybridCoordinateDescent::new().cluster_sweeps(0),
+        HybridCoordinateDescent::new().max_iterations(0),
+        HybridCoordinateDescent::new().check_every(0),
+        HybridCoordinateDescent::new().tolerance(0.0),
+        HybridCoordinateDescent::new().tolerance(f64::NAN),
     ] {
         assert!(matches!(
             problem.fit_with(&solver),
@@ -456,7 +456,8 @@ fn invalid_inputs_fail_before_preparation_and_runtime_selection_stays_unsupporte
     }
     assert!(matches!(
         problem.fit_with(
-            &Hybrid::<Vec<f64>>::new().terminate_on(StoppingCriterion::kkt_violation(1e-6))
+            &HybridCoordinateDescent::<Vec<f64>>::new()
+                .terminate_on(StoppingCriterion::kkt_violation(1e-6))
         ),
         Err(FitError::UnsupportedCombination { .. })
     ));
@@ -466,7 +467,7 @@ fn invalid_inputs_fail_before_preparation_and_runtime_selection_stays_unsupporte
         Box::new(Slope::new(vec![0.2, 0.1])),
     );
     assert!(matches!(
-        runtime.fit_with(&Hybrid::<Vec<f64>>::new()),
+        runtime.fit_with(&HybridCoordinateDescent::<Vec<f64>>::new()),
         Err(FitError::UnsupportedCombination { .. })
     ));
     assert_eq!(x.visits.get(), 0);
@@ -482,7 +483,7 @@ fn sign_accessor_preserves_existing_signed_cluster_values() {
         ClusteredLasso::new(0.1, 0.1),
     )
     .normalize(Normalization::None)
-    .fit_with(&Hybrid::<Vec<f64>>::new())
+    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new())
     .unwrap();
     let chain = Problem::new(
         &x,
@@ -490,7 +491,7 @@ fn sign_accessor_preserves_existing_signed_cluster_values() {
         ChainFusedLasso::new(0.1, 0.1),
     )
     .normalize(Normalization::None)
-    .fit_with(&Hybrid::<Vec<f64>>::new())
+    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new())
     .unwrap();
     for fit in [clustered, chain] {
         assert_eq!(fit.coefficient_signs(), [-1.0, 1.0]);

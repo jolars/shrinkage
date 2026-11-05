@@ -1,5 +1,7 @@
 use super::*;
-use crate::solver::hybrid::{Hybrid, HybridStep, Workspace, iterate, tests::independent_scalar};
+use crate::solver::hybrid::{
+    HybridCoordinateDescent, HybridStep, Workspace, iterate, tests::independent_scalar,
+};
 use crate::solver::proximal::NativeDesign;
 use crate::{Gaussian, Normalization, Problem, Termination};
 
@@ -354,7 +356,7 @@ fn pg_splits_blocks_and_diagnostics_do_not_advance_the_sweep_schedule() {
             let mut design = NativeDesign::<_, Vec<f64>>::new(problem.prepare(false).unwrap());
             let mut work = Workspace::<ChainFusedLasso>::new(2, 2);
             work.coefficients.copy_from_slice(&[2.0 / 3.0, -2.0 / 3.0]);
-            let options = Hybrid::<Vec<f64>>::new()
+            let options = HybridCoordinateDescent::<Vec<f64>>::new()
                 .max_iterations(budget)
                 .check_every(check_every)
                 .step_policy(HybridStep::Backtracking {

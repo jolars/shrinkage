@@ -81,7 +81,7 @@ presentation:
             link: "reference/solvers/index.html"
           - text: "Coordinate descent"
             link: "reference/solvers/coordinate-descent.html"
-          - text: "Hybrid"
+          - text: "Hybrid coordinate descent"
             link: "reference/solvers/hybrid.html"
           - text: "IRLS"
             link: "reference/solvers/irls.html"

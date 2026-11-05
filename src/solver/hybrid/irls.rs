@@ -3,7 +3,7 @@
 use super::*;
 use crate::{Binomial, Datafit, DiagonalHessianDatafit, DifferentiableDatafit};
 
-impl<M, V, P> Solver<Problem<&M, Binomial<'_>, P>> for Hybrid<V>
+impl<M, V, P> Solver<Problem<&M, Binomial<'_>, P>> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
@@ -49,7 +49,7 @@ where
     }
 }
 
-impl<M, V, P> ObservedSolver<Problem<&M, Binomial<'_>, P>> for Hybrid<V>
+impl<M, V, P> ObservedSolver<Problem<&M, Binomial<'_>, P>> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
@@ -135,7 +135,7 @@ fn iterate<M, V, W, P>(
     design: &mut NativeDesign<M, V>,
     datafit: Binomial<'_>,
     penalty: &P,
-    options: &Hybrid<W>,
+    options: &HybridCoordinateDescent<W>,
     threshold: f64,
     inner: &mut Workspace<P>,
 ) -> Result<Solution, FitError<M::Error>>
@@ -159,7 +159,7 @@ fn iterate_observed<M, V, W, P, T>(
     design: &mut NativeDesign<M, V>,
     datafit: Binomial<'_>,
     penalty: &P,
-    options: &Hybrid<W>,
+    options: &HybridCoordinateDescent<W>,
     threshold: f64,
     inner: &mut Workspace<P>,
     observer: &mut T,
@@ -186,7 +186,7 @@ pub(super) fn iterate_with_workspace_observed<M, V, W, P, T>(
     design: &mut NativeDesign<M, V>,
     datafit: Binomial<'_>,
     penalty: &P,
-    options: &Hybrid<W>,
+    options: &HybridCoordinateDescent<W>,
     threshold: f64,
     work: (&mut Workspace<P>, &mut Outer),
     observer: &mut T,
@@ -207,7 +207,8 @@ where
     let n = design.nrows();
     outer.coefficients.copy_from_slice(&inner.coefficients);
     outer.intercept = inner.intercept;
-    let mut inner_options = Hybrid::<()>::new().step_policy(HybridStep::FixedBound);
+    let mut inner_options =
+        HybridCoordinateDescent::<()>::new().step_policy(HybridStep::FixedBound);
     let curvature = finite(
         0.25 * initial_curvature(
             design,

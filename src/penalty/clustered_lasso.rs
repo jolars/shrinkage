@@ -16,7 +16,7 @@ use crate::{FitError, Penalty, ProximalPenalty};
 /// rank-shifted values, and soft-thresholds the pooled levels. Value and prox
 /// take `O(p log p)` time and reuse `O(p)` CPU scratch storage. There is no
 /// explicit pairwise graph. [`crate::ProximalGradient`] fits this penalty
-/// through typed and runtime composition; [`crate::Hybrid`] additionally
+/// through typed and runtime composition; [`crate::HybridCoordinateDescent`] additionally
 /// performs exact Gaussian cluster-coordinate sweeps.
 ///
 /// ```

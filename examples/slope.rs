@@ -1,7 +1,7 @@
 //! Equal-magnitude SLOPE clusters with individual signs and a free intercept.
 
 use faer::{Col, Mat};
-use shrinkage::{Gaussian, Hybrid, Problem, ProximalGradient, Slope, Termination};
+use shrinkage::{Gaussian, HybridCoordinateDescent, Problem, ProximalGradient, Slope, Termination};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(16, 5, |i, j| ((i * 7 + j * 3 + i * j) % 17) as f64 - 8.0);
@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Gaussian::new(&y),
         Slope::new(vec![0.5, 0.4, 0.3, 0.2, 0.1]),
     );
-    let fit = problem.fit_with(&Hybrid::<Col<f64>>::new().tolerance(1e-8))?;
+    let fit = problem.fit_with(&HybridCoordinateDescent::<Col<f64>>::new().tolerance(1e-8))?;
     let reference = problem.fit_with(&ProximalGradient::<Col<f64>>::new().tolerance(1e-8))?;
     assert_eq!(fit.termination(), Termination::Converged);
     assert_eq!(reference.termination(), Termination::Converged);

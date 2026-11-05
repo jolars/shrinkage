@@ -14,7 +14,7 @@ loss, and penalty:
 
 ```rust
 use faer::{Col, Mat};
-use shrinkage::{ChainFusedLasso, Gaussian, Hybrid, Problem, Termination};
+use shrinkage::{ChainFusedLasso, Gaussian, HybridCoordinateDescent, Problem, Termination};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(16, 5, |i, j| ((i * 7 + j * 3 + i * j) % 17) as f64 - 8.0);
@@ -22,7 +22,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|i| 2.0 + x[(i, 0)] + x[(i, 1)] - 0.5 * x[(i, 3)] - 0.5 * x[(i, 4)])
         .collect();
     let penalty = ChainFusedLasso::new(0.05, 0.2).with_weights(vec![1.0, 0.5, 0.0, 2.0]);
-    let fit = Problem::new(&x, Gaussian::new(&y), penalty).fit_with(&Hybrid::<Col<f64>>::new())?;
+    let fit = Problem::new(&x, Gaussian::new(&y), penalty)
+        .fit_with(&HybridCoordinateDescent::<Col<f64>>::new())?;
     assert_eq!(fit.termination(), Termination::Converged);
     println!("Coefficients: {:?}", fit.coefficients());
     println!("Segment labels: {:?}", fit.cluster_labels());

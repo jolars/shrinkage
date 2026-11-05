@@ -37,9 +37,9 @@ fn automatic_paths_stop_by_default_and_can_fit_the_full_sequence() {
 #[test]
 fn every_solver_and_runtime_and_multivariate_paths_share_stopping() {
     use shrinkage::{
-        AxisPenalty, CoefficientLayout, CoordinateDescent, ErasedPathPenalty, Gaussian, Hybrid,
-        Irls, L1, MatrixDesign, MultivariateGaussian, PenaltyAxis, Problem, ProximalGradient,
-        RuntimePathProblem, Slope,
+        AxisPenalty, CoefficientLayout, CoordinateDescent, ErasedPathPenalty, Gaussian,
+        HybridCoordinateDescent, Irls, L1, MatrixDesign, MultivariateGaussian, PenaltyAxis,
+        Problem, ProximalGradient, RuntimePathProblem, Slope,
     };
     let x = Matrix::from_rows(&[&[-1.0], &[1.0]]);
     let y = [-1.0, 1.0];
@@ -64,7 +64,7 @@ fn every_solver_and_runtime_and_multivariate_paths_share_stopping() {
         verify!(problem.fit_regularization_path_with(&ProximalGradient::new(), &options));
     assert_eq!(proximal.lambdas(), reference.lambdas());
     let hybrid = Problem::new(&x, Gaussian::new(&y), Slope::new(vec![1.0]));
-    let _ = verify!(hybrid.fit_regularization_path_with(&Hybrid::new(), &options));
+    let _ = verify!(hybrid.fit_regularization_path_with(&HybridCoordinateDescent::new(), &options));
     let runtime = RuntimePathProblem::new(
         Box::new(MatrixDesign::new(&x)),
         Box::new(Gaussian::new(&y)),

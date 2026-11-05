@@ -8,18 +8,18 @@ in this repository. These tools do not grant kernel profiling permissions.
 
 ## Follow callers into the responsible layer
 
-  | Layer                                                                 | Source                                                              |
-  | --------------------------------------------------------------------- | ------------------------------------------------------------------- |
-  | Python configuration and fitted result conversion                     | `packages/python/src/shrinkage/`                                    |
-  | Owned NumPy copies, finite-value validation, and detached native fit  | `packages/python/rust/input.rs` and `packages/python/rust/lasso.rs` |
-  | Statistical validation and normalization preparation                  | `src/problem.rs` and its child modules                              |
-  | Gaussian coordinate updates, residual state, KKT and dual diagnostics | `src/solver/coordinate.rs`                                          |
-  | Working-set membership and scores                                     | `src/solver/working_set.rs`                                         |
-  | Original-loss IRLS checks and weighted subproblems                    | `src/solver/irls.rs`                                                |
-  | Proximal products and vector adapters                                 | `src/solver/proximal.rs` and `src/solver/proximal/`                 |
-  | Hybrid transitions, aggregate columns, and cluster state              | `src/solver/hybrid.rs` and `src/solver/hybrid/`                     |
-  | Penalty evaluation and proximal operators                             | `src/penalty.rs` and `src/penalty/`                                 |
-  | Path preparation and workspace reuse                                  | `src/path.rs` and `src/path/`                                       |
+  | Layer                                                                     | Source                                                              |
+  | ------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+  | Python configuration and fitted result conversion                         | `packages/python/src/shrinkage/`                                    |
+  | Owned NumPy copies, finite-value validation, and detached native fit      | `packages/python/rust/input.rs` and `packages/python/rust/lasso.rs` |
+  | Statistical validation and normalization preparation                      | `src/problem.rs` and its child modules                              |
+  | Gaussian coordinate updates, residual state, KKT and dual diagnostics     | `src/solver/coordinate.rs`                                          |
+  | Working-set membership and scores                                         | `src/solver/working_set.rs`                                         |
+  | Original-loss IRLS checks and weighted subproblems                        | `src/solver/irls.rs`                                                |
+  | Proximal products and vector adapters                                     | `src/solver/proximal.rs` and `src/solver/proximal/`                 |
+  | HybridCoordinateDescent transitions, aggregate columns, and cluster state | `src/solver/hybrid.rs` and `src/solver/hybrid/`                     |
+  | Penalty evaluation and proximal operators                                 | `src/penalty.rs` and `src/penalty/`                                 |
+  | Path preparation and workspace reuse                                      | `src/path.rs` and `src/path/`                                       |
 
 Follow matrix calls into the resolved published LazyMatrix source when needed.
 Compare matrix passes and arithmetic before suggesting a backend replacement.

@@ -1,7 +1,9 @@
 //! Weighted adjacent fusion with a free intercept and normalized columns.
 
 use faer::{Col, Mat};
-use shrinkage::{ChainFusedLasso, Gaussian, Hybrid, Problem, ProximalGradient, Termination};
+use shrinkage::{
+    ChainFusedLasso, Gaussian, HybridCoordinateDescent, Problem, ProximalGradient, Termination,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(16, 5, |i, j| ((i * 7 + j * 3 + i * j) % 17) as f64 - 8.0);
@@ -13,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Gaussian::new(&y),
         ChainFusedLasso::new(0.05, 0.2).with_weights(vec![1.0, 0.5, 0.0, 2.0]),
     );
-    let fit = problem.fit_with(&Hybrid::<Col<f64>>::new().tolerance(1e-8))?;
+    let fit = problem.fit_with(&HybridCoordinateDescent::<Col<f64>>::new().tolerance(1e-8))?;
     let reference = problem.fit_with(&ProximalGradient::<Col<f64>>::new().tolerance(1e-8))?;
     assert_eq!(fit.termination(), Termination::Converged);
     assert_eq!(reference.termination(), Termination::Converged);

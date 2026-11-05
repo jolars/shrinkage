@@ -10,9 +10,9 @@ use ndarray::Array1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, Hybrid, HybridFit, HybridStep,
-    MatrixDesign, Normalization, Problem, ProximalFit, ProximalGradient, ProximalPenalty,
-    RuntimeProblem, Slope, SmoothDatafit, WorkingSetPolicy,
+    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, HybridCoordinateDescent, HybridFit,
+    HybridStep, MatrixDesign, Normalization, Problem, ProximalFit, ProximalGradient,
+    ProximalPenalty, RuntimeProblem, Slope, SmoothDatafit, WorkingSetPolicy,
 };
 
 use crate::common::{
@@ -146,7 +146,7 @@ fn step((kind, initial_curvature, max_backtracks): StepInput) -> PyResult<Hybrid
 
 #[derive(Clone)]
 enum Method {
-    Hybrid(Hybrid<Array1<f64>>),
+    Hybrid(HybridCoordinateDescent<Array1<f64>>),
     Proximal(ProximalGradient),
 }
 
@@ -236,7 +236,7 @@ impl PySolver {
         working_set_policy: PolicyInput,
         step_policy: StepInput,
     ) -> PyResult<Self> {
-        let mut solver = Hybrid::new()
+        let mut solver = HybridCoordinateDescent::new()
             .max_iterations(positive("max_iterations", max_iterations)?)
             .max_outer_iterations(positive("max_outer_iterations", max_outer_iterations)?)
             .max_inner_iterations(positive("max_inner_iterations", max_inner_iterations)?)
@@ -366,7 +366,7 @@ impl PyModelFit {
         match self.fit.as_ref() {
             NativeFit::Hybrid(fit) => Ok(fit),
             NativeFit::Proximal(_) => Err(PyValueError::new_err(
-                "hybrid diagnostics are available only for Hybrid fits",
+                "hybrid diagnostics are available only for HybridCoordinateDescent fits",
             )),
         }
     }

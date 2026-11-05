@@ -5,9 +5,9 @@ mod matrix;
 
 use matrix::Matrix;
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, CoordinateDescent, Gaussian, Hybrid, HybridFit,
-    Irls, L1, Lasso, Normalization, Problem, ProximalPenalty, Slope, SmoothDatafit, Termination,
-    WorkingSetPolicy,
+    Binomial, ChainFusedLasso, ClusteredLasso, CoordinateDescent, Gaussian,
+    HybridCoordinateDescent, HybridFit, Irls, L1, Lasso, Normalization, Problem, ProximalPenalty,
+    Slope, SmoothDatafit, Termination, WorkingSetPolicy,
 };
 
 fn check_mapping<D: SmoothDatafit, P: ProximalPenalty>(
@@ -91,7 +91,7 @@ fn hybrid_policies_preserve_complete_penalties_and_original_loss_checks() {
                 let problem = Problem::new(&x, datafit, penalty.clone()).normalize(normalization);
                 let reference = problem
                     .fit_with(
-                        &Hybrid::<Vec<f64>>::new()
+                        &HybridCoordinateDescent::<Vec<f64>>::new()
                             .working_sets(false)
                             .screening(false)
                             .tolerance(1e-8)
@@ -103,7 +103,7 @@ fn hybrid_policies_preserve_complete_penalties_and_original_loss_checks() {
                     for policy in policies() {
                         let fit = problem
                             .fit_with(
-                                &Hybrid::<Vec<f64>>::new()
+                                &HybridCoordinateDescent::<Vec<f64>>::new()
                                     .working_set_policy(policy)
                                     .screening(screening)
                                     .tolerance(1e-8)
@@ -302,7 +302,7 @@ fn coupled_zero_features_must_enter_together() {
     for policy in policies() {
         let fit = problem
             .fit_with(
-                &Hybrid::<Vec<f64>>::new()
+                &HybridCoordinateDescent::<Vec<f64>>::new()
                     .screening(false)
                     .working_set_policy(policy)
                     .tolerance(1e-10),
@@ -388,7 +388,7 @@ fn restricted_pg_splits_a_warm_started_nonzero_cluster() {
     )
     .normalize(Normalization::None);
     for prune in [false, true] {
-        let solver = Hybrid::<Vec<f64>>::new()
+        let solver = HybridCoordinateDescent::<Vec<f64>>::new()
             .screening(false)
             .tolerance(1e-10)
             .working_set_policy(WorkingSetPolicy::Adaptive {

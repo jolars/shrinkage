@@ -44,16 +44,17 @@ explicit, with generic methods complementing specialized implementations.
 The primal problem minimizes the composite objective
 
 $$
-  \min_{\beta_0,\beta} P(\beta_0,\beta), \qquad P(\beta_0,\beta)
-  = F(\beta_0,\beta) + R(\beta),
+  \min_{\beta_0,\beta} P(\beta_0,\beta),
+  \qquad
+  P(\beta_0,\beta) = F(\beta_0,\beta) + R(\beta),
 $$
 
 with
 
 $$
-  F(\beta_0,\beta)
-  = F(Y, X\beta + \mathbf{1}\beta_0^\mathsf{T} + O; M), \qquad R(\beta)
-                   = \sum_{k=1}^{K}\lambda_k R_k(\beta),
+  F(\beta_0,\beta) = F(Y, X\beta + \mathbf{1}\beta_0^\mathsf{T} + O; M),
+  \qquad
+  R(\beta) = \sum_{k=1}^{K}\lambda_k R_k(\beta),
 $$
 
 where `X` is a design operator, `beta` is a coefficient vector or matrix,
@@ -289,7 +290,8 @@ certifies approximate stationarity, not existence of a finite optimum.
 violation, accepted outer steps, and total coordinate sweeps. Predictions are
 linear predictors, including binomial logits. Only absolute KKT stopping is
 implemented. Runtime proximal oracles do not expose this coordinate IRLS solver.
-Python exposes logistic Hybrid IRLS with its full-space PG mapping criterion.
+Python exposes logistic HybridCoordinateDescent IRLS with its full-space PG
+mapping criterion.
 
 ## 4. Static computation and runtime composition
 
@@ -679,13 +681,13 @@ in that sweep. Add aggregate columns and recompute curvature, including cross
 terms. Minimize an enabled free intercept exactly after each sweep. Every exact
 scalar minimization is nonincreasing in the original complete objective.
 
-**PG transitions, bounds, and convergence.** `Hybrid<V>` starts with a full PG
-transition, then performs five complete sweeps between PG transitions by
-default. Every transition directly refreshes the residual before its full
-gradient and after its candidate. Rebuild membership and all aggregate columns
-from the candidate in original feature order. Stage this state before committing
-coefficients, intercept, and curvature together. The rebuild allows zero and
-nonzero blocks to split, even when block count is unchanged.
+**PG transitions, bounds, and convergence.** `HybridCoordinateDescent<V>` starts
+with a full PG transition, then performs five complete sweeps between PG
+transitions by default. Every transition directly refreshes the residual before
+its full gradient and after its candidate. Rebuild membership and all aggregate
+columns from the candidate in original feature order. Stage this state before
+committing coefficients, intercept, and curvature together. The rebuild allows
+zero and nonzero blocks to split, even when block count is unchanged.
 
 `HybridStep::FixedBound` uses `||A||_F²/n` with a conservative rounding guard,
 where `A` augments the normalized design with a column of ones if an intercept
@@ -808,14 +810,15 @@ immediately, retain the moving identity, and retire absorbed identities. Add
 aggregate columns and recompute curvature, including cross terms. Update
 residuals for each move, and minimize an enabled intercept after the sweep.
 
-**Hybrid integration.** Typed Gaussian problems use `Hybrid<V>` with the same
-schedule, line search, stopping tolerance, and budget semantics as clustered
-lasso. Private partition adapters share the driver and preserve penalty-specific
-membership. Rebuild all segments and aggregates after accepted full PG steps so
-segments can split. A fresh full-space PG mapping, including the free-intercept
-derivative, certifies convergence at the returned point. Unchanged sweeps do
-not. The clustered-lasso descent and convergence argument applies because
-segment sweeps exactly minimize restrictions of this convex objective.
+**HybridCoordinateDescent integration.** Typed Gaussian problems use
+`HybridCoordinateDescent<V>` with the same schedule, line search, stopping
+tolerance, and budget semantics as clustered lasso. Private partition adapters
+share the driver and preserve penalty-specific membership. Rebuild all segments
+and aggregates after accepted full PG steps so segments can split. A fresh
+full-space PG mapping, including the free-intercept derivative, certifies
+convergence at the returned point. Unchanged sweeps do not. The clustered-lasso
+descent and convergence argument applies because segment sweeps exactly minimize
+restrictions of this convex objective.
 
 `HybridFit::cluster_labels()` indexes segment values in feature order for this
 penalty. `cluster_values()` may repeat and is not sorted. Clustered lasso
@@ -859,10 +862,10 @@ fits agree with an orthogonal solution. `task bench:slope` measures distinct and
 tied magnitudes, and `task bench:proximal:heap` checks value and prox
 allocations.
 
-**Gaussian hybrid and state.** Typed Gaussian problems also support `Hybrid<V>`.
-Its driver, controls, line search, full-space stopping checks, and diagnostic
-accounting are shared with the fusion penalties. SLOPE has a private partition
-implementation following [Coordinate Descent for
+**Gaussian hybrid and state.** Typed Gaussian problems also support
+`HybridCoordinateDescent<V>`. Its driver, controls, line search, full-space
+stopping checks, and diagnostic accounting are shared with the fusion penalties.
+SLOPE has a private partition implementation following [Coordinate Descent for
 SLOPE](https://proceedings.mlr.press/v206/larsson23a.html). The complete
 objective is
 `||y - beta_0 - X_tilde beta||² / (2n) + sum_j weights[j] * |beta|_(j)`, with an
@@ -963,11 +966,12 @@ sparse-specific optimization remain later milestones.
 
 ### Logistic hybrid IRLS
 
-Typed `Binomial` problems support the same `Hybrid<V>` and `HybridFit` as
-Gaussian problems for all three coupled penalties. The original objective is the
-averaged binomial negative log likelihood plus the complete penalty on
-optimization-scale coefficients. The intercept remains unpenalized, and
-predictions remain logits. Preprocessing is fitted once and reused throughout.
+Typed `Binomial` problems support the same `HybridCoordinateDescent<V>` and
+`HybridFit` as Gaussian problems for all three coupled penalties. The original
+objective is the averaged binomial negative log likelihood plus the complete
+penalty on optimization-scale coefficients. The intercept remains unpenalized,
+and predictions remain logits. Preprocessing is fitted once and reused
+throughout.
 
 At each accepted outer point, the binomial gradient `g` and diagonal predictor
 Hessian `H` define the quadratic model
@@ -981,13 +985,14 @@ This representation never divides by a row weight. For an aggregate `a` at level
 `sum(r_i) / sum(w_i)`. Zero-curvature restrictions retain their penalty-only
 minimizers; an all-zero weighted intercept with zero gradient remains fixed.
 
-The private quadratic datafit also supports proximal gradient. Hybrid inner
-solves reuse summaries, residuals, and dense aggregate buffers and start with a
-full PG transition. Every weight change refreshes curvatures, weighted column
-summaries, and the PG curvature policy. Merges recompute curvature from the
-combined aggregate, including cross terms. Gaussian kernels retain their
-unweighted arithmetic. Storage remains `O(nK + p + n)`, with committed and
-staged aggregates retaining their high-water capacities.
+The private quadratic datafit also supports proximal gradient.
+HybridCoordinateDescent inner solves reuse summaries, residuals, and dense
+aggregate buffers and start with a full PG transition. Every weight change
+refreshes curvatures, weighted column summaries, and the PG curvature policy.
+Merges recompute curvature from the combined aggregate, including cross terms.
+Gaussian kernels retain their unweighted arithmetic. Storage remains
+`O(nK + p + n)`, with committed and staged aggregates retaining their high-water
+capacities.
 
 The original-loss diagnostic step is fixed at the reciprocal of a guarded
 Frobenius bound for `X_aug' X_aug / (4n)`, including the intercept column when
@@ -1066,8 +1071,9 @@ scale on which penalties are defined. With normalized coefficients `beta`,
 return original-scale coefficients using
 
 $$
-  \beta_{\mathrm{original}} = S^{-1}\beta, \qquad \beta_{0,\mathrm{original}}
-                            = \beta_0 - \beta_{\mathrm{original}}^\mathsf Tc.
+  \beta_{\mathrm{original}} = S^{-1}\beta,
+  \qquad
+  \beta_{0,\mathrm{original}} = \beta_0 - \beta_{\mathrm{original}}^\mathsf Tc.
 $$
 
 Retain fitted preprocessing metadata and verify prediction equivalence. With no
@@ -1218,16 +1224,16 @@ Gaussian sums over responses, and binomial includes fractional-response entropy.
 `PathFit` retains the fitted prefix, optional null and per-point deviances, and
 a `PathTermination` separate from model convergence.
 
-Hybrid paths return `PathFit<HybridFit, P>` for Gaussian and binomial datafits
-with all three hybrid penalties. Each path prepares the design once, retains
-optimization-scale coefficients and intercepts, and reuses native products,
-partition buffers, and logistic IRLS buffers. Budgets and diagnostic counters
-reset per point. Screening restrictions reset, partitions rebuild for the new
-penalty, and weighted summaries refresh for each quadratic model. Automatic
-working sets resolve to `EverActive` and retain activation history. Full
-original-loss checks certify every returned point. `task bench:paths` compares
-complete warm paths and cold fits at identical strengths and tolerances,
-including allocations and peak live storage.
+HybridCoordinateDescent paths return `PathFit<HybridFit, P>` for Gaussian and
+binomial datafits with all three hybrid penalties. Each path prepares the design
+once, retains optimization-scale coefficients and intercepts, and reuses native
+products, partition buffers, and logistic IRLS buffers. Budgets and diagnostic
+counters reset per point. Screening restrictions reset, partitions rebuild for
+the new penalty, and weighted summaries refresh for each quadratic model.
+Automatic working sets resolve to `EverActive` and retain activation history.
+Full original-loss checks certify every returned point. `task bench:paths`
+compares complete warm paths and cold fits at identical strengths and
+tolerances, including allocations and peak live storage.
 
 Coordinate paths cache column summaries, residual offsets, correlations, dual
 certificate storage, and working-set masks across points. Gap Safe screening
@@ -1307,8 +1313,8 @@ many correlated features initially violate KKT conditions. Other solvers use
 builder expose `.working_set_policy(...)` and `.working_sets(...)`; the last
 setter wins, and enabling restores `Auto`. Current nonzeros always remain
 eligible. EverActive retains activation history across path points. Adaptive
-ranks coordinate KKT violations or full Hybrid PG mapping components, with
-deterministic index ordering at tied scores.
+ranks coordinate KKT violations or full HybridCoordinateDescent PG mapping
+components, with deterministic index ordering at tied scores.
 
 Adaptive starts with the larger of the requested initial size and the support.
 Unsuccessful restricted solves either retain and double the previous set or
@@ -1319,14 +1325,15 @@ EverActive history survives. Partial selection and all membership storage reuse
 workspace capacity.
 
 Full checks run initially, at most ten inner updates apart by default, when a
-restricted solve converges or stalls, and before returning. Hybrid retains its
-configurable check interval. Inner stationarity targets use the larger of the
-required absolute tolerance and one tenth of the current full violation. Gap
-stopping uses relative stationarity reduction only to trigger a full gap check.
-Only a refreshed original-loss check, including the intercept, accepts final
-convergence. Safe screening stays independent: numerical restrictions combine
-certified zeros with heuristic exclusions, and exact fixed-zero proxes retain
-every original penalty interaction. Restricted Hybrid PG can split clusters.
+restricted solve converges or stalls, and before returning.
+HybridCoordinateDescent retains its configurable check interval. Inner
+stationarity targets use the larger of the required absolute tolerance and one
+tenth of the current full violation. Gap stopping uses relative stationarity
+reduction only to trigger a full gap check. Only a refreshed original-loss
+check, including the intercept, accepts final convergence. Safe screening stays
+independent: numerical restrictions combine certified zeros with heuristic
+exclusions, and exact fixed-zero proxes retain every original penalty
+interaction. Restricted HybridCoordinateDescent PG can split clusters.
 
 `WorkingSetDiagnostics` separates full and restricted checks, set rebuilds,
 expansions, reactivations, current and peak dimensions, and feature and block
@@ -1334,30 +1341,30 @@ visits. Diagnostics count quadratic subproblems within their parent fit. Sweep
 budgets count restricted sweeps as one sweep, and checks do not consume updates.
 `task bench:working-sets` measures complete fits and existing paths, including
 preprocessing, scans, rebuilds, allocations, and memory at matched original-loss
-accuracy. Python exposes these policies for Hybrid single fits and reports the
-resolved policy and work counters.
+accuracy. Python exposes these policies for HybridCoordinateDescent single fits
+and reports the resolved policy and work counters.
 
 An initial quick comparison on October 29, 2026, validated 544 configurations on
 a synthetic design with 160 observations and 256 features, stored densely and as
 CSC. All original-loss mappings met `1e-8`, and policy objectives agreed within
 `1e-8 * (1 + abs(reference_objective))`. Each configuration had one timed
 repetition and a separate heap pass. The selected defaults improved several
-coordinate and IRLS cases, while some Gaussian Hybrid cases and weak-penalty
-logistic chain fits took longer. These results establish correctness and expose
-tradeoffs; the defaults remain provisional. The ordinary benchmark command uses
-five timed repetitions per configuration.
+coordinate and IRLS cases, while some Gaussian HybridCoordinateDescent cases and
+weak-penalty logistic chain fits took longer. These results establish
+correctness and expose tradeoffs; the defaults remain provisional. The ordinary
+benchmark command uses five timed repetitions per configuration.
 
 ### Dynamic Gap Safe zero screening
 
-`Hybrid` and `ProximalGradient` enable zero screening by default for Gaussian
-and binomial losses with `ClusteredLasso`, `ChainFusedLasso`, and `Slope`.
-`.screening(false)` disables certificates and reductions. Optional
-`GapSafeDatafit`, `GapSafePenalty`, and `ScreeningDesign` capabilities preserve
-external components and runtime composition without additional solver bounds.
-`Box` forwards capabilities. Other wrappers, multivariate layouts, and
-product-only designs retain ordinary fitting. Working sets have independent
-controls. Fusion screening and screening in the separable `Irls` solver remain
-separate capabilities.
+`HybridCoordinateDescent` and `ProximalGradient` enable zero screening by
+default for Gaussian and binomial losses with `ClusteredLasso`,
+`ChainFusedLasso`, and `Slope`. `.screening(false)` disables certificates and
+reductions. Optional `GapSafeDatafit`, `GapSafePenalty`, and `ScreeningDesign`
+capabilities preserve external components and runtime composition without
+additional solver bounds. `Box` forwards capabilities. Other wrappers,
+multivariate layouts, and product-only designs retain ordinary fitting. Working
+sets have independent controls. Fusion screening and screening in the separable
+`Irls` solver remain separate capabilities.
 
 Let $\theta$ be an observation-scale feasible dual point and
 $G = G(\beta_0,\beta,\theta)$ its original-problem gap. The dual has strong
@@ -1443,7 +1450,8 @@ weighted TV $T$ and nonnegative node weights $\alpha$, the exact prox is
 
 $$
   \operatorname{prox}_{\tau(T+\sum_j\alpha_j|\cdot_j|)}(v)
-  = [\operatorname{prox}_{\tau T}(v - \tau\alpha)]_+ + [\operatorname{prox}_{\tau T}(v + \tau\alpha)]_-.
+  = [\operatorname{prox}_{\tau T}(v - \tau\alpha)]_+
+    + [\operatorname{prox}_{\tau T}(v + \tau\alpha)]_-.
 $$
 
 TV's prox preserves order, and clipping preserves its edge subgradients. The
@@ -1453,15 +1461,16 @@ formula. Two existing taut-string calls suffice; uniform weights retain the
 one-call fast path. This restriction is separate from `Masked`, which excludes
 coordinates from penalization instead of fixing them to zero.
 
-Screening runs initially and every ten PG updates, at Gaussian Hybrid checks,
-and at accepted logistic outer iterates. Logistic surrogate gaps never establish
-restrictions. Selected column products and aggregate rebuilds skip screened
-columns. A zero block containing certified features stays fixed during Hybrid
-sweeps; PG may split and reactivate its unscreened members. Stopping and final
-labels remain in the original space, and observers never trigger certificates.
-Every existing proximal path point resets restrictions while retaining scratch
-capacity and warm-start coefficients. Thus features can reactivate as strengths
-change. Returned vectors always retain the original feature dimension.
+Screening runs initially and every ten PG updates, at Gaussian
+HybridCoordinateDescent checks, and at accepted logistic outer iterates.
+Logistic surrogate gaps never establish restrictions. Selected column products
+and aggregate rebuilds skip screened columns. A zero block containing certified
+features stays fixed during HybridCoordinateDescent sweeps; PG may split and
+reactivate its unscreened members. Stopping and final labels remain in the
+original space, and observers never trigger certificates. Every existing
+proximal path point resets restrictions while retaining scratch capacity and
+warm-start coefficients. Thus features can reactivate as strengths change.
+Returned vectors always retain the original feature dimension.
 
 Fit diagnostics separate certificate passes, zero tests, certified features,
 active dimensions, rebuilds, and fallback certificates. Optional gaps do not
@@ -1621,35 +1630,36 @@ alongside analytical fits and independent objective and KKT calculations.
 
 `Problem(X, datafit, penalty, normalization=...)` composes `Gaussian(y)` or
 `Binomial(y)` with `ClusteredLasso`, `ChainFusedLasso`, or `Slope`.
-`fit_with(Hybrid(...))` returns `HybridFit`, and
+`fit_with(HybridCoordinateDescent(...))` returns `HybridFit`, and
 `fit_with(ProximalGradient(...))` returns `ProximalFit`. Solver configurations
-expose the existing Rust controls and defaults, including Hybrid step and
-working-set policies. Both solvers use absolute proximal-gradient mapping
-stopping. The existing Gaussian `Lasso` convenience interface retains its gap
-and KKT criteria. Shared option conversion preserves solver compatibility errors
-and normalization conventions.
+expose the existing Rust controls and defaults, including
+HybridCoordinateDescent step and working-set policies. Both solvers use absolute
+proximal-gradient mapping stopping. The existing Gaussian `Lasso` convenience
+interface retains its gap and KKT criteria. Shared option conversion preserves
+solver compatibility errors and normalization conventions.
 
 Problems retain input references until each fit snapshots them. Penalty weight
 sequences become immutable tuples at construction; dimensions and numerical
 validity are checked against the selected problem when fitting. The dense input
 adapter remains the only boundary for training and prediction matrices. After
 copying, a detached native call constructs fresh penalties and their mutable
-scratch. Hybrid dispatch selects one of six typed ndarray combinations. PG uses
-independently boxed datafit and penalty oracles through `RuntimeProblem` and the
-ndarray `MatrixDesign` adapter. Runtime backend errors need not be thread-safe,
-so detached calls transport an owned error category and message and construct
-Python exceptions only after reattaching. No Python references or shared penalty
-workspaces reach the numerical loops.
+scratch. HybridCoordinateDescent dispatch selects one of six typed ndarray
+combinations. PG uses independently boxed datafit and penalty oracles through
+`RuntimeProblem` and the ndarray `MatrixDesign` adapter. Runtime backend errors
+need not be thread-safe, so detached calls transport an owned error category and
+message and construct Python exceptions only after reattaching. No Python
+references or shared penalty workspaces reach the numerical loops.
 
 Results retain only native fitted state and family metadata. Both report the
 chosen solver, original-scale parameters, preprocessing, original-loss mapping,
-optional dual certificates, and screening diagnostics. Hybrid adds cluster
-metadata, working-set diagnostics, and inner and outer work counters. Cluster
-labels and values use the optimization scale; SLOPE additionally retains
-individual signs. Array-valued properties return independent NumPy copies.
-`predict` returns Gaussian means or binomial logits with shape `(n_samples,)`.
-Neither prediction nor result inspection refits normalization. Python
-cross-validation and plotting remain subsequent milestones.
+optional dual certificates, and screening diagnostics. HybridCoordinateDescent
+adds cluster metadata, working-set diagnostics, and inner and outer work
+counters. Cluster labels and values use the optimization scale; SLOPE
+additionally retains individual signs. Array-valued properties return
+independent NumPy copies. `predict` returns Gaussian means or binomial logits
+with shape `(n_samples,)`. Neither prediction nor result inspection refits
+normalization. Python cross-validation and plotting remain subsequent
+milestones.
 
 The `python_model_fixture` generator checks all twelve penalty, family, and
 solver combinations against typed public Rust fits, including normalization,
@@ -1675,10 +1685,10 @@ same defaults and validation.
 
 Both calls snapshot the dense inputs once and fit the entire path while detached
 from Python. Rust owns normalization, null-model initialization, workspace
-reuse, screening resets, and warm starts. Hybrid `Auto` working sets resolve to
-`EverActive` for paths. Each point gets a fresh solver budget, and finite
-iteration-limit fits remain usable as subsequent warm starts. Errors return no
-partial path and preserve Rust's error category and message.
+reuse, screening resets, and warm starts. HybridCoordinateDescent `Auto` working
+sets resolve to `EverActive` for paths. Each point gets a fresh solver budget,
+and finite iteration-limit fits remain usable as subsequent warm starts. Errors
+return no partial path and preserve Rust's error category and message.
 
 `PathFit` owns immutable native fits shared with independent per-point wrappers.
 `coefficients` has shape `(n_points, n_features)`, `intercepts` has shape
@@ -1686,9 +1696,9 @@ partial path and preserve Rust's error category and message.
 paths, zero-feature designs, and empty prediction batches retain these axes.
 Bulk prediction snapshots the new design once before detaching. Every point
 exposes its complete fit API, including preprocessing, stopping, dual, and
-screening diagnostics. Hybrid points add working-set and cluster diagnostics.
-Arrays are independent NumPy copies, and neither path nor point wrappers retain
-training data.
+screening diagnostics. HybridCoordinateDescent points add working-set and
+cluster diagnostics. Arrays are independent NumPy copies, and neither path nor
+point wrappers retain training data.
 
 Automatic results retain aligned scalar multipliers and deviances, the true zero
 threshold, the used anchor, null deviance, and path termination. An unbounded

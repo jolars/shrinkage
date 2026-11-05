@@ -1,9 +1,9 @@
-# Hybrid
+# Hybrid coordinate descent
 
-`Hybrid` alternates proximal-gradient transitions with exact updates of
-coefficient blocks. Gaussian problems use the original quadratic loss. Binomial
-problems use weighted hybrid subproblems inside IRLS, with backtracking on the
-original objective.
+`HybridCoordinateDescent` alternates proximal-gradient transitions with exact
+updates of coefficient blocks. Gaussian problems use the original quadratic
+loss. Binomial problems use weighted hybrid subproblems inside IRLS, with
+backtracking on the original objective.
 
 Three penalties are supported. Clustered lasso groups equal signed effects,
 chain fused lasso groups contiguous equal segments, and SLOPE groups equal
@@ -14,13 +14,13 @@ reactivate coordinates that block sweeps leave fixed.
 
 ```rust
 use faer::{Col, Mat};
-use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem, Termination};
+use shrinkage::{ClusteredLasso, Gaussian, HybridCoordinateDescent, Problem, Termination};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(8, 3, |i, j| ((i * 7 + j * 3) % 11) as f64 - 5.0);
     let y: Vec<_> = (0..8).map(|i| 2.0 + x[(i, 0)] + x[(i, 1)]).collect();
     let fit = Problem::new(&x, Gaussian::new(&y), ClusteredLasso::new(0.05, 0.1))
-        .fit_with(&Hybrid::<Col<f64>>::new())?;
+        .fit_with(&HybridCoordinateDescent::<Col<f64>>::new())?;
     assert_eq!(fit.termination(), Termination::Converged);
     println!("Cluster labels: {:?}", fit.cluster_labels());
     println!("Cluster values: {:?}", fit.cluster_values());
@@ -93,7 +93,7 @@ Certificates run at Gaussian checks and accepted logistic outer iterates.
 Quadratic IRLS subproblem gaps never certify original logistic restrictions.
 
 API:
-[`shrinkage::Hybrid`](https://shrinkage.cc/packages/rust/reference/2a1d90805911db329d5e4ff4986bb2f7fdb00992ed6828b9cd3b3af05e3b1973),
+[`shrinkage::HybridCoordinateDescent`](https://shrinkage.cc/packages/rust/reference/6e142c2de8c70807e35ff7553fffda094241be993dc7a332ee193688dc1f04bf),
 [`shrinkage::HybridStep`](https://shrinkage.cc/packages/rust/reference/8c2324572d804bcaf844c43f1cf5a8cfa03c0ef3439c88e54a8dcdd948cdc85e),
 and
 [`shrinkage::HybridFit`](https://shrinkage.cc/packages/rust/reference/4cfe41c15bbeb98348e19c60ae6240bfb650cf4d7fe4c2c32a660c298508b022).

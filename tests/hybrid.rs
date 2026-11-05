@@ -6,9 +6,9 @@ mod matrix;
 use matrix::Matrix;
 use serde_json::Value;
 use shrinkage::{
-    ClusteredLasso, FitError, Gaussian, Hybrid, HybridFit, HybridStep, MatrixDesign, Normalization,
-    Penalty, Problem, ProximalGradient, ProximalPenalty, RuntimeProblem, StoppingCriterion,
-    Termination,
+    ClusteredLasso, FitError, Gaussian, HybridCoordinateDescent, HybridFit, HybridStep,
+    MatrixDesign, Normalization, Penalty, Problem, ProximalGradient, ProximalPenalty,
+    RuntimeProblem, StoppingCriterion, Termination,
 };
 
 fn close(actual: f64, expected: f64, tolerance: f64) {
@@ -159,7 +159,7 @@ fn typed_runtime_and_hybrid_fits_match_independent_qp_fixtures() {
         for policy in [HybridStep::default(), HybridStep::FixedBound] {
             let fit = problem
                 .fit_with(
-                    &Hybrid::<Vec<f64>>::new()
+                    &HybridCoordinateDescent::<Vec<f64>>::new()
                         .tolerance(1e-8)
                         .max_iterations(100_000)
                         .step_policy(policy),
@@ -332,7 +332,7 @@ fn budgets_cadence_and_backtracking_do_not_change_the_schedule() {
             max_backtracks: 100,
         },
     ] {
-        let options = Hybrid::<Vec<f64>>::new()
+        let options = HybridCoordinateDescent::<Vec<f64>>::new()
             .step_policy(policy)
             .tolerance(1e-30)
             .max_iterations(11);
@@ -348,7 +348,7 @@ fn budgets_cadence_and_backtracking_do_not_change_the_schedule() {
         assert_eq!(first.diagnostic_checks(), 12);
         assert_eq!(second.diagnostic_checks(), 2);
     }
-    let failed = problem.fit_with(&Hybrid::<Vec<f64>>::new().step_policy(
+    let failed = problem.fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().step_policy(
         HybridStep::Backtracking {
             initial_curvature: Some(1e-4),
             max_backtracks: 0,
@@ -369,7 +369,11 @@ fn zero_and_nonzero_blocks_split_through_full_pg() {
         ClusteredLasso::new(0.05, 0.1),
     )
     .normalize(Normalization::None)
-    .fit_with(&Hybrid::<Vec<f64>>::new().check_every(1).tolerance(1e-12))
+    .fit_with(
+        &HybridCoordinateDescent::<Vec<f64>>::new()
+            .check_every(1)
+            .tolerance(1e-12),
+    )
     .unwrap();
     assert_eq!(fit.termination(), Termination::Converged);
     close(fit.coefficients()[0], -1.7, 1e-12);
@@ -402,7 +406,7 @@ fn compare_normalization(fit: &HybridFit, rows: &[Vec<f64>], y: &[f64], free_int
         ClusteredLasso::new(0.07, 0.03),
     )
     .normalize(Normalization::None)
-    .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
     .unwrap();
     close(fit.objective(), reference.objective(), 1e-10);
     let raw = Matrix::from_rows(&rows.iter().map(Vec::as_slice).collect::<Vec<_>>());
@@ -447,7 +451,7 @@ fn lazy_normalization_and_supplied_metadata_preserve_predictions() {
                 ClusteredLasso::new(0.07, 0.03),
             )
             .normalize(normalization)
-            .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+            .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
             .unwrap();
             compare_normalization(&fit, &rows, &y, free_intercept);
         }
@@ -459,7 +463,7 @@ fn lazy_normalization_and_supplied_metadata_preserve_predictions() {
         .normalize(Normalization::None)
         .with_centers(vec![0.5, -0.25])
         .with_scales(vec![2.0, 3.0])
-        .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+        .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
         .unwrap();
         compare_normalization(&fit, &rows, &y, free_intercept);
         assert!(fit.preprocessing().centers_were_supplied());
@@ -477,7 +481,7 @@ fn cluster_labels_describe_optimization_scale() {
     )
     .normalize(Normalization::None)
     .with_scales(vec![1.0, 2.0])
-    .fit_with(&Hybrid::<Vec<f64>>::new())
+    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new())
     .unwrap();
     assert_eq!(fit.cluster_labels()[0], fit.cluster_labels()[1]);
     assert_ne!(fit.coefficients()[0], fit.coefficients()[1]);
@@ -494,7 +498,7 @@ fn empty_features_zero_design_and_invalid_settings() {
                 ClusteredLasso::new(0.0, 0.0),
             )
             .normalize(Normalization::None)
-            .fit_with(&Hybrid::<Vec<f64>>::new())
+            .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new())
             .unwrap();
             assert_eq!(fit.termination(), Termination::Converged);
             assert_eq!(fit.iterations(), 0);
@@ -512,12 +516,12 @@ fn empty_features_zero_design_and_invalid_settings() {
         ClusteredLasso::new(0.1, 0.2),
     );
     for options in [
-        Hybrid::<Vec<f64>>::new().max_iterations(0),
-        Hybrid::new().cluster_sweeps(0),
-        Hybrid::new().check_every(0),
-        Hybrid::new().tolerance(0.0),
-        Hybrid::new().tolerance(f64::NAN),
-        Hybrid::new().step_policy(HybridStep::Backtracking {
+        HybridCoordinateDescent::<Vec<f64>>::new().max_iterations(0),
+        HybridCoordinateDescent::new().cluster_sweeps(0),
+        HybridCoordinateDescent::new().check_every(0),
+        HybridCoordinateDescent::new().tolerance(0.0),
+        HybridCoordinateDescent::new().tolerance(f64::NAN),
+        HybridCoordinateDescent::new().step_policy(HybridStep::Backtracking {
             initial_curvature: Some(-1.0),
             max_backtracks: 10,
         }),
@@ -529,7 +533,8 @@ fn empty_features_zero_design_and_invalid_settings() {
     }
     assert!(matches!(
         problem.fit_with(
-            &Hybrid::<Vec<f64>>::new().terminate_on(StoppingCriterion::duality_gap(1e-6))
+            &HybridCoordinateDescent::<Vec<f64>>::new()
+                .terminate_on(StoppingCriterion::duality_gap(1e-6))
         ),
         Err(FitError::UnsupportedCombination { .. })
     ));
@@ -539,7 +544,7 @@ fn empty_features_zero_design_and_invalid_settings() {
         Box::new(ClusteredLasso::new(0.1, 0.2)),
     );
     assert!(matches!(
-        runtime.fit_with(&Hybrid::<Vec<f64>>::new()),
+        runtime.fit_with(&HybridCoordinateDescent::<Vec<f64>>::new()),
         Err(FitError::UnsupportedCombination { .. })
     ));
 }

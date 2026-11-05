@@ -131,8 +131,8 @@ pub use screening::{
     DualCertificate, GapSafeDatafit, GapSafePenalty, ScreeningDesign, ScreeningDiagnostics,
 };
 pub use solver::{
-    CoordinateDescent, Hybrid, HybridStep, InitialPoint, Irls, ObservedSolver, ProximalDesign,
-    ProximalGradient, ProximalVector, Solver, SolverObserver, SolverStep, StepKind,
+    CoordinateDescent, HybridCoordinateDescent, HybridStep, InitialPoint, Irls, ObservedSolver,
+    ProximalDesign, ProximalGradient, ProximalVector, Solver, SolverObserver, SolverStep, StepKind,
     StoppingCriterion, WorkingSetDiagnostics, WorkingSetPolicy,
 };
 

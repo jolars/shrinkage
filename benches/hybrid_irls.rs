@@ -3,8 +3,8 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use faer::Col;
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, Hybrid, Normalization, Problem, ProximalGradient,
-    Slope, Termination,
+    Binomial, ChainFusedLasso, ClusteredLasso, HybridCoordinateDescent, Normalization, Problem,
+    ProximalGradient, Slope, Termination,
 };
 use std::{hint::black_box, time::Duration};
 
@@ -19,7 +19,7 @@ fn solves(c: &mut Criterion) {
                 ($name:literal, $penalty:expr) => {{
                     let penalty = $penalty;
                     let problem = Problem::new(&x, Binomial::new(&y), penalty.clone()).normalize(Normalization::None);
-                    let solver = Hybrid::<Col<f64>>::new().tolerance(1e-7).max_iterations(100_000);
+                    let solver = HybridCoordinateDescent::<Col<f64>>::new().tolerance(1e-7).max_iterations(100_000);
                     let pg = ProximalGradient::<Col<f64>>::new().tolerance(1e-7).max_iterations(100_000);
                     let reference = problem.fit_with(&pg).unwrap();
                     let fit = problem.fit_with(&solver).unwrap();

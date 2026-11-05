@@ -61,7 +61,7 @@ from .penalty import (
 )
 from .problem import Problem as Problem
 from .solver import (
-    Hybrid as Hybrid,
+    HybridCoordinateDescent as HybridCoordinateDescent,
 )
 from .solver import (
     HybridStep as HybridStep,
@@ -79,7 +79,7 @@ __all__ = [
     "ChainFusedLasso",
     "ClusteredLasso",
     "Gaussian",
-    "Hybrid",
+    "HybridCoordinateDescent",
     "HybridFit",
     "HybridStep",
     "Lasso",

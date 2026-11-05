@@ -7,8 +7,8 @@ Complete the MVP, then publish the Python package so the paper in
 
 The MVP includes:
 
-- Hybrid fitting for all three penalties, with proximal-gradient reference
-  solvers and full optimality checks.
+- HybridCoordinateDescent fitting for all three penalties, with
+  proximal-gradient reference solvers and full optimality checks.
 - Gaussian regression, plus logistic regression through IRLS.
 - Regularization paths with warm starts and reusable workspaces.
 - Cross-validation for tuning selection and refitting.
@@ -75,23 +75,24 @@ decision and concrete follow-up tasks.
   references and complete sweeps with a reference that rebuilds residuals
   and aggregates after each move. Verify objective descent and state
   invariants.
-- [x] **Hybrid iteration:** Start with a full PG step, then interleave a
-  configurable finite number of cluster sweeps with full PG transitions,
-  initially matching the research setting of five sweeps. Use a justified
-  curvature bound for the averaged loss. Refresh residuals and rebuild all
-  membership-dependent caches after PG so zero and nonzero blocks can split.
-  Require the full-space stopping check, and report PG steps, CD sweeps,
-  stopping values, and termination reasons separately. Test split-required
-  cases, unchanged sweeps, iteration limits, and agreement with the proximal
-  baseline at matched accuracy. Benchmark complete solves, including
-  rebuilds and diagnostics, on clustered and weakly fused cases.
-- [x] **Hybrid normalization and intercepts:** Integrate the dense hybrid with
-  fitted lazy normalization and unpenalized intercepts. Verify agreement
-  between explicit and lazy normalization and prediction-preserving
-  back-transformation. Document that cluster labels describe
-  optimization-scale coefficients; scaling can change equality among
-  reported original-scale coefficients. Preserve the paper's unnormalized,
-  no-intercept configuration as a tested case.
+- [x] **HybridCoordinateDescent iteration:** Start with a full PG step, then
+  interleave a configurable finite number of cluster sweeps with full PG
+  transitions, initially matching the research setting of five sweeps. Use a
+  justified curvature bound for the averaged loss. Refresh residuals and
+  rebuild all membership-dependent caches after PG so zero and nonzero
+  blocks can split. Require the full-space stopping check, and report PG
+  steps, CD sweeps, stopping values, and termination reasons separately.
+  Test split-required cases, unchanged sweeps, iteration limits, and
+  agreement with the proximal baseline at matched accuracy. Benchmark
+  complete solves, including rebuilds and diagnostics, on clustered and
+  weakly fused cases.
+- [x] **HybridCoordinateDescent normalization and intercepts:** Integrate the
+  dense hybrid with fitted lazy normalization and unpenalized intercepts.
+  Verify agreement between explicit and lazy normalization and
+  prediction-preserving back-transformation. Document that cluster labels
+  describe optimization-scale coefficients; scaling can change equality
+  among reported original-scale coefficients. Preserve the paper's
+  unnormalized, no-intercept configuration as a tested case.
 
 ### 2. Chain fused lasso
 
@@ -144,12 +145,12 @@ decision and concrete follow-up tasks.
 
 ### 4. Logistic regression through IRLS
 
-- [x] **Hybrid quadratic subproblems:** Extend the existing curvature and IRLS
-  capabilities to weighted Gaussian subproblems for clustered lasso, chain
-  fused lasso, and SLOPE. Provide compatible proximal and hybrid inner
-  solvers with reusable weighted summaries, aggregates, and residual
-  storage. Test weighted scalar updates, zero weights and curvatures, and
-  agreement with independently solved quadratic subproblems.
+- [x] **HybridCoordinateDescent quadratic subproblems:** Extend the existing
+  curvature and IRLS capabilities to weighted Gaussian subproblems for
+  clustered lasso, chain fused lasso, and SLOPE. Provide compatible proximal
+  and hybrid inner solvers with reusable weighted summaries, aggregates, and
+  residual storage. Test weighted scalar updates, zero weights and
+  curvatures, and agreement with independently solved quadratic subproblems.
 - [x] **Logistic hybrid IRLS:** Integrate the three penalties with stable
   binomial weights, an unpenalized intercept, controlled inner accuracy, and
   globalization against the original penalized logistic objective. Rebuild
@@ -168,39 +169,41 @@ decision and concrete follow-up tasks.
   stopping; the feasible zero certificate can remain loose in degenerate
   cases.
 - [x] **Dynamic zero screening:** Enable Gap Safe zero restrictions by default
-  in Hybrid and proximal gradient, including existing proximal paths and
-  runtime composition. Preserve every removed-zero interaction in the exact
-  objective, skip screened matrix work, and expose controls and diagnostics.
-  Validate strict boundaries, conservative rounding, original-space results,
-  path resets, and agreement with unscreened fits. Benchmark complete
-  enabled and disabled solves, allocations, and memory at matched accuracy.
+  in HybridCoordinateDescent and proximal gradient, including existing
+  proximal paths and runtime composition. Preserve every removed-zero
+  interaction in the exact objective, skip screened matrix work, and expose
+  controls and diagnostics. Validate strict boundaries, conservative
+  rounding, original-space results, path resets, and agreement with
+  unscreened fits. Benchmark complete enabled and disabled solves,
+  allocations, and memory at matched accuracy.
 - [ ] **Fusion screening:** Add certified equality restrictions, including
   clustered-lasso fusion where safe. Preserve original feature masses and
   the exact reduced penalty, validate lifting and strict boundaries
   independently, and rebuild certificates at every path point.
-- [x] **Hybrid working sets:** Extend existing working-set machinery to select
-  coefficients or clusters using full optimality violations. Permit excluded
-  coordinates to reactivate and clusters to split. Refresh eligibility after
-  PG transitions, IRLS weight changes, and path-strength changes. Test
-  deliberately omitted violators, compare with full sweeps, and require a
-  full original-loss check before accepting convergence.
+- [x] **HybridCoordinateDescent working sets:** Extend existing working-set
+  machinery to select coefficients or clusters using full optimality
+  violations. Permit excluded coordinates to reactivate and clusters to
+  split. Refresh eligibility after PG transitions, IRLS weight changes, and
+  path-strength changes. Test deliberately omitted violators, compare with
+  full sweeps, and require a full original-loss check before accepting
+  convergence.
 - [x] **Screening and working-set integration:** Expose independent controls and
   diagnostics for supported screening and working sets in coordinate
-  descent, separable IRLS, and Hybrid, including existing coordinate and
-  IRLS paths. Compare policies and enabled and disabled combinations at
-  matched accuracy, including warm starts and IRLS. Benchmark complete solve
-  time, certificate passes, rebuilds, active dimensions, allocations, and
-  memory.
+  descent, separable IRLS, and HybridCoordinateDescent, including existing
+  coordinate and IRLS paths. Compare policies and enabled and disabled
+  combinations at matched accuracy, including warm starts and IRLS.
+  Benchmark complete solve time, certificate passes, rebuilds, active
+  dimensions, allocations, and memory.
 
 ### 6. Paths, cross-validation, and plotting
 
-- [x] **Hybrid regularization paths:** Extend existing warm-start paths to all
-  three hybrid solvers. Support explicit L1/fusion strength pairs for
-  clustered and chain fused lasso, including fixed-ratio sequences, and
-  scaled SLOPE weight profiles. Retain all tuning parameters and per-point
-  diagnostics, rebuild cluster and screening state correctly, and compare
-  with cold fits. Automatic sequences require a justified null model and
-  tuning direction for the complete penalty.
+- [x] **HybridCoordinateDescent regularization paths:** Extend existing
+  warm-start paths to all three hybrid solvers. Support explicit L1/fusion
+  strength pairs for clustered and chain fused lasso, including fixed-ratio
+  sequences, and scaled SLOPE weight profiles. Retain all tuning parameters
+  and per-point diagnostics, rebuild cluster and screening state correctly,
+  and compare with cold fits. Automatic sequences require a justified null
+  model and tuning direction for the complete penalty.
 - [x] **Logistic hybrid paths:** Reuse IRLS workspaces and warm starts across
   tuning points for all three penalties. Refresh weighted summaries, working
   sets, and screening eligibility, and preserve inner and outer diagnostics.

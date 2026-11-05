@@ -11,7 +11,7 @@ pub(crate) mod irls;
 pub(crate) mod proximal;
 
 pub use crate::path::{PathSolver, RegularizationPathSolver};
-pub use hybrid::{Hybrid, HybridStep};
+pub use hybrid::{HybridCoordinateDescent, HybridStep};
 pub use irls::Irls;
 pub use proximal::{ProximalDesign, ProximalGradient, ProximalVector};
 

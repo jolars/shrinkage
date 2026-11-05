@@ -2,8 +2,8 @@
 
 use faer::Mat;
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, Hybrid, Irls, L1, PathOptions, Problem, Slope,
-    Termination,
+    Binomial, ChainFusedLasso, ClusteredLasso, HybridCoordinateDescent, Irls, L1, PathOptions,
+    Problem, Slope, Termination,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         assert_eq!(fit.termination(), Termination::Converged);
         println!("lambda={lambda:.5}: {:?}", fit.coefficients());
     }
-    let hybrid = Hybrid::<faer::Col<f64>>::new().tolerance(1e-9);
+    let hybrid = HybridCoordinateDescent::<faer::Col<f64>>::new().tolerance(1e-9);
     for fit in [
         Problem::new(&x, Binomial::new(&y), ClusteredLasso::new(0.02, 0.03)).fit_with(&hybrid)?,
         Problem::new(&x, Binomial::new(&y), ChainFusedLasso::new(0.02, 0.03)).fit_with(&hybrid)?,
@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ] {
         assert_eq!(fit.termination(), Termination::Converged);
         println!(
-            "Hybrid: outer={}, PG={}, sweeps={}, logistic mapping={}",
+            "HybridCoordinateDescent: outer={}, PG={}, sweeps={}, logistic mapping={}",
             fit.outer_iterations(),
             fit.pg_steps(),
             fit.coordinate_sweeps(),

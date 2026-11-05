@@ -6,8 +6,9 @@ mod matrix;
 use matrix::Matrix;
 use serde_json::Value;
 use shrinkage::{
-    ChainFusedLasso, FitError, Gaussian, Hybrid, HybridStep, MatrixDesign, Normalization, Penalty,
-    Problem, ProximalGradient, ProximalPenalty, RuntimeProblem, StoppingCriterion, Termination,
+    ChainFusedLasso, FitError, Gaussian, HybridCoordinateDescent, HybridStep, MatrixDesign,
+    Normalization, Penalty, Problem, ProximalGradient, ProximalPenalty, RuntimeProblem,
+    StoppingCriterion, Termination,
 };
 
 fn close(actual: f64, expected: f64, tolerance: f64) {
@@ -123,7 +124,7 @@ fn gaussian_pg_and_hybrid_match_independent_qp_fixtures() {
         for policy in [HybridStep::default(), HybridStep::FixedBound] {
             let hybrid = problem
                 .fit_with(
-                    &Hybrid::<Vec<f64>>::new()
+                    &HybridCoordinateDescent::<Vec<f64>>::new()
                         .tolerance(1e-9)
                         .max_iterations(100_000)
                         .step_policy(policy),
@@ -254,7 +255,7 @@ fn empty_and_single_feature_fits_and_separated_equal_values() {
         Gaussian::new(&[1.0, 2.0, 3.0]),
         ChainFusedLasso::new(0.1, 0.2).with_weights(vec![]),
     )
-    .fit_with(&Hybrid::<Vec<f64>>::new())
+    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new())
     .unwrap();
     assert_eq!(fit.termination(), Termination::Converged);
     assert_eq!(fit.intercept(), 2.0);
@@ -267,7 +268,7 @@ fn empty_and_single_feature_fits_and_separated_equal_values() {
         ChainFusedLasso::new(0.1, 100.0).with_weights(vec![]),
     );
     let hybrid = problem
-        .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+        .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
         .unwrap();
     let pg = problem
         .fit_with(&ProximalGradient::<Vec<f64>>::new().tolerance(1e-10))
@@ -284,7 +285,7 @@ fn empty_and_single_feature_fits_and_separated_equal_values() {
             ChainFusedLasso::new(0.1, 0.0).with_weights(weights),
         )
         .normalize(Normalization::None)
-        .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+        .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
         .unwrap();
         assert_eq!(fit.cluster_labels(), labels);
         if response[1] < 0.0 {
@@ -325,7 +326,7 @@ fn lazy_normalization_and_supplied_metadata_preserve_predictions() {
                         .with_scales(vec![2.0, 3.0, 0.5]);
                 }
                 let fit = problem
-                    .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+                    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
                     .unwrap();
                 assert_eq!(fit.termination(), Termination::Converged);
                 let centers = fit
@@ -354,7 +355,7 @@ fn lazy_normalization_and_supplied_metadata_preserve_predictions() {
                 )
                 .normalize(Normalization::None);
                 let reference = reference_problem
-                    .fit_with(&Hybrid::<Vec<f64>>::new().tolerance(1e-10))
+                    .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new().tolerance(1e-10))
                     .unwrap();
                 let pg = reference_problem
                     .fit_with(&ProximalGradient::<Vec<f64>>::new().tolerance(1e-10))
@@ -392,7 +393,7 @@ fn invalid_dimensions_fail_before_preparation_and_runtime_hybrid_remains_unsuppo
             Gaussian::new(&[1.0, 2.0]),
             ChainFusedLasso::new(0.0, 0.0).with_weights(weights),
         )
-        .fit_with(&Hybrid::<Vec<f64>>::new());
+        .fit_with(&HybridCoordinateDescent::<Vec<f64>>::new());
         assert!(matches!(result, Err(FitError::InvalidInput { .. })));
         assert_eq!(x.visits.get(), 0);
     }
@@ -402,16 +403,19 @@ fn invalid_dimensions_fail_before_preparation_and_runtime_hybrid_remains_unsuppo
         ChainFusedLasso::new(0.1, 0.2),
     );
     for options in [
-        Hybrid::<Vec<f64>>::new().max_iterations(0),
-        Hybrid::new().cluster_sweeps(0),
-        Hybrid::new().check_every(0),
-        Hybrid::new().tolerance(f64::NAN),
+        HybridCoordinateDescent::<Vec<f64>>::new().max_iterations(0),
+        HybridCoordinateDescent::new().cluster_sweeps(0),
+        HybridCoordinateDescent::new().check_every(0),
+        HybridCoordinateDescent::new().tolerance(f64::NAN),
     ] {
         assert!(problem.fit_with(&options).is_err());
     }
     assert!(
         problem
-            .fit_with(&Hybrid::<Vec<f64>>::new().terminate_on(StoppingCriterion::duality_gap(1e-6)))
+            .fit_with(
+                &HybridCoordinateDescent::<Vec<f64>>::new()
+                    .terminate_on(StoppingCriterion::duality_gap(1e-6))
+            )
             .is_err()
     );
     let runtime = RuntimeProblem::new(
@@ -420,7 +424,7 @@ fn invalid_dimensions_fail_before_preparation_and_runtime_hybrid_remains_unsuppo
         Box::new(ChainFusedLasso::new(0.1, 0.2)),
     );
     assert!(matches!(
-        runtime.fit_with(&Hybrid::<Vec<f64>>::new()),
+        runtime.fit_with(&HybridCoordinateDescent::<Vec<f64>>::new()),
         Err(FitError::UnsupportedCombination { .. })
     ));
 }

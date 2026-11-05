@@ -12,7 +12,7 @@ trait HybridPathDatafit: SmoothDatafit + NullModelDatafit + Copy {
     fn initial_intercept(&self) -> Result<f64, FitError> {
         Ok(0.0)
     }
-    fn validate_solver<V>(&self, solver: &Hybrid<V>) -> Result<f64, FitError> {
+    fn validate_solver<V>(&self, solver: &HybridCoordinateDescent<V>) -> Result<f64, FitError> {
         solver.validate()
     }
     fn path_deviance<P: ReducedCoordinatePenalty>(
@@ -24,7 +24,7 @@ trait HybridPathDatafit: SmoothDatafit + NullModelDatafit + Copy {
         &self,
         design: &mut NativeDesign<M, V>,
         penalty: &P,
-        solver: &Hybrid<V>,
+        solver: &HybridCoordinateDescent<V>,
         threshold: f64,
         work: (&mut Workspace<P>, &mut Self::Outer),
     ) -> Result<Solution, FitError<M::Error>>
@@ -51,7 +51,7 @@ impl HybridPathDatafit for Gaussian<'_> {
         &self,
         design: &mut NativeDesign<M, V>,
         penalty: &P,
-        solver: &Hybrid<V>,
+        solver: &HybridCoordinateDescent<V>,
         threshold: f64,
         work: (&mut Workspace<P>, &mut ()),
     ) -> Result<Solution, FitError<M::Error>>
@@ -84,7 +84,7 @@ impl HybridPathDatafit for Binomial<'_> {
     ) -> Result<Option<f64>, FitError> {
         self.deviance(&outer.eta)
     }
-    fn validate_solver<V>(&self, solver: &Hybrid<V>) -> Result<f64, FitError> {
+    fn validate_solver<V>(&self, solver: &HybridCoordinateDescent<V>) -> Result<f64, FitError> {
         let threshold = solver.validate()?;
         if solver.max_outer_iterations == 0 || solver.max_inner_iterations == 0 {
             return Err(invalid(
@@ -97,7 +97,7 @@ impl HybridPathDatafit for Binomial<'_> {
         &self,
         design: &mut NativeDesign<M, V>,
         penalty: &P,
-        solver: &Hybrid<V>,
+        solver: &HybridCoordinateDescent<V>,
         threshold: f64,
         work: (&mut Workspace<P>, &mut Self::Outer),
     ) -> Result<Solution, FitError<M::Error>>
@@ -131,7 +131,7 @@ fn validate<D: SmoothDatafit, E>(n: usize, datafit: &D) -> Result<(), FitError<E
     Ok(())
 }
 
-impl<M, D, P, Q, V> PathSolver<Problem<&M, D, P>, Q> for Hybrid<V>
+impl<M, D, P, Q, V> PathSolver<Problem<&M, D, P>, Q> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     D: HybridPathDatafit,
@@ -189,7 +189,7 @@ where
     }
 }
 
-impl<M, D, P, V> RegularizationPathSolver<Problem<&M, D, P>> for Hybrid<V>
+impl<M, D, P, V> RegularizationPathSolver<Problem<&M, D, P>> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     D: HybridPathDatafit,
@@ -261,7 +261,7 @@ where
 }
 
 impl<D: SmoothDatafit, P, Q: crate::ProximalPenalty, V>
-    PathSolver<Problem<Box<dyn RuntimeDesign + '_>, D, P>, Q> for Hybrid<V>
+    PathSolver<Problem<Box<dyn RuntimeDesign + '_>, D, P>, Q> for HybridCoordinateDescent<V>
 {
     type Fit = HybridFit;
     type Error = FitError<BackendError>;
@@ -275,7 +275,8 @@ impl<D: SmoothDatafit, P, Q: crate::ProximalPenalty, V>
 }
 
 impl<D: crate::PathDatafit, P: PathPenalty, V>
-    RegularizationPathSolver<Problem<Box<dyn RuntimeDesign + '_>, D, P>> for Hybrid<V>
+    RegularizationPathSolver<Problem<Box<dyn RuntimeDesign + '_>, D, P>>
+    for HybridCoordinateDescent<V>
 {
     type Fit = HybridFit;
     type Penalty = P::AtStrength;
@@ -297,7 +298,7 @@ impl<D: crate::PathDatafit, P: PathPenalty, V>
 
 fn runtime_unsupported<E>() -> FitError<E> {
     unsupported(
-        "Hybrid",
+        "HybridCoordinateDescent",
         "erased proximal oracles do not expose cluster or segment columns",
         "use a typed Gaussian or Binomial problem with ClusteredLasso, ChainFusedLasso, or Slope, or runtime ProximalGradient",
     )

@@ -123,6 +123,7 @@ Use independent numerical checks outside timers and source-level work counters
 inside focused correctness tests. `WorkingSetDiagnostics` distinguishes feature
 visits, full checks, restricted checks, and membership changes. Interpret these
 in their solver context: a full IRLS check is not interchangeable with a
-Gaussian CD check. Hybrid fits also distinguish accepted PG steps and coordinate
-sweeps. Avoid adding callbacks to both solvers merely to obtain convergence
-plots when independent truncated fits already answer the question.
+Gaussian CD check. HybridCoordinateDescent fits also distinguish accepted PG
+steps and coordinate sweeps. Avoid adding callbacks to both solvers merely to
+obtain convergence plots when independent truncated fits already answer the
+question.

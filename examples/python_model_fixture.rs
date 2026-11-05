@@ -8,8 +8,8 @@ use python::{assert_close, hybrid_snapshot, policy, proximal_snapshot, step};
 use ndarray::{Array1, Array2, ShapeBuilder};
 use serde_json::{Value, json};
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, Hybrid, HybridStep, Normalization,
-    Problem, ProximalGradient, Slope, WorkingSetPolicy,
+    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, HybridCoordinateDescent, HybridStep,
+    Normalization, Problem, ProximalGradient, Slope, WorkingSetPolicy,
 };
 
 #[derive(Clone)]
@@ -214,7 +214,7 @@ impl Case {
             "l2" => Normalization::L2,
             _ => unreachable!(),
         };
-        let hybrid = Hybrid::<Array1<f64>>::new()
+        let hybrid = HybridCoordinateDescent::<Array1<f64>>::new()
             .tolerance(self.tolerance)
             .max_iterations(self.iterations)
             .max_outer_iterations(self.outer_iterations)

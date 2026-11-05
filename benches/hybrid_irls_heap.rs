@@ -2,7 +2,8 @@
 
 use faer::Col;
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, Hybrid, Normalization, Problem, Slope, Termination,
+    Binomial, ChainFusedLasso, ClusteredLasso, HybridCoordinateDescent, Normalization, Problem,
+    Slope, Termination,
 };
 
 #[path = "common/hybrid_irls.rs"]
@@ -23,7 +24,7 @@ fn main() {
                 let profiler = dhat::Profiler::builder().testing().build();
                 let fit = problem
                     .fit_with(
-                        &Hybrid::<Col<f64>>::new()
+                        &HybridCoordinateDescent::<Col<f64>>::new()
                             .tolerance(1e-7)
                             .max_iterations(100_000),
                     )

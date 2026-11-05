@@ -2,9 +2,9 @@
 
 use faer::{Col, Mat};
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, ElasticNet, ErasedPathPenalty, Gaussian, Hybrid, L1,
-    Lasso, MatrixDesign, PathOptions, Problem, ProximalGradient, RuntimePathProblem, Slope,
-    Termination,
+    Binomial, ChainFusedLasso, ClusteredLasso, ElasticNet, ErasedPathPenalty, Gaussian,
+    HybridCoordinateDescent, L1, Lasso, MatrixDesign, PathOptions, Problem, ProximalGradient,
+    RuntimePathProblem, Slope, Termination,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fit.intercept()
         );
     }
-    let hybrid = Hybrid::<Col<f64>>::new();
+    let hybrid = HybridCoordinateDescent::<Col<f64>>::new();
     macro_rules! show_hybrid {
         ($family:literal, $datafit:expr, $name:literal, $penalty:expr) => {{
             let path = Problem::new(&x, $datafit, $penalty)

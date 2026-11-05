@@ -3,10 +3,10 @@
 use nalgebra::{DMatrix, DVector};
 use serde::{Deserialize, Serialize};
 use shrinkage::{
-    Binomial, ClusteredLasso, CoordinateDescent, Datafit, ElasticNet, FitError, Gaussian, Hybrid,
-    InitialPoint, Irls, L1, Normalization, ObservedSolver, Penalty, Problem, ProximalGradient,
-    ProximalPenalty, Ridge, Slope, SmoothDatafit, SolverObserver, SolverStep, StepKind,
-    StoppingCriterion, Termination,
+    Binomial, ClusteredLasso, CoordinateDescent, Datafit, ElasticNet, FitError, Gaussian,
+    HybridCoordinateDescent, InitialPoint, Irls, L1, Normalization, ObservedSolver, Penalty,
+    Problem, ProximalGradient, ProximalPenalty, Ridge, Slope, SmoothDatafit, SolverObserver,
+    SolverStep, StepKind, StoppingCriterion, Termination,
 };
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -351,14 +351,14 @@ pub fn trace_from(config: &Config, method: Method, start: [f64; 2]) -> Result<Tr
         Method::Hybrid => match config.penalty {
             Regularizer::Slope => fit!(
                 Slope::new(vec![config.strength, config.strength * config.rank_ratio]),
-                Hybrid::<DVector<f64>>::new()
+                HybridCoordinateDescent::<DVector<f64>>::new()
             ),
             Regularizer::ClusteredLasso => fit!(
                 ClusteredLasso::new(
                     config.strength * config.mixing,
                     config.strength * (1. - config.mixing)
                 ),
-                Hybrid::<DVector<f64>>::new()
+                HybridCoordinateDescent::<DVector<f64>>::new()
             ),
             _ => unreachable!("compatibility checked"),
         },

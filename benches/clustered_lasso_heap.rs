@@ -4,7 +4,8 @@ use std::hint::black_box;
 
 use faer::Col;
 use shrinkage::{
-    ClusteredLasso, Gaussian, Hybrid, Normalization, Penalty, Problem, ProximalPenalty, Termination,
+    ClusteredLasso, Gaussian, HybridCoordinateDescent, Normalization, Penalty, Problem,
+    ProximalPenalty, Termination,
 };
 
 #[path = "common/clustered.rs"]
@@ -38,7 +39,7 @@ fn main() {
                 .normalize(Normalization::None);
             let profiler = dhat::Profiler::builder().testing().build();
             let fit = problem
-                .fit_with(&Hybrid::<Col<f64>>::new().max_iterations(budget))
+                .fit_with(&HybridCoordinateDescent::<Col<f64>>::new().max_iterations(budget))
                 .unwrap();
             let stats = dhat::HeapStats::get();
             let clusters = fit.cluster_values().len();

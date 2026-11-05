@@ -272,7 +272,7 @@ fn pg_splits_nonzero_blocks_and_stages_cache_rebuilds() {
     let mut design = NativeDesign::<_, Vec<f64>>::new(problem.prepare(false).unwrap());
     let mut work = Workspace::new(2, 2);
     work.coefficients.fill(1.0);
-    let options = Hybrid::<Vec<f64>>::new()
+    let options = HybridCoordinateDescent::<Vec<f64>>::new()
         .max_iterations(1)
         .check_every(1)
         .step_policy(HybridStep::FixedBound);
@@ -320,7 +320,7 @@ fn unchanged_cluster_sweeps_wait_for_the_scheduled_pg_split() {
         let mut design = NativeDesign::<_, Vec<f64>>::new(problem.prepare(false).unwrap());
         let mut work = Workspace::new(2, 2);
         work.coefficients.copy_from_slice(&[2.0 / 3.0, -2.0 / 3.0]);
-        let options = Hybrid::<Vec<f64>>::new()
+        let options = HybridCoordinateDescent::<Vec<f64>>::new()
             .max_iterations(budget)
             .check_every(1)
             .tolerance(1e-14)

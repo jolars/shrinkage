@@ -10,9 +10,9 @@ use faer::{
     sparse::{SparseColMat, Triplet},
 };
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, CoordinateDescent, Gaussian, Hybrid, HybridFit,
-    Irls, IrlsFit, L1, LassoFit, Normalization, Problem, ProximalPenalty, Slope, SmoothDatafit,
-    Termination, WorkingSetDiagnostics, WorkingSetPolicy,
+    Binomial, ChainFusedLasso, ClusteredLasso, CoordinateDescent, Gaussian,
+    HybridCoordinateDescent, HybridFit, Irls, IrlsFit, L1, LassoFit, Normalization, Problem,
+    ProximalPenalty, Slope, SmoothDatafit, Termination, WorkingSetDiagnostics, WorkingSetPolicy,
 };
 
 #[global_allocator]
@@ -332,7 +332,7 @@ fn main() {
                             let problem = Problem::new(x, datafit, penalty.clone()).normalize(Normalization::None);
                             let label = format!("{},{regime},{},{},single,{n},{p}", $storage, $loss_name, $name);
                             measure(&label, &dense, &datafit, &[penalty], repeats, true, |policy, screening| {
-                                vec![problem.fit_with(&Hybrid::<Col<f64>>::new().tolerance(TOLERANCE)
+                                vec![problem.fit_with(&HybridCoordinateDescent::<Col<f64>>::new().tolerance(TOLERANCE)
                                     .working_set_policy(policy).screening(screening).max_iterations(100_000)).unwrap()]
                             });
                         }};

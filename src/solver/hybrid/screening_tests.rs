@@ -17,7 +17,9 @@ fn compare_gaussian<P: ReducedCoordinatePenalty + Clone>(penalty: P) {
     let x = fixture();
     let y = [-3.0, 3.0, -3.0, 3.0, -3.0, 3.0];
     let problem = Problem::new(&x, Gaussian::new(&y), penalty).normalize(Normalization::None);
-    let options = Hybrid::<Vec<f64>>::new().tolerance(1e-10).check_every(1);
+    let options = HybridCoordinateDescent::<Vec<f64>>::new()
+        .tolerance(1e-10)
+        .check_every(1);
     let initial = crate::InitialPoint {
         coefficients: &[2.5, 0.0, 0.0, 0.0],
         intercept: 0.0,
@@ -70,7 +72,9 @@ fn compare_binomial<P: ReducedCoordinatePenalty + Clone>(penalty: P) {
     let x = fixture();
     let y = [0.1, 0.9, 0.1, 0.9, 0.1, 0.9];
     let problem = Problem::new(&x, Binomial::new(&y), penalty).normalize(Normalization::None);
-    let options = Hybrid::<Vec<f64>>::new().tolerance(1e-9).check_every(1);
+    let options = HybridCoordinateDescent::<Vec<f64>>::new()
+        .tolerance(1e-9)
+        .check_every(1);
     let fit = problem.fit_with(&options).unwrap();
     let reference = problem.fit_with(&options.screening(false)).unwrap();
     assert_eq!(fit.termination(), Termination::Converged);

@@ -5,8 +5,8 @@ use std::{hint::black_box, time::Duration};
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use faer::Col;
 use shrinkage::{
-    ChainFusedLasso, Gaussian, Hybrid, HybridStep, Normalization, Penalty, Problem,
-    ProximalGradient, ProximalPenalty, Termination,
+    ChainFusedLasso, Gaussian, HybridCoordinateDescent, HybridStep, Normalization, Penalty,
+    Problem, ProximalGradient, ProximalPenalty, Termination,
 };
 
 #[path = "common/chain.rs"]
@@ -77,7 +77,7 @@ fn solves(c: &mut Criterion) {
                 ("hybrid_backtracking", HybridStep::default()),
                 ("hybrid_fixed", HybridStep::FixedBound),
             ] {
-                let solver = Hybrid::<Col<f64>>::new()
+                let solver = HybridCoordinateDescent::<Col<f64>>::new()
                     .tolerance(1e-8)
                     .max_iterations(100_000)
                     .step_policy(policy);
@@ -103,7 +103,7 @@ fn solves(c: &mut Criterion) {
             // These bounded runs include preparation and final diagnostics. The
             // second also includes a subsequent PG rebuild after five sweeps.
             for (label, budget) in [("setup_and_first_pg", 1), ("setup_sweeps_and_second_pg", 7)] {
-                let solver = Hybrid::<Col<f64>>::new().max_iterations(budget);
+                let solver = HybridCoordinateDescent::<Col<f64>>::new().max_iterations(budget);
                 group.bench_function(label, |b| {
                     b.iter(|| black_box(&problem).fit_with(black_box(&solver)).unwrap())
                 });

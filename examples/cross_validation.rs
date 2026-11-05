@@ -2,8 +2,8 @@
 
 use faer::{Col, Mat};
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, CrossValidation, FoldAssignments, Gaussian, Hybrid,
-    Lasso, PathOptions, Problem, SelectionRule, Slope,
+    Binomial, ChainFusedLasso, ClusteredLasso, CrossValidation, FoldAssignments, Gaussian,
+    HybridCoordinateDescent, Lasso, PathOptions, Problem, SelectionRule, Slope,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let predictions = lasso.fit().predict(&x)?;
     assert_eq!(predictions.len(), y.len());
 
-    let solver = Hybrid::<Col<f64>>::new();
+    let solver = HybridCoordinateDescent::<Col<f64>>::new();
     macro_rules! show {
         ($family:ident, $response:expr, $penalty:expr) => {{
             let result = Problem::new(&x, $family::new($response), $penalty)

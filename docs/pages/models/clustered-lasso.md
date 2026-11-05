@@ -14,7 +14,7 @@ design, loss, and penalty:
 
 ```rust
 use faer::{Col, Mat};
-use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem, Termination};
+use shrinkage::{ClusteredLasso, Gaussian, HybridCoordinateDescent, Problem, Termination};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(8, 3, |i, j| ((i * 7 + j * 3) % 11) as f64 - 5.0);
@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|i| 2.0 + x[(i, 0)] + x[(i, 1)] - 0.5 * x[(i, 2)])
         .collect();
     let problem = Problem::new(&x, Gaussian::new(&y), ClusteredLasso::new(0.05, 0.1));
-    let fit = problem.fit_with(&Hybrid::<Col<f64>>::new())?;
+    let fit = problem.fit_with(&HybridCoordinateDescent::<Col<f64>>::new())?;
     assert_eq!(fit.termination(), Termination::Converged);
     println!("Coefficients: {:?}", fit.coefficients());
     println!("Cluster labels: {:?}", fit.cluster_labels());
@@ -67,9 +67,9 @@ stopping selections are unsupported for this hybrid.
 Backtracking is the default. To use a computed conservative curvature bound:
 
 ```rust
-use shrinkage::{Hybrid, HybridStep};
+use shrinkage::{HybridCoordinateDescent, HybridStep};
 
-let solver = Hybrid::<Vec<f64>>::new()
+let solver = HybridCoordinateDescent::<Vec<f64>>::new()
     .step_policy(HybridStep::FixedBound)
     .tolerance(1e-8);
 ```
@@ -132,19 +132,19 @@ devenv shell -- task bench:clustered:heap
 
 ## Logistic regression {#logistic-regression}
 
-Use `Binomial::new(&y)` with the same `Hybrid<V>` solver to fit logistic
-regression. Clustered lasso, chain fused lasso, and SLOPE all use weighted
-hybrid subproblems inside IRLS. For example:
+Use `Binomial::new(&y)` with the same `HybridCoordinateDescent<V>` solver to fit
+logistic regression. Clustered lasso, chain fused lasso, and SLOPE all use
+weighted hybrid subproblems inside IRLS. For example:
 
 ```rust
 use faer::{Col, Mat};
-use shrinkage::{Binomial, ClusteredLasso, Hybrid, Problem, Termination};
+use shrinkage::{Binomial, ClusteredLasso, HybridCoordinateDescent, Problem, Termination};
 
 # fn main() -> Result<(), Box<dyn std::error::Error>> {
 let x = Mat::from_fn(8, 2, |i, j| ((i + j) % 3) as f64);
 let y = [0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0];
 let fit = Problem::new(&x, Binomial::new(&y), ClusteredLasso::new(0.02, 0.03))
-    .fit_with(&Hybrid::<Col<f64>>::new())?;
+    .fit_with(&HybridCoordinateDescent::<Col<f64>>::new())?;
 assert_eq!(fit.termination(), Termination::Converged);
 let logits = fit.predict(&x)?;
 # Ok(())

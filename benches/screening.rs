@@ -11,9 +11,9 @@ use faer::{
     sparse::{SparseColMat, Triplet},
 };
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, Hybrid, HybridFit, Normalization, Problem,
-    ProximalFit, ProximalGradient, ProximalPenalty, ScreeningDiagnostics, Slope, SmoothDatafit,
-    Termination,
+    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, HybridCoordinateDescent, HybridFit,
+    Normalization, Problem, ProximalFit, ProximalGradient, ProximalPenalty, ScreeningDiagnostics,
+    Slope, SmoothDatafit, Termination,
 };
 
 #[global_allocator]
@@ -243,7 +243,7 @@ fn main() {
                 let pg = ProximalGradient::<Col<f64>>::new()
                     .tolerance(TOLERANCE)
                     .max_iterations(100_000);
-                let hybrid = Hybrid::<Col<f64>>::new()
+                let hybrid = HybridCoordinateDescent::<Col<f64>>::new()
                     .tolerance(TOLERANCE)
                     .max_iterations(100_000);
                 let label = format!("{},{regime},{},pg,{n},{p}", $loss_name, $name);

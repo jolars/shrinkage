@@ -1,12 +1,12 @@
-//! Hybrid paths share preparation while retaining independent fitted models.
+//! HybridCoordinateDescent paths share preparation while retaining independent fitted models.
 
 #[path = "common/matrix.rs"]
 mod matrix;
 
 use matrix::Matrix;
 use shrinkage::{
-    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, Hybrid, Normalization, PathOptions,
-    PathPenalty, PenaltyMaximum, Problem, Slope, Termination, WorkingSetPolicy,
+    Binomial, ChainFusedLasso, ClusteredLasso, Gaussian, HybridCoordinateDescent, Normalization,
+    PathOptions, PathPenalty, PenaltyMaximum, Problem, Slope, Termination, WorkingSetPolicy,
 };
 
 fn close(a: f64, b: f64) {
@@ -28,7 +28,9 @@ fn explicit_gaussian_and_logistic_paths_match_cold_fits() {
     ]);
     let y = [-2.0, -0.5, 1.0, 2.5, 2.0, 4.0];
     let binary = [0.1, 0.8, 0.3, 0.7, 0.2, 0.9];
-    let solver = Hybrid::new().tolerance(1e-9).max_iterations(100_000);
+    let solver = HybridCoordinateDescent::new()
+        .tolerance(1e-9)
+        .max_iterations(100_000);
     macro_rules! check {
         ($base:expr, $points:expr) => {
             for normalization in [Normalization::None, Normalization::default()] {
@@ -105,7 +107,7 @@ fn explicit_gaussian_and_logistic_paths_match_cold_fits() {
 fn empty_and_iteration_limited_paths_preserve_their_contract() {
     let x = Matrix::empty(3, 0);
     let y = [0.0, 1.0, 3.0];
-    let solver = Hybrid::new();
+    let solver = HybridCoordinateDescent::new();
     let problem = Problem::new(&x, Gaussian::new(&y), ClusteredLasso::new(1.0, 1.0));
     assert!(
         problem
@@ -121,7 +123,7 @@ fn empty_and_iteration_limited_paths_preserve_their_contract() {
     let problem = Problem::new(&x, Gaussian::new(&y), Slope::new(vec![0.01, 0.005]));
     let path = problem
         .fit_path_with(
-            &Hybrid::new()
+            &HybridCoordinateDescent::new()
                 .max_iterations(1)
                 .tolerance(1e-15)
                 .step_policy(shrinkage::HybridStep::Backtracking {
@@ -138,7 +140,9 @@ fn empty_and_iteration_limited_paths_preserve_their_contract() {
 #[test]
 fn every_automatic_hybrid_combination_matches_cold_proximal_fits() {
     let x = Matrix::from_rows(&[&[-1.0, -1.0], &[-1.0, 1.0], &[1.0, -1.0], &[1.0, 1.0]]);
-    let solver = Hybrid::new().tolerance(1e-9).max_iterations(100_000);
+    let solver = HybridCoordinateDescent::new()
+        .tolerance(1e-9)
+        .max_iterations(100_000);
     let pg = shrinkage::ProximalGradient::new()
         .tolerance(1e-9)
         .max_iterations(100_000);
@@ -318,7 +322,7 @@ fn screening_and_working_sets_reactivate_features_at_new_strengths() {
                     .to_vec()
             };
             let problem = Problem::new(&x, datafit, base.clone()).normalize(Normalization::None);
-            let solver = Hybrid::new()
+            let solver = HybridCoordinateDescent::new()
                 .tolerance(1e-9)
                 .max_iterations(100_000)
                 .step_policy(shrinkage::HybridStep::FixedBound)
@@ -387,7 +391,7 @@ fn screening_and_working_sets_reactivate_features_at_new_strengths() {
 fn boundary_null_models_and_invalid_points_fail_without_partial_results() {
     use shrinkage::FitError;
     let x = Matrix::from_rows(&[&[-1.0, 0.0], &[0.0, 1.0], &[1.0, 0.0]]);
-    let solver = Hybrid::new().tolerance(1e-8);
+    let solver = HybridCoordinateDescent::new().tolerance(1e-8);
     let boundary = Problem::new(&x, Binomial::new(&[1.0; 3]), ClusteredLasso::new(1.0, 1.0));
     assert!(matches!(
         boundary.fit_regularization_path_with(&solver, &PathOptions::new()),
@@ -437,7 +441,7 @@ fn automatic_hybrid_paths_scale_the_complete_penalty() {
     let x = Matrix::from_rows(&[&[-1.0, -1.0], &[-1.0, 1.0], &[1.0, -1.0], &[1.0, 1.0]]);
     let y = [-1.0, -7.0, 9.0, 3.0];
     let options = PathOptions::new().nlambda(4).early_stopping(false);
-    let solver = Hybrid::new().tolerance(1e-9);
+    let solver = HybridCoordinateDescent::new().tolerance(1e-9);
     let problem = Problem::new(&x, Gaussian::new(&y), ClusteredLasso::new(2.0, 1.0));
     let path = problem
         .fit_regularization_path_with(&solver, &options)

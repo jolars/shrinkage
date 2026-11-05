@@ -23,7 +23,7 @@ from shrinkage import (
     ChainFusedLasso,
     ClusteredLasso,
     Gaussian,
-    Hybrid,
+    HybridCoordinateDescent,
     HybridFit,
     HybridStep,
     Lasso,
@@ -76,7 +76,9 @@ def objective(
     return loss + value
 
 
-def fit_problem(problem: Problem, solver: Hybrid | ProximalGradient) -> ProximalFit:
+def fit_problem(
+    problem: Problem, solver: HybridCoordinateDescent | ProximalGradient
+) -> ProximalFit:
     return problem.fit_with(solver)
 
 
@@ -118,7 +120,9 @@ class ModelTests(unittest.TestCase):
                         **options["working_set_policy"]
                     )
                     options["step_policy"] = HybridStep(**options["step_policy"])
-                    solver: Hybrid | ProximalGradient = Hybrid(**options)
+                    solver: HybridCoordinateDescent | ProximalGradient = (
+                        HybridCoordinateDescent(**options)
+                    )
                 else:
                     solver = ProximalGradient(**options)
                 y = np.asarray(fixture[f"{case['family']}_y"], dtype=np.float64)
@@ -208,7 +212,7 @@ class ModelTests(unittest.TestCase):
             x = np.sqrt(len(signal)) * np.eye(len(signal))
             y = x @ np.asarray(signal)
             for solver in (
-                Hybrid(stopping=stopping),
+                HybridCoordinateDescent(stopping=stopping),
                 ProximalGradient(stopping=stopping),
             ):
                 with self.subTest(penalty=penalty, solver=solver):
@@ -244,7 +248,9 @@ class ModelTests(unittest.TestCase):
             Slope([0.1]),
         ):
             for solver in (
-                Hybrid(stopping=StoppingCriterion.proximal_gradient_mapping(1e-10)),
+                HybridCoordinateDescent(
+                    stopping=StoppingCriterion.proximal_gradient_mapping(1e-10)
+                ),
                 ProximalGradient(
                     stopping=StoppingCriterion.proximal_gradient_mapping(1e-10)
                 ),
@@ -267,7 +273,9 @@ class ModelTests(unittest.TestCase):
     def test_original_scale_prediction_and_cluster_reconstruction(self) -> None:
         for penalty in penalties():
             for datafit in (Gaussian(self.y), Binomial(self.binary_y)):
-                fit = Problem(self.x, datafit, penalty).fit_with(Hybrid())
+                fit = Problem(self.x, datafit, penalty).fit_with(
+                    HybridCoordinateDescent()
+                )
                 scales = fit.preprocessing.scales
                 assert scales is not None
                 values = fit.cluster_values[fit.cluster_labels]
@@ -298,7 +306,7 @@ class ModelTests(unittest.TestCase):
                 ChainFusedLasso(0.0, 0.0),
                 Slope([0.0] * 4),
             ):
-                for solver in (Hybrid(), ProximalGradient()):
+                for solver in (HybridCoordinateDescent(), ProximalGradient()):
                     fit = Problem(x, datafit, penalty, normalization="none").fit_with(
                         solver
                     )
@@ -317,7 +325,7 @@ class ModelTests(unittest.TestCase):
             ):
                 problem = Problem(x, datafit, penalty)
                 reference = problem.fit_with(
-                    Hybrid(
+                    HybridCoordinateDescent(
                         screening=False,
                         working_set_policy=WorkingSetPolicy.disabled(),
                         stopping=StoppingCriterion.proximal_gradient_mapping(1e-8),
@@ -336,7 +344,7 @@ class ModelTests(unittest.TestCase):
                         datafit=type(datafit), penalty=penalty, policy=policy
                     ):
                         fit = problem.fit_with(
-                            Hybrid(
+                            HybridCoordinateDescent(
                                 working_set_policy=policy,
                                 stopping=StoppingCriterion.proximal_gradient_mapping(
                                     1e-8
@@ -367,15 +375,15 @@ class ModelTests(unittest.TestCase):
         self.assertEqual(chain.weights, (0.0, 2.0, 0.5))
         y = self.y.copy()
         problem = Problem(self.x, Gaussian(y), penalty)
-        first = problem.fit_with(Hybrid())
+        first = problem.fit_with(HybridCoordinateDescent())
         y += 5
-        second = problem.fit_with(Hybrid())
+        second = problem.fit_with(HybridCoordinateDescent())
         np.testing.assert_allclose(
             second.predict(self.x), first.predict(self.x) + 5, atol=1e-5
         )
 
     def test_owned_fits_outlive_sources_and_return_independent_arrays(self) -> None:
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             x, y = self.x.copy(), self.y.copy()
             references = [weakref.ref(x), weakref.ref(y)]
             problem = Problem(x, Gaussian(y), penalties()[0])
@@ -401,7 +409,7 @@ class ModelTests(unittest.TestCase):
         for datafit_type, y in ((Gaussian, self.y), (Binomial, self.binary_y)):
             base_x, base_y = np.zeros((16, 8)), np.zeros(16)
             base_x[::2, ::2], base_y[::2] = self.x, y
-            for solver in (Hybrid(), ProximalGradient()):
+            for solver in (HybridCoordinateDescent(), ProximalGradient()):
                 expected = Problem(self.x, datafit_type(y), penalties()[0]).fit_with(
                     solver
                 )
@@ -427,7 +435,7 @@ class ModelTests(unittest.TestCase):
                 self.assertTrue(np.isfinite(fit.predict(x_broadcast)).all())
 
     def test_empty_predictions_zero_features_and_single_observation(self) -> None:
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             for datafit in (Gaussian(self.y), Binomial(self.binary_y)):
                 y = cast(FloatArray, datafit.y)
                 expected = float(y.mean())
@@ -453,7 +461,7 @@ class ModelTests(unittest.TestCase):
                 self.assertEqual(fit.predict(np.empty((0, 4))).shape, (0,))
 
     def test_dense_contract_and_compatibility_errors(self) -> None:
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             for datafit_type, y in ((Gaussian, self.y), (Binomial, self.binary_y)):
                 fit = Problem(self.x, datafit_type(y), penalties()[0]).fit_with(solver)
                 for x in (
@@ -490,16 +498,20 @@ class ModelTests(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, "solver must be"):
             problem.fit_with(cast(Any, object()))
         with self.assertRaisesRegex(TypeError, "datafit must be"):
-            Problem(self.x, cast(Any, object()), penalties()[0]).fit_with(Hybrid())
+            Problem(self.x, cast(Any, object()), penalties()[0]).fit_with(
+                HybridCoordinateDescent()
+            )
         with self.assertRaisesRegex(TypeError, "penalty must be"):
-            Problem(self.x, Gaussian(self.y), cast(Any, object())).fit_with(Hybrid())
+            Problem(self.x, Gaussian(self.y), cast(Any, object())).fit_with(
+                HybridCoordinateDescent()
+            )
         with self.assertRaisesRegex(ValueError, "normalization must be"):
             Problem(
                 self.x,
                 Gaussian(self.y),
                 penalties()[0],
                 normalization=cast(Normalization, "bad"),
-            ).fit_with(Hybrid())
+            ).fit_with(HybridCoordinateDescent())
 
     def test_invalid_penalties_and_binomial_responses(self) -> None:
         invalid: tuple[Penalty, ...] = (
@@ -513,7 +525,7 @@ class ModelTests(unittest.TestCase):
             Slope([1, np.nan, 0, 0]),
             Slope([1]),
         )
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             for penalty in invalid:
                 with self.subTest(penalty=penalty), self.assertRaises(ValueError):
                     Problem(self.x, Gaussian(self.y), penalty).fit_with(solver)
@@ -534,7 +546,7 @@ class ModelTests(unittest.TestCase):
             StoppingCriterion.kkt_violation(),
             StoppingCriterion.duality_gap(),
         ):
-            for solver_type in (Hybrid, ProximalGradient):
+            for solver_type in (HybridCoordinateDescent, ProximalGradient):
                 with self.assertRaisesRegex(
                     ValueError, "unsupported fit combination.*mapping"
                 ):
@@ -544,7 +556,7 @@ class ModelTests(unittest.TestCase):
                 self.x, self.y
             )
         for value in (-1.0, 0.0, np.nan, np.inf):
-            for solver_type in (Hybrid, ProximalGradient):
+            for solver_type in (HybridCoordinateDescent, ProximalGradient):
                 with self.assertRaisesRegex(ValueError, "tolerance.*positive"):
                     problem.fit_with(
                         solver_type(
@@ -552,16 +564,20 @@ class ModelTests(unittest.TestCase):
                         )
                     )
         for solver in (
-            Hybrid(max_iterations=0),
-            Hybrid(max_iterations=-1),
-            Hybrid(cluster_sweeps=0),
-            Hybrid(check_every=0),
-            Hybrid(max_outer_iterations=0),
-            Hybrid(max_inner_iterations=-1),
-            Hybrid(max_outer_backtracks=-1),
-            Hybrid(working_set_policy=WorkingSetPolicy.adaptive(0)),
-            Hybrid(step_policy=HybridStep.backtracking(initial_curvature=0)),
-            Hybrid(step_policy=HybridStep.backtracking(max_backtracks=-1)),
+            HybridCoordinateDescent(max_iterations=0),
+            HybridCoordinateDescent(max_iterations=-1),
+            HybridCoordinateDescent(cluster_sweeps=0),
+            HybridCoordinateDescent(check_every=0),
+            HybridCoordinateDescent(max_outer_iterations=0),
+            HybridCoordinateDescent(max_inner_iterations=-1),
+            HybridCoordinateDescent(max_outer_backtracks=-1),
+            HybridCoordinateDescent(working_set_policy=WorkingSetPolicy.adaptive(0)),
+            HybridCoordinateDescent(
+                step_policy=HybridStep.backtracking(initial_curvature=0)
+            ),
+            HybridCoordinateDescent(
+                step_policy=HybridStep.backtracking(max_backtracks=-1)
+            ),
             ProximalGradient(max_iterations=0),
             ProximalGradient(initial_step=-1),
             ProximalGradient(max_backtracks=-1),
@@ -570,7 +586,7 @@ class ModelTests(unittest.TestCase):
                 problem.fit_with(solver)
         with self.assertRaisesRegex(ValueError, "relative must be zero"):
             problem.fit_with(
-                Hybrid(
+                HybridCoordinateDescent(
                     stopping=StoppingCriterion("proximal_gradient_mapping", 1e-6, 1e-6)
                 )
             )
@@ -579,7 +595,7 @@ class ModelTests(unittest.TestCase):
         for datafit in (Gaussian(self.y), Binomial(self.binary_y)):
             problem = Problem(self.x, datafit, penalties()[0])
             for solver in (
-                Hybrid(max_iterations=1),
+                HybridCoordinateDescent(max_iterations=1),
                 ProximalGradient(max_iterations=1),
             ):
                 fit = problem.fit_with(solver)
@@ -588,7 +604,7 @@ class ModelTests(unittest.TestCase):
                 self.assertGreater(fit.stopping_value, fit.stopping_threshold)
                 self.assertTrue(np.isfinite(fit.predict(self.x)).all())
             for solver in (
-                Hybrid(
+                HybridCoordinateDescent(
                     step_policy=HybridStep.backtracking(
                         initial_curvature=1e-20, max_backtracks=0
                     )
@@ -601,7 +617,7 @@ class ModelTests(unittest.TestCase):
                     problem.fit_with(solver)
 
     def test_nonfinite_arithmetic_preserves_error_context(self) -> None:
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             with self.assertRaisesRegex(
                 FloatingPointError, "nonfinite arithmetic.*iteration 0"
             ):
@@ -652,7 +668,7 @@ class ModelTests(unittest.TestCase):
         rng = np.random.default_rng(42)
         original = rng.normal(size=(10_000, 40))
         for family in ("gaussian", "binomial"):
-            for solver_type in (Hybrid, ProximalGradient):
+            for solver_type in (HybridCoordinateDescent, ProximalGradient):
                 x = original.copy()
                 y = x @ np.linspace(-2, 2, 40)
                 if family == "binomial":
@@ -676,7 +692,7 @@ class ModelTests(unittest.TestCase):
     def test_native_predictions_release_gil_after_snapshot(self) -> None:
         rng = np.random.default_rng(93)
         original = rng.normal(size=(100_000, 40))
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             fit = Problem(
                 original[:100],
                 Gaussian(original[:100] @ np.linspace(1, 2, 40)),
@@ -692,7 +708,7 @@ class ModelTests(unittest.TestCase):
     def test_same_problem_and_solver_support_concurrent_fits(self) -> None:
         from concurrent.futures import ThreadPoolExecutor
 
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             for datafit in (Gaussian(self.y), Binomial(self.binary_y)):
                 problem = Problem(self.x, datafit, penalties()[2])
                 expected = problem.fit_with(solver)
@@ -708,7 +724,9 @@ class ModelTests(unittest.TestCase):
                         self.assertEqual(fit.objective, expected.objective)
 
     def test_public_diagnostics_are_ordinary_immutable_records(self) -> None:
-        fit = Problem(self.x, Gaussian(self.y), penalties()[0]).fit_with(Hybrid())
+        fit = Problem(self.x, Gaussian(self.y), penalties()[0]).fit_with(
+            HybridCoordinateDescent()
+        )
         self.assertIn("full_checks", asdict(fit.working_set_diagnostics))
         self.assertIn("certificate_passes", asdict(fit.screening_diagnostics))
 

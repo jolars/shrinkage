@@ -6,7 +6,7 @@ const methods = {
   coordinate: "Coordinate descent",
   proximal: "Proximal gradient",
   irls: "CD (IRLS)",
-  hybrid: "Hybrid",
+  hybrid: "Hybrid coordinate descent",
 };
 const defaults = {
   loss: "gaussian",

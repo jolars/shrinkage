@@ -11,7 +11,7 @@ from .datafit import Binomial, Gaussian
 from .fit import HybridFit, ProximalFit
 from .path import PathFit, PathOptions
 from .penalty import ChainFusedLasso, ClusteredLasso, Slope
-from .solver import Hybrid, ProximalGradient
+from .solver import HybridCoordinateDescent, ProximalGradient
 
 __all__ = ["Problem"]
 
@@ -32,17 +32,21 @@ class Problem:
     penalty: ClusteredLasso | ChainFusedLasso | Slope
     normalization: Normalization = field(default="auto", kw_only=True)
 
-    def _validate(self, solver: Hybrid | ProximalGradient) -> Family:
+    def _validate(self, solver: HybridCoordinateDescent | ProximalGradient) -> Family:
         if not isinstance(self.datafit, Gaussian | Binomial):
             raise TypeError("datafit must be Gaussian or Binomial")
         if not isinstance(self.penalty, ClusteredLasso | ChainFusedLasso | Slope):
             raise TypeError("penalty must be ClusteredLasso, ChainFusedLasso, or Slope")
-        if not isinstance(solver, Hybrid | ProximalGradient):
-            raise TypeError("solver must be Hybrid or ProximalGradient")
+        if not isinstance(solver, HybridCoordinateDescent | ProximalGradient):
+            raise TypeError(
+                "solver must be HybridCoordinateDescent or ProximalGradient"
+            )
         return "gaussian" if isinstance(self.datafit, Gaussian) else "binomial"
 
     @overload
-    def fit_with(self, solver: Hybrid, *, copy: bool = True) -> HybridFit: ...
+    def fit_with(
+        self, solver: HybridCoordinateDescent, *, copy: bool = True
+    ) -> HybridFit: ...
 
     @overload
     def fit_with(
@@ -50,7 +54,7 @@ class Problem:
     ) -> ProximalFit: ...
 
     def fit_with(
-        self, solver: Hybrid | ProximalGradient, *, copy: bool = True
+        self, solver: HybridCoordinateDescent | ProximalGradient, *, copy: bool = True
     ) -> HybridFit | ProximalFit:
         """Fit with Rust, releasing the GIL after copying all inputs.
 
@@ -71,12 +75,16 @@ class Problem:
             self.penalty._spec(),
             copy=copy,
         )
-        return HybridFit(native) if isinstance(solver, Hybrid) else ProximalFit(native)
+        return (
+            HybridFit(native)
+            if isinstance(solver, HybridCoordinateDescent)
+            else ProximalFit(native)
+        )
 
     @overload
     def fit_path_with(
         self,
-        solver: Hybrid,
+        solver: HybridCoordinateDescent,
         penalties: Iterable[ClusteredLasso | ChainFusedLasso | Slope],
         *,
         copy: bool = True,
@@ -93,7 +101,7 @@ class Problem:
 
     def fit_path_with(
         self,
-        solver: Hybrid | ProximalGradient,
+        solver: HybridCoordinateDescent | ProximalGradient,
         penalties: Iterable[ClusteredLasso | ChainFusedLasso | Slope],
         *,
         copy: bool = True,
@@ -103,8 +111,8 @@ class Problem:
         All points must match the problem penalty's type. Both strengths and
         weights may change independently. Empty, repeated, and nonmonotone
         sequences are accepted. The problem's own penalty supplies only the
-        type for explicit paths. Hybrid ``auto`` working sets resolve to
-        ``ever_active``. Each point has its own solver budget, and finite
+        type for explicit paths. HybridCoordinateDescent ``auto`` working sets
+        resolve to ``ever_active``. Each point has its own solver budget, and finite
         iteration-limit fits warm-start subsequent points. Errors raise
         without returning a partial path. Dense input and GIL rules match fit.
         """
@@ -126,14 +134,14 @@ class Problem:
         )
         return (
             PathFit(native, HybridFit)
-            if isinstance(solver, Hybrid)
+            if isinstance(solver, HybridCoordinateDescent)
             else PathFit(native, ProximalFit)
         )
 
     @overload
     def fit_regularization_path_with(
         self,
-        solver: Hybrid,
+        solver: HybridCoordinateDescent,
         options: PathOptions | None = None,
         *,
         copy: bool = True,
@@ -150,7 +158,7 @@ class Problem:
 
     def fit_regularization_path_with(
         self,
-        solver: Hybrid | ProximalGradient,
+        solver: HybridCoordinateDescent | ProximalGradient,
         options: PathOptions | None = None,
         *,
         copy: bool = True,
@@ -180,6 +188,6 @@ class Problem:
         )
         return (
             PathFit(native, HybridFit)
-            if isinstance(solver, Hybrid)
+            if isinstance(solver, HybridCoordinateDescent)
             else PathFit(native, ProximalFit)
         )

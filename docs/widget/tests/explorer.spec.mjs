@@ -146,7 +146,7 @@ test("problem changes select a compatible solver and preserve supported selectio
   await expect(solver).toHaveValue("proximal");
   await expect(solver.locator("option")).toHaveText([
     "Proximal gradient",
-    "Hybrid",
+    "Hybrid coordinate descent",
   ]);
   await solver.selectOption("hybrid");
   await expect(root).toHaveAttribute("aria-busy", "false");
@@ -454,7 +454,7 @@ test("automatically fits with a compatible solver on load and after problem chan
   await expect(path).toHaveAttribute("d", /^M164,142L/);
   await expect(solver.locator("option")).toHaveText([
     "Proximal gradient",
-    "Hybrid",
+    "Hybrid coordinate descent",
   ]);
 });
 

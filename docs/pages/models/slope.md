@@ -14,7 +14,7 @@ nonnegative, nonincreasing weight per feature, including the penalty strength:
 
 ```rust
 use faer::{Col, Mat};
-use shrinkage::{Gaussian, Hybrid, Problem, Slope, Termination};
+use shrinkage::{Gaussian, HybridCoordinateDescent, Problem, Slope, Termination};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let x = Mat::from_fn(16, 5, |i, j| ((i * 7 + j * 3 + i * j) % 17) as f64 - 8.0);
@@ -22,7 +22,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|i| 2.0 + x[(i, 0)] - x[(i, 1)] + 0.5 * x[(i, 3)] - 0.5 * x[(i, 4)])
         .collect();
     let penalty = Slope::new(vec![0.5, 0.4, 0.3, 0.2, 0.1]);
-    let fit = Problem::new(&x, Gaussian::new(&y), penalty).fit_with(&Hybrid::<Col<f64>>::new())?;
+    let fit = Problem::new(&x, Gaussian::new(&y), penalty)
+        .fit_with(&HybridCoordinateDescent::<Col<f64>>::new())?;
     assert_eq!(fit.termination(), Termination::Converged);
     println!("Coefficients: {:?}", fit.coefficients());
     println!("Magnitude labels: {:?}", fit.cluster_labels());
@@ -120,11 +121,11 @@ correlation `0.8`, and mapping tolerance `1e-8`. Times are milliseconds. Each
 fit includes preprocessing, workspace allocation, rebuilds, and final checks;
 design, response, and penalty construction are outside the timed region.
 
-  | Solution structure     | PG    | Hybrid, backtracking | Hybrid, fixed bound |
-  | ---------------------- | ----: | -------------------: | ------------------: |
-  | 64 distinct magnitudes | 43.03 |                22.23 |               23.68 |
-  | 16 tied magnitudes     | 41.98 |                 5.96 |                6.03 |
-  | One magnitude          | 33.94 |                0.276 |               0.219 |
+  | Solution structure     | PG    | HybridCoordinateDescent, backtracking | HybridCoordinateDescent, fixed bound |
+  | ---------------------- | ----: | ------------------------------------: | -----------------------------------: |
+  | 64 distinct magnitudes | 43.03 |                                 22.23 |                                23.68 |
+  | 16 tied magnitudes     | 41.98 |                                  5.96 |                                 6.03 |
+  | One magnitude          | 33.94 |                                 0.276 |                                0.219 |
 
 For the orthogonal 512-by-256 heap cases, complete-fit peak live storage was
 89,032 bytes with one magnitude cluster and 2,252,800 bytes with 256 clusters.

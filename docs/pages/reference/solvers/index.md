@@ -11,7 +11,7 @@ return an unsupported-combination error when necessary.
   | [Proximal gradient](proximal-gradient.md)   | Gaussian and binomial | All seven base penalties and compatible wrappers | Explicit; automatic when the penalty provides PathPenalty    | Absolute full PG mapping                            |
   | [Proximal gradient](proximal-gradient.md)   | Multivariate Gaussian | AxisPenalty with an exact inner prox             | Explicit; automatic with a compatible inner path penalty     | Absolute full PG mapping                            |
   | [IRLS](irls.md)                             | Gaussian and binomial | L1, ridge, elastic net                           | Explicit and automatic when the penalty provides PathPenalty | Absolute original-loss KKT                          |
-  | [Hybrid](hybrid.md)                         | Gaussian and binomial | Clustered lasso, chain fused lasso, SLOPE        | Not implemented                                              | Absolute original-loss full PG mapping              |
+  | [Hybrid coordinate descent](hybrid.md)      | Gaussian and binomial | Clustered lasso, chain fused lasso, SLOPE        | Not implemented                                              | Absolute original-loss full PG mapping              |
 
 Coordinate descent and proximal gradient support runtime problems. IRLS and
 hybrid use typed problems; selecting them on an erased runtime problem returns
@@ -41,11 +41,12 @@ Check frequencies and iteration units depend on the solver.
 
 ## Working sets {#working-sets}
 
-`CoordinateDescent`, `Irls`, `Hybrid`, and the `Lasso` builder enable working
-sets by default. `WorkingSetPolicy::Auto` uses adaptive sets for single fits and
-`EverActive` for existing paths. Override it with `.working_set_policy(...)`, or
-use `.working_sets(false)` to disable heuristic restrictions. Calling
-`.working_sets(true)` restores `Auto`; the last setter wins.
+`CoordinateDescent`, `Irls`, `HybridCoordinateDescent`, and the `Lasso` builder
+enable working sets by default. `WorkingSetPolicy::Auto` uses adaptive sets for
+single fits and `EverActive` for existing paths. Override it with
+`.working_set_policy(...)`, or use `.working_sets(false)` to disable heuristic
+restrictions. Calling `.working_sets(true)` restores `Auto`; the last setter
+wins.
 
 ```rust
 use shrinkage::{CoordinateDescent, WorkingSetPolicy};
@@ -62,13 +63,13 @@ violators.
 
 `Adaptive` always retains current nonzeros and fills its budget with the largest
 optimality violations, breaking ties by feature index. Separable penalties use
-coordinate KKT violations; Hybrid uses full PG mapping components. With
-`prune: false`, unsuccessful restricted solves retain and double the set. With
-`prune: true`, they rebuild around twice the current support, with the initial
-size as a floor. Stalled solves increase a persistent minimum budget, eventually
-allowing the full problem. The default initial size is ten; it must be positive.
-This combines Celer-inspired growth with general optimality scoring rather than
-Celer's dual-distance ranking.
+coordinate KKT violations; HybridCoordinateDescent uses full PG mapping
+components. With `prune: false`, unsuccessful restricted solves retain and
+double the set. With `prune: true`, they rebuild around twice the current
+support, with the initial size as a floor. Stalled solves increase a persistent
+minimum budget, eventually allowing the full problem. The default initial size
+is ten; it must be positive. This combines Celer-inspired growth with general
+optimality scoring rather than Celer's dual-distance ranking.
 
 Full checks refresh excluded features, and only original-loss checks certify
 convergence. IRLS rebuilds selection for each quadratic model while retaining
@@ -96,9 +97,9 @@ paths multiply the supplied rank weights by a scalar strength. Fusion, group,
 scaled, and masked penalties do not currently provide automatic paths.
 
 No solver forms a Gram matrix or materializes the normalized design by default.
-Hybrid solvers retain dense cluster aggregates, which can grow to the size of
-the dense design. Matrix backend requirements remain solver-specific; consult
-[installation](../../installation.md) and the [shared
+HybridCoordinateDescent solvers retain dense cluster aggregates, which can grow
+to the size of the dense design. Matrix backend requirements remain
+solver-specific; consult [installation](../../installation.md) and the [shared
 conventions](../../modeling.md).
 
 API:

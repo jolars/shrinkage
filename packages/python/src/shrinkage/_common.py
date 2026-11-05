@@ -21,8 +21,9 @@ StoppingSpec = tuple[str, float, float]
 class StoppingCriterion:
     """A convergence check with tolerances in its own units.
 
-    Gaussian lasso supports ``duality_gap`` and ``kkt_violation``. Hybrid and
-    proximal gradient support only ``proximal_gradient_mapping``. KKT and
+    Gaussian lasso supports ``duality_gap`` and ``kkt_violation``.
+    HybridCoordinateDescent and proximal gradient support only
+    ``proximal_gradient_mapping``. KKT and
     mapping tolerances must be finite and strictly positive and use no
     relative component. Gap tolerances must be finite and nonnegative, with
     at least one positive component. Compatibility is checked when fitting.

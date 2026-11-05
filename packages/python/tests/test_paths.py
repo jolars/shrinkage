@@ -23,7 +23,7 @@ from shrinkage import (
     ChainFusedLasso,
     ClusteredLasso,
     Gaussian,
-    Hybrid,
+    HybridCoordinateDescent,
     HybridFit,
     HybridStep,
     PathFit,
@@ -58,7 +58,9 @@ def penalty_from_record(record: dict[str, Any]) -> Penalty:
     return Slope(**options)
 
 
-def solver_from_record(case: dict[str, Any]) -> Hybrid | ProximalGradient:
+def solver_from_record(
+    case: dict[str, Any],
+) -> HybridCoordinateDescent | ProximalGradient:
     options = case["solver_options"].copy()
     options["stopping"] = StoppingCriterion(**options["stopping"])
     if case["solver"] == "hybrid":
@@ -66,7 +68,7 @@ def solver_from_record(case: dict[str, Any]) -> Hybrid | ProximalGradient:
             **options["working_set_policy"]
         )
         options["step_policy"] = HybridStep(**options["step_policy"])
-        return Hybrid(**options)
+        return HybridCoordinateDescent(**options)
     return ProximalGradient(**options)
 
 
@@ -262,7 +264,9 @@ class PathTests(unittest.TestCase):
             for points in point_sequences:
                 points += [points[0], points[0]]
                 for solver in (
-                    Hybrid(stopping=StoppingCriterion.proximal_gradient_mapping(1e-9)),
+                    HybridCoordinateDescent(
+                        stopping=StoppingCriterion.proximal_gradient_mapping(1e-9)
+                    ),
                     ProximalGradient(
                         stopping=StoppingCriterion.proximal_gradient_mapping(1e-9)
                     ),
@@ -315,7 +319,7 @@ class PathTests(unittest.TestCase):
                 ChainFusedLasso(2.0, 1.0, weights=[0.0]),
                 Slope([2.0, 0.5]),
             ):
-                for solver in (Hybrid(), ProximalGradient()):
+                for solver in (HybridCoordinateDescent(), ProximalGradient()):
                     path = Problem(x, datafit, penalty).fit_regularization_path_with(
                         solver, options
                     )
@@ -348,7 +352,7 @@ class PathTests(unittest.TestCase):
                                 self.assertEqual(actual.weights, penalty.weights)
 
     def test_empty_paths_batches_and_zero_features_keep_both_axes(self) -> None:
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             for nfeatures in (0, 2):
                 x = np.zeros((3, nfeatures))
                 for family in (Gaussian, Binomial):
@@ -378,7 +382,7 @@ class PathTests(unittest.TestCase):
     def test_default_endpoint_ratio_depends_on_training_dimensions(self) -> None:
         for nfeatures, ratio in ((1, 0.0001), (4, 0.01)):
             x = np.arange(3 * nfeatures, dtype=np.float64).reshape(3, nfeatures)
-            for solver in (Hybrid(), ProximalGradient()):
+            for solver in (HybridCoordinateDescent(), ProximalGradient()):
                 path = Problem(
                     x, Gaussian(np.array([0.0, 1.0, 2.0])), ClusteredLasso(1, 0)
                 ).fit_regularization_path_with(
@@ -390,7 +394,7 @@ class PathTests(unittest.TestCase):
     def test_invalid_options_inputs_controls_and_mixed_penalties(self) -> None:
         x, y = np.array([[-1.0], [0.0], [1.0]]), np.array([0.1, 0.3, 0.8])
         penalty = ClusteredLasso(1, 0)
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             problem = Problem(x, Gaussian(y), penalty)
             for changes in (
                 {"nlambda": 0},
@@ -423,7 +427,7 @@ class PathTests(unittest.TestCase):
                     y_case: object,
                     copy: bool = True,
                     automatic: bool = automatic,
-                    solver: Hybrid | ProximalGradient = solver,
+                    solver: HybridCoordinateDescent | ProximalGradient = solver,
                 ) -> PathFit[HybridFit] | PathFit[ProximalFit]:
                     problem = Problem(x_case, Gaussian(y_case), penalty)
                     if automatic:
@@ -458,7 +462,7 @@ class PathTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 path.predict(x * np.nan)
         for solver in (
-            Hybrid(stopping=StoppingCriterion.kkt_violation()),
+            HybridCoordinateDescent(stopping=StoppingCriterion.kkt_violation()),
             ProximalGradient(stopping=StoppingCriterion.duality_gap()),
         ):
             problem = Problem(x, Gaussian(y), penalty)
@@ -470,7 +474,7 @@ class PathTests(unittest.TestCase):
                         problem.fit_path_with(solver, [penalty])
 
     def test_nonfinite_path_and_prediction_arithmetic_keep_rust_context(self) -> None:
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             problem = Problem(
                 np.array([[1e308], [-1e308]]),
                 Gaussian(np.array([1.0, -1.0])),
@@ -497,7 +501,7 @@ class PathTests(unittest.TestCase):
                 path.predict(np.array([[1e308]]))
 
     def test_paths_and_individual_points_outlive_their_inputs(self) -> None:
-        for solver in (Hybrid(), ProximalGradient()):
+        for solver in (HybridCoordinateDescent(), ProximalGradient()):
             x = np.array([[-2.0, 1.0], [0.0, -1.0], [2.0, 1.0]])
             y = np.array([-2.0, 0.1, 2.0])
             references = (weakref.ref(x), weakref.ref(y))
@@ -558,7 +562,7 @@ class PathTests(unittest.TestCase):
         spec = ClusteredLasso(0.01, 0.001)._spec()
         for family in ("gaussian", "binomial"):
             for solver in (
-                Hybrid(max_iterations=50),
+                HybridCoordinateDescent(max_iterations=50),
                 ProximalGradient(max_iterations=50),
             ):
                 native = solver._native()

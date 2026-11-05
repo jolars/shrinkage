@@ -90,7 +90,7 @@ impl ReducedCoordinatePenalty for Slope {
     type State = slope::State;
 }
 
-/// Curvature policy for [`Hybrid`]'s proximal-gradient transitions.
+/// Curvature policy for [`HybridCoordinateDescent`]'s proximal-gradient transitions.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum HybridStep {
     /// Validate each transition against the current quadratic model.
@@ -116,8 +116,8 @@ impl Default for HybridStep {
     }
 }
 
-/// Dense Gaussian and logistic hybrid for clustered lasso, chain fused lasso,
-/// and SLOPE.
+/// Coordinate descent with periodic proximal-gradient steps for clustered
+/// lasso, chain fused lasso, and SLOPE with Gaussian or logistic loss.
 ///
 /// Begin with a PG transition on the working set, then alternate five cluster
 /// sweeps with one PG transition. PG can split zero and nonzero blocks; CD
@@ -143,17 +143,17 @@ impl Default for HybridStep {
 /// ```
 /// # #[cfg(feature = "faer_v0_24")] {
 /// use faer::{Col, Mat};
-/// use shrinkage::{ClusteredLasso, Gaussian, Hybrid, Problem};
+/// use shrinkage::{ClusteredLasso, Gaussian, HybridCoordinateDescent, Problem};
 /// let x = Mat::from_fn(4, 2, |i, j| ((i + 2 * j) % 3) as f64);
 /// let fit = Problem::new(&x, Gaussian::new(&[1.0, 2.0, 0.0, 3.0]),
 ///     ClusteredLasso::new(0.1, 0.2))
-///     .fit_with(&Hybrid::<Col<f64>>::new())?;
+///     .fit_with(&HybridCoordinateDescent::<Col<f64>>::new())?;
 /// let predictions = fit.predict(&x)?;
 /// # }
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Clone, Copy, Debug)]
-pub struct Hybrid<V = Vec<f64>> {
+pub struct HybridCoordinateDescent<V = Vec<f64>> {
     criterion: StoppingCriterion,
     max_iterations: usize,
     max_outer_iterations: usize,
@@ -167,7 +167,7 @@ pub struct Hybrid<V = Vec<f64>> {
     vector: PhantomData<V>,
 }
 
-impl<V> Hybrid<V> {
+impl<V> HybridCoordinateDescent<V> {
     /// Use mapping tolerance `1e-6`, 10,000 iterations, five sweeps per PG,
     /// checks every ten iterations, backtracking, and safe zero screening.
     /// Logistic fits allow 100
@@ -269,9 +269,9 @@ impl<V> Hybrid<V> {
         self.working_set_policy.validate()?;
         let StoppingCriterion::ProximalGradientMapping { absolute } = self.criterion else {
             return Err(unsupported(
-                "Hybrid",
+                "HybridCoordinateDescent",
                 "only full proximal-gradient mapping stopping is implemented",
-                "select StoppingCriterion::proximal_gradient_mapping or Hybrid::tolerance",
+                "select StoppingCriterion::proximal_gradient_mapping or HybridCoordinateDescent::tolerance",
             ));
         };
         if !absolute.is_finite() || absolute <= 0.0 {
@@ -299,13 +299,13 @@ impl<V> Hybrid<V> {
     }
 }
 
-impl<V> Default for Hybrid<V> {
+impl<V> Default for HybridCoordinateDescent<V> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<M, V> Solver<Problem<&M, Gaussian<'_>, ClusteredLasso>> for Hybrid<V>
+impl<M, V> Solver<Problem<&M, Gaussian<'_>, ClusteredLasso>> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
@@ -321,7 +321,7 @@ where
     }
 }
 
-impl<M, V> ObservedSolver<Problem<&M, Gaussian<'_>, ClusteredLasso>> for Hybrid<V>
+impl<M, V> ObservedSolver<Problem<&M, Gaussian<'_>, ClusteredLasso>> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
@@ -336,7 +336,7 @@ where
     }
 }
 
-impl<M, V> Solver<Problem<&M, Gaussian<'_>, ChainFusedLasso>> for Hybrid<V>
+impl<M, V> Solver<Problem<&M, Gaussian<'_>, ChainFusedLasso>> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
@@ -352,7 +352,7 @@ where
     }
 }
 
-impl<M, V> ObservedSolver<Problem<&M, Gaussian<'_>, ChainFusedLasso>> for Hybrid<V>
+impl<M, V> ObservedSolver<Problem<&M, Gaussian<'_>, ChainFusedLasso>> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
@@ -367,7 +367,7 @@ where
     }
 }
 
-impl<M, V> Solver<Problem<&M, Gaussian<'_>, Slope>> for Hybrid<V>
+impl<M, V> Solver<Problem<&M, Gaussian<'_>, Slope>> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
@@ -380,7 +380,7 @@ where
     }
 }
 
-impl<M, V> ObservedSolver<Problem<&M, Gaussian<'_>, Slope>> for Hybrid<V>
+impl<M, V> ObservedSolver<Problem<&M, Gaussian<'_>, Slope>> for HybridCoordinateDescent<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
@@ -397,7 +397,7 @@ where
 
 fn solve<M, V, P>(
     problem: &Problem<&M, Gaussian<'_>, P>,
-    options: &Hybrid<V>,
+    options: &HybridCoordinateDescent<V>,
 ) -> Result<HybridFit, FitError<M::Error>>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
@@ -409,7 +409,7 @@ where
 
 fn solve_observed<M, V, P, T>(
     problem: &Problem<&M, Gaussian<'_>, P>,
-    options: &Hybrid<V>,
+    options: &HybridCoordinateDescent<V>,
     initial: Option<crate::InitialPoint<'_>>,
     observer: &mut T,
 ) -> Result<HybridFit, FitError<M::Error>>
@@ -459,13 +459,13 @@ where
     HybridFit::from_solution(solution, design.into_preprocessing())
 }
 
-impl<V> Solver<RuntimeProblem<'_>> for Hybrid<V> {
+impl<V> Solver<RuntimeProblem<'_>> for HybridCoordinateDescent<V> {
     type Fit = HybridFit;
     type Error = FitError<BackendError>;
 
     fn solve(&self, _: &RuntimeProblem<'_>) -> Result<HybridFit, Self::Error> {
         Err(unsupported(
-            "Hybrid",
+            "HybridCoordinateDescent",
             "erased proximal oracles do not expose cluster or segment columns",
             "use a typed Gaussian or Binomial problem with ClusteredLasso, ChainFusedLasso, or Slope, or runtime ProximalGradient",
         ))
@@ -832,7 +832,7 @@ fn initial_curvature<M: RawColumns<f64> + lazymatrix::MatrixErrorType, V: Proxim
     design: &NativeDesign<M, V>,
     fit_intercept: bool,
     weights: &Weights,
-    options: &Hybrid<W>,
+    options: &HybridCoordinateDescent<W>,
 ) -> Result<f64, FitError<M::Error>> {
     let mut maximum = if fit_intercept {
         weights.intercept_curvature(design.matrix().nrows())
@@ -871,7 +871,7 @@ fn iterate_quadratic<'a, M, V, W, P>(
     design: &mut NativeDesign<M, V>,
     datafit: Model<'a>,
     penalty: &P,
-    options: &Hybrid<W>,
+    options: &HybridCoordinateDescent<W>,
     threshold: f64,
     work: &mut Workspace<P>,
 ) -> Result<Progress, FitError<M::Error>>
@@ -895,7 +895,7 @@ fn iterate_quadratic_observed<'a, M, V, W, P, T>(
     design: &mut NativeDesign<M, V>,
     datafit: Model<'a>,
     penalty: &P,
-    options: &Hybrid<W>,
+    options: &HybridCoordinateDescent<W>,
     threshold: f64,
     work: &mut Workspace<P>,
     observer: &mut T,
@@ -1178,7 +1178,7 @@ impl Progress {
     fn finish<P: ReducedCoordinatePenalty, V>(
         self,
         work: &Workspace<P>,
-        options: &Hybrid<V>,
+        options: &HybridCoordinateDescent<V>,
         threshold: f64,
     ) -> Solution {
         Solution {
@@ -1214,7 +1214,7 @@ fn iterate<M, V, W, P>(
     design: &mut NativeDesign<M, V>,
     datafit: Gaussian<'_>,
     penalty: &P,
-    options: &Hybrid<W>,
+    options: &HybridCoordinateDescent<W>,
     threshold: f64,
     work: &mut Workspace<P>,
 ) -> Result<Solution, FitError<M::Error>>
@@ -1238,7 +1238,7 @@ fn iterate_observed<M, V, W, P, T>(
     design: &mut NativeDesign<M, V>,
     datafit: Gaussian<'_>,
     penalty: &P,
-    options: &Hybrid<W>,
+    options: &HybridCoordinateDescent<W>,
     threshold: f64,
     work: &mut Workspace<P>,
     observer: &mut T,
