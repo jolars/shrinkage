@@ -1,5 +1,11 @@
 //! Coarse dispatch into typed hybrid and runtime proximal fitting.
 
+mod path;
+
+pub(crate) use path::PyModelPath;
+
+use std::sync::Arc;
+
 use ndarray::Array1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -292,7 +298,45 @@ impl PySolver {
         let fit = py
             .detach(move || method.solve(&data, family, fit_intercept, normalization, penalty))
             .map_err(DetachedError::into_python)?;
-        Ok(PyModelFit { fit, family })
+        Ok(PyModelFit {
+            fit: Arc::new(fit),
+            family,
+        })
+    }
+
+    #[pyo3(signature = (x, y, family, fit_intercept, normalization_name, penalty, *, penalties = None, options = None, copy = true))]
+    #[allow(clippy::too_many_arguments)]
+    fn path(
+        &self,
+        py: Python<'_>,
+        x: &Bound<'_, PyAny>,
+        y: &Bound<'_, PyAny>,
+        family: &str,
+        fit_intercept: bool,
+        normalization_name: &str,
+        penalty: PenaltyInput,
+        penalties: Option<Vec<PenaltyInput>>,
+        options: Option<path::OptionsInput>,
+        copy: bool,
+    ) -> PyResult<PyModelPath> {
+        let family = Family::parse(family)?;
+        let normalization = normalization(normalization_name)?;
+        let penalty = Penalty::parse(penalty)?;
+        let request = path::Request::parse(penalties, options)?;
+        let method = self.method.clone();
+        let data = DenseInputs::from_python(x, y, copy)?;
+        py.detach(move || {
+            path::solve(
+                method,
+                &data,
+                family,
+                fit_intercept,
+                normalization,
+                penalty,
+                request,
+            )
+        })
+        .map_err(DetachedError::into_python)
     }
 }
 
@@ -302,14 +346,15 @@ enum NativeFit {
 }
 
 #[pyclass(frozen, name = "_ModelFit", module = "shrinkage._shrinkage")]
+#[derive(Clone)]
 pub(crate) struct PyModelFit {
-    fit: NativeFit,
+    fit: Arc<NativeFit>,
     family: Family,
 }
 
 macro_rules! fitted {
     ($this:expr, $method:ident) => {
-        match &$this.fit {
+        match $this.fit.as_ref() {
             NativeFit::Hybrid(fit) => fit.$method(),
             NativeFit::Proximal(fit) => fit.$method(),
         }
@@ -318,7 +363,7 @@ macro_rules! fitted {
 
 impl PyModelFit {
     fn hybrid_fit(&self) -> PyResult<&HybridFit> {
-        match &self.fit {
+        match self.fit.as_ref() {
             NativeFit::Hybrid(fit) => Ok(fit),
             NativeFit::Proximal(_) => Err(PyValueError::new_err(
                 "hybrid diagnostics are available only for Hybrid fits",
@@ -331,7 +376,7 @@ impl PyModelFit {
 impl PyModelFit {
     #[getter]
     fn solver(&self) -> &'static str {
-        match self.fit {
+        match self.fit.as_ref() {
             NativeFit::Hybrid(_) => "hybrid",
             NativeFit::Proximal(_) => "proximal_gradient",
         }
@@ -479,7 +524,7 @@ impl PyModelFit {
     #[pyo3(signature = (x, *, copy = true))]
     fn predict(&self, py: Python<'_>, x: &Bound<'_, PyAny>, copy: bool) -> PyResult<Vec<f64>> {
         let data = DenseDesign::from_python(x, copy)?;
-        py.detach(|| match &self.fit {
+        py.detach(|| match self.fit.as_ref() {
             NativeFit::Hybrid(fit) => fit.predict(&data.matrix()),
             NativeFit::Proximal(fit) => fit.predict(&data.matrix()),
         })

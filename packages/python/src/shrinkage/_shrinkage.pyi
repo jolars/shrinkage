@@ -4,6 +4,7 @@ _PenaltySpec = tuple[str, float, float, tuple[float, ...] | None]
 _PolicySpec = tuple[str, int, bool]
 _PolicyRecord = tuple[Literal["auto", "disabled", "ever_active", "adaptive"], int, bool]
 _StepSpec = tuple[str, float | None, int]
+_OptionsSpec = tuple[int, float | None, float | None, bool, int, float, float]
 
 __version__: str
 
@@ -101,6 +102,54 @@ class _Solver:
         *,
         copy: bool = True,
     ) -> _ModelFit: ...
+    def path(
+        self,
+        x: object,
+        y: object,
+        family: str,
+        fit_intercept: bool,
+        normalization_name: str,
+        penalty: _PenaltySpec,
+        *,
+        penalties: list[_PenaltySpec] | None = None,
+        options: _OptionsSpec | None = None,
+        copy: bool = True,
+    ) -> _ModelPath: ...
+
+class _ModelPath:
+    @property
+    def solver(self) -> Literal["hybrid", "proximal_gradient"]: ...
+    @property
+    def npoints(self) -> int: ...
+    @property
+    def fits(self) -> list[_ModelFit]: ...
+    @property
+    def penalties(self) -> list[_PenaltySpec]: ...
+    @property
+    def family(self) -> Literal["gaussian", "binomial"]: ...
+    @property
+    def nfeatures(self) -> int: ...
+    @property
+    def coefficients(self) -> list[list[float]]: ...
+    @property
+    def intercepts(self) -> list[float]: ...
+    @property
+    def lambdas(self) -> list[float] | None: ...
+    @property
+    def maximum_penalty(self) -> float | None: ...
+    @property
+    def lambda_start(self) -> float | None: ...
+    @property
+    def termination(
+        self,
+    ) -> Literal["completed", "deviance_change", "deviance_ratio"]: ...
+    @property
+    def null_deviance(self) -> float | None: ...
+    @property
+    def deviances(self) -> list[float] | None: ...
+    def predict(
+        self, x: object, *, copy: bool = True
+    ) -> tuple[int, list[list[float]]]: ...
 
 class _ModelFit:
     @property

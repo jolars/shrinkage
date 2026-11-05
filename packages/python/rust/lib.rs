@@ -26,5 +26,6 @@ fn _shrinkage(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<lasso::PyLassoFit>()?;
     module.add_class::<model::PySolver>()?;
     module.add_class::<model::PyModelFit>()?;
+    module.add_class::<model::PyModelPath>()?;
     Ok(())
 }

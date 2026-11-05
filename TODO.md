@@ -244,7 +244,7 @@ decision and concrete follow-up tasks.
   screening, working sets, and diagnostics. Preserve the dense input and GIL
   contracts, verify Rust/Python agreement, and return actionable
   compatibility errors.
-- [ ] **Python paths:** Bind Gaussian and logistic paths for all three penalties
+- [x] **Python paths:** Bind Gaussian and logistic paths for all three penalties
   with explicit output shapes, complete tuning metadata, per-point
   diagnostics, and prediction. Compare warm starts, failures, screening,
   working sets, and predictions with Rust paths in installed-package tests.

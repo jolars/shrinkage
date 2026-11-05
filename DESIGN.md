@@ -837,9 +837,9 @@ includes nonuniform weights, a cut, normalization, and a free intercept.
 `task bench:chain` compares proximal operations and complete solves at matched
 accuracy; bounded runs include setup, first PG, and subsequent rebuild work.
 `task bench:chain:heap` checks warmed scratch reuse and complete-solve storage
-for strongly fused and nearly singleton partitions. Python single fits and
-prediction are available; Python paths, fusion screening, and sparse-specific
-optimizations remain later milestones.
+for strongly fused and nearly singleton partitions. Python fits, paths, and
+prediction are available; fusion screening and sparse-specific optimizations
+remain later milestones.
 
 ## 7. Specialized SLOPE support
 
@@ -958,8 +958,8 @@ complete PG and hybrid solves on constructed distinct, tied, and highly
 clustered optima at matched accuracy. Bounded runs include setup, the first PG,
 and a subsequent rebuild. `task bench:slope:heap` measures warmed proximal
 allocations and complete-solve peak storage at low, high, and changing block
-counts. Python single fits and prediction are available; Python paths, fusion
-screening, and sparse-specific optimization remain later milestones.
+counts. Python fits, paths, and prediction are available; fusion screening and
+sparse-specific optimization remain later milestones.
 
 ### Logistic hybrid IRLS
 
@@ -1648,8 +1648,8 @@ metadata, working-set diagnostics, and inner and outer work counters. Cluster
 labels and values use the optimization scale; SLOPE additionally retains
 individual signs. Array-valued properties return independent NumPy copies.
 `predict` returns Gaussian means or binomial logits with shape `(n_samples,)`.
-Neither prediction nor result inspection refits normalization. Python paths,
-cross-validation, and plotting remain subsequent milestones.
+Neither prediction nor result inspection refits normalization. Python
+cross-validation and plotting remain subsequent milestones.
 
 The `python_model_fixture` generator checks all twelve penalty, family, and
 solver combinations against typed public Rust fits, including normalization,
@@ -1659,6 +1659,47 @@ recompute objectives, check independent analytical solutions, and exercise
 concurrent fits and GIL release during fitting and prediction. The runnable
 Python hybrid example compares both solvers for every penalty and family through
 the installed distribution.
+
+### Python paths
+
+`Problem.fit_path_with(solver, penalties)` binds explicit Rust paths in caller
+order, including empty paths, repeated points, and increasing strengths. Each
+point retains its complete penalty rather than only one tuning coordinate.
+Points share the problem penalty's type, but clustered and chain strengths can
+vary independently, and chain edge weights and SLOPE rank weights may change.
+`fit_regularization_path_with(solver, PathOptions(...))` binds automatic paths
+for both solvers and all six family and penalty combinations. Generated
+strengths scale the complete base penalty, keeping chain edge weights fixed. The
+Python options expose every Rust sequence and early stopping control with the
+same defaults and validation.
+
+Both calls snapshot the dense inputs once and fit the entire path while detached
+from Python. Rust owns normalization, null-model initialization, workspace
+reuse, screening resets, and warm starts. Hybrid `Auto` working sets resolve to
+`EverActive` for paths. Each point gets a fresh solver budget, and finite
+iteration-limit fits remain usable as subsequent warm starts. Errors return no
+partial path and preserve Rust's error category and message.
+
+`PathFit` owns immutable native fits shared with independent per-point wrappers.
+`coefficients` has shape `(n_points, n_features)`, `intercepts` has shape
+`(n_points,)`, and bulk `predict` has shape `(n_samples, n_points)`. Empty
+paths, zero-feature designs, and empty prediction batches retain these axes.
+Bulk prediction snapshots the new design once before detaching. Every point
+exposes its complete fit API, including preprocessing, stopping, dual, and
+screening diagnostics. Hybrid points add working-set and cluster diagnostics.
+Arrays are independent NumPy copies, and neither path nor point wrappers retain
+training data.
+
+Automatic results retain aligned scalar multipliers and deviances, the true zero
+threshold, the used anchor, null deviance, and path termination. An unbounded
+threshold is represented by positive infinity; explicit paths use `None` for
+automatic metadata. Path completion and deviance stopping remain separate from
+point convergence. The `python_path_fixture` generator and its `--check` mode
+verify complete metadata, every exposed point diagnostic, predictions,
+iteration-limit continuation, screening, working sets, early stopping, and
+failures against public typed Rust paths. The same comparisons and a runnable
+six-combination path example run against installed wheels and wheels rebuilt
+from isolated source distributions.
 
 ## 12. Results, correctness, and performance
 

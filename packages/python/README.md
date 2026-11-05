@@ -106,8 +106,9 @@ trials. `HybridStep.fixed_bound()` uses a computed Frobenius bound.
 
 Working sets offer `WorkingSetPolicy.auto()`, `.disabled()`, `.ever_active()`,
 and `.adaptive(initial_size=10, prune=True)`. Automatic sets resolve to adaptive
-sets for single fits. Screening and working sets are independent; disable both
-to update all features. A heuristic exclusion is not a certified zero.
+sets for single fits and ever-active sets for paths. Screening and working sets
+are independent; disable both to update all features. A heuristic exclusion is
+not a certified zero.
 
 Use `ProximalGradient(...)` with the same problem for the reference solver. It
 returns `ProximalFit` and optimizes the original Gaussian or binomial loss
@@ -154,6 +155,98 @@ installed package:
 
 ```console
 uv run --locked --project packages/python python packages/python/examples/hybrid.py
+```
+
+## Regularization paths
+
+Both solvers fit Gaussian and binomial paths for all three composed penalties.
+Explicit paths accept complete penalties in caller order, preserving duplicates
+and increases in strength. Points must have the same penalty type as the
+problem. Both strengths and all weights can vary independently:
+
+```python
+from shrinkage import ClusteredLasso, Gaussian, Hybrid, PathOptions, Problem
+
+problem = Problem(X, Gaussian(y), ClusteredLasso(l1=1.0, fusion=0.3))
+explicit = problem.fit_path_with(
+    Hybrid(),
+    [ClusteredLasso(0.1, 0.02), ClusteredLasso(0.5, 0.01), ClusteredLasso(0.1, 0.02)],
+)
+automatic = problem.fit_regularization_path_with(
+    Hybrid(),
+    PathOptions(nlambda=20, lambda_min_ratio=0.01, early_stopping=False),
+)
+assert automatic.coefficients.shape == (20, X.shape[1])
+assert automatic.intercepts.shape == (20,)
+assert automatic.predict(X).shape == (X.shape[0], 20)
+```
+
+`fit_path_with(solver, penalties, *, copy=True)` consumes the iterable once. The
+problem's own penalty supplies the type; the supplied points determine the
+complete strengths and weights. An empty iterable returns a valid empty path.
+
+`fit_regularization_path_with(solver, options=None, *, copy=True)` generates a
+decreasing log-spaced sequence, starting at the true zero-coefficient threshold
+unless `lambda_start` overrides it. Scalar strengths multiply both clustered or
+chain strengths, or every supplied SLOPE rank weight. Chain edge weights stay
+fixed. Thus `penalties[i]` always contains the complete penalty actually fitted,
+rather than only a scalar or one of the fusion strengths.
+
+`PathOptions` uses Rust's defaults and validates controls when fitting:
+
+  | Option                      | Default | Meaning                                                            |
+  | --------------------------- | ------- | ------------------------------------------------------------------ |
+  | `nlambda`                   | `100`   | Positive requested point count                                     |
+  | `lambda_min_ratio`          | `None`  | Endpoint/start ratio in `(0, 1]`; `0.01` if `n < p`, else `0.0001` |
+  | `lambda_start`              | `None`  | Optional finite, nonnegative anchor override                       |
+  | `early_stopping`            | `True`  | Enable deviance-based stopping                                     |
+  | `min_points`                | `5`     | Positive minimum point count before early stopping                 |
+  | `deviance_change_tolerance` | `1e-5`  | Nonnegative fractional deviance improvement; zero disables it      |
+  | `deviance_ratio_tolerance`  | `0.999` | Explained null-deviance target in `(0, 1]`                         |
+
+A zero anchor generates zero strengths. Pure fusion and zero-weight SLOPE can
+have an unbounded zero threshold and require `lambda_start`. Automatic binomial
+paths with a free intercept reject all-zero or all-one responses because the
+null intercept has no finite optimum. Disable the intercept or use an explicit
+path for those responses.
+
+`PathFit` retains the selected `solver`, `family`, and `n_features`. Its arrays
+have explicit axes, including when a dimension is zero:
+
+  | Property or method | Shape                    | Meaning                           |
+  | ------------------ | ------------------------ | --------------------------------- |
+  | `coefficients`     | `(n_points, n_features)` | Original-scale coefficients       |
+  | `intercepts`       | `(n_points,)`            | Original-scale intercepts         |
+  | `predict(X_new)`   | `(n_samples, n_points)`  | Gaussian means or binomial logits |
+  | `lambdas`          | `(n_points,)` or `None`  | Generated scalar multipliers      |
+  | `deviances`        | `(n_points,)` or `None`  | Averaged original-loss deviances  |
+
+`fits` and `penalties` are immutable tuples aligned with the parameter rows and
+prediction columns. Each `fits[i]` exposes its solver's full single-fit API,
+including preprocessing, stopping and dual diagnostics, screening, and
+prediction. Hybrid entries also expose clusters and working sets. Arrays are
+float64 snapshots; cluster labels remain integers. Changing returned arrays
+cannot affect any point or subsequent prediction.
+
+Automatic metadata also includes `maximum_penalty`, `lambda_start`, and
+`null_deviance`. `maximum_penalty` is the true zero threshold, including `inf`
+when unbounded, even if the anchor was overridden. Explicit paths report `None`
+for all automatic metadata. The path's `termination` is `"completed"`,
+`"deviance_change"`, or `"deviance_ratio"`, independently of point convergence.
+Only consecutive converged points can trigger deviance-change stopping.
+
+Paths copy the training inputs once, prepare normalization once, and reuse
+Rust's workspace and warm starts. Every point receives a fresh solver budget.
+Finite iteration-limit results stay in the path and warm-start the next point;
+inspect each fit's `termination`. Invalid points, nonfinite arithmetic, and
+line-search failures raise the same exceptions as single fits without returning
+a partial path. Dense input, ownership, and GIL rules match single fits. Bulk
+prediction copies its input once before releasing the GIL.
+
+Run the installed-package example for all three penalties and both families:
+
+```console
+uv run --locked --project packages/python python packages/python/examples/paths.py
 ```
 
 ## Gaussian lasso convenience API
@@ -251,7 +344,7 @@ penalty strengths, normalization names, stopping controls, and copying policies
 raise `ValueError`. Finite inputs that produce nonfinite arithmetic raise
 `FloatingPointError`, retaining the Rust operation and iteration in the message.
 Line-search exhaustion raises `RuntimeError` with the iteration and solver
-settings. Python paths, cross-validation, and plotting remain later milestones.
+settings. Python cross-validation and plotting remain later milestones.
 
 ## Dense input contract
 
@@ -319,12 +412,18 @@ ownership, concurrent fits, GIL release during fitting and prediction, and all
 diagnostics from public Rust fixtures. The model fixtures cover all twelve
 combinations of penalty, family, and solver, every normalization preset, both
 Hybrid step policies, working sets, screening settings, and iteration limits.
+Path fixtures compare explicit and automatic paths, complete tuning settings,
+every point's diagnostics, iteration-limit warm starts, both early stopping
+reasons, unbounded thresholds, invalid points, and line-search and null-model
+failures against public Rust paths. Path tests also cover empty shapes,
+ownership, and GIL release for fitting and bulk prediction.
 
 Regenerate the fixtures after an intentional numerical change:
 
 ```console
 cargo run --locked --example python_lasso_fixture --features ndarray_v0_17 > packages/python/tests/fixtures/lasso_rust.json
 cargo run --locked --example python_model_fixture --features ndarray_v0_17 > packages/python/tests/fixtures/model_rust.json
+cargo run --locked --example python_path_fixture --features ndarray_v0_17 > packages/python/tests/fixtures/path_rust.json
 ```
 
 `task example` and CI run that generator with `--check` to verify the committed

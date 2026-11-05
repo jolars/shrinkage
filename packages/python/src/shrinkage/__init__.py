@@ -47,6 +47,9 @@ from .fit import (
 )
 from .lasso import Lasso as Lasso
 from .lasso import LassoFit as LassoFit
+from .path import PathFit as PathFit
+from .path import PathOptions as PathOptions
+from .path import PathTermination as PathTermination
 from .penalty import (
     ChainFusedLasso as ChainFusedLasso,
 )
@@ -82,6 +85,9 @@ __all__ = [
     "Lasso",
     "LassoFit",
     "Normalization",
+    "PathFit",
+    "PathOptions",
+    "PathTermination",
     "Preprocessing",
     "Problem",
     "ProximalFit",

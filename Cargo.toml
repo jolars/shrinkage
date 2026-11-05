@@ -103,6 +103,10 @@ required-features = ["ndarray_v0_17"]
 name = "python_model_fixture"
 required-features = ["ndarray_v0_17"]
 
+[[example]]
+name = "python_path_fixture"
+required-features = ["ndarray_v0_17"]
+
 [[bench]]
 name = "lasso"
 harness = false

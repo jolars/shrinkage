@@ -140,7 +140,7 @@ Predictions remain logits.
 
 Runtime problems support SLOPE through proximal gradient. Gaussian and binomial
 [hybrid paths](../modeling.md#regularization-paths) scale the supplied weight
-profile. Python exposes single fits and prediction with explicit hybrid or PG
-selection; see the [Python package guide](../../../packages/python/README.md).
-Python paths, fusion screening, and sparse-specific optimization follow later
-roadmap milestones.
+profile. Python exposes fits, paths, and prediction with explicit hybrid or PG
+selection; see the [Python path
+guide](../../../packages/python/README.md#regularization-paths). Fusion
+screening and sparse-specific optimization follow later roadmap milestones.

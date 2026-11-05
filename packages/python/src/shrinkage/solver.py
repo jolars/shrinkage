@@ -51,7 +51,7 @@ class WorkingSetPolicy:
 
     @classmethod
     def auto(cls) -> WorkingSetPolicy:
-        """Use adaptive sets for single fits, starting with ten features."""
+        """Use adaptive sets for single fits, or ever-active sets for paths."""
         return cls("auto")
 
     @classmethod
