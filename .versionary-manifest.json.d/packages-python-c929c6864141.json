@@ -1,11 +1,11 @@
 {
   "manifest-version": 1,
   "path": "packages/python",
-  "baseline-sha": "f0d0a78621bb838e7d220b1de35851693abd2ad2",
+  "baseline-sha": "e651e7ccce9ace499f3c811b0e225ece132d604b",
   "release-target": {
     "path": "packages/python",
-    "version": "0.2.0",
-    "tag": "shrinkage-python-v0.2.0"
+    "version": "0.3.0",
+    "tag": "shrinkage-python-v0.3.0"
   },
   "release-branch": "versionary/release-shrinkage-cdb4ee2aea69"
 }
