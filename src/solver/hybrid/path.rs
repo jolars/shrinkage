@@ -15,7 +15,7 @@ trait HybridPathDatafit: SmoothDatafit + NullModelDatafit + Copy {
     fn validate_solver<V>(&self, solver: &Hybrid<V>) -> Result<f64, FitError> {
         solver.validate()
     }
-    fn path_deviance<P: HybridPenalty>(
+    fn path_deviance<P: ReducedCoordinatePenalty>(
         &self,
         work: &Workspace<P>,
         outer: &Self::Outer,
@@ -31,7 +31,7 @@ trait HybridPathDatafit: SmoothDatafit + NullModelDatafit + Copy {
     where
         M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
         V: ProximalVector,
-        P: HybridPenalty;
+        P: ReducedCoordinatePenalty;
 }
 
 impl HybridPathDatafit for Gaussian<'_> {
@@ -40,7 +40,7 @@ impl HybridPathDatafit for Gaussian<'_> {
     fn initial_intercept(&self) -> Result<f64, FitError> {
         Ok(self.null_intercepts()?[0])
     }
-    fn path_deviance<P: HybridPenalty>(
+    fn path_deviance<P: ReducedCoordinatePenalty>(
         &self,
         work: &Workspace<P>,
         _: &(),
@@ -58,7 +58,7 @@ impl HybridPathDatafit for Gaussian<'_> {
     where
         M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
         V: ProximalVector,
-        P: HybridPenalty,
+        P: ReducedCoordinatePenalty,
     {
         iterate_observed(
             design,
@@ -77,7 +77,7 @@ impl HybridPathDatafit for Binomial<'_> {
     fn outer(n: usize, p: usize) -> Self::Outer {
         irls::Outer::new(n, p)
     }
-    fn path_deviance<P: HybridPenalty>(
+    fn path_deviance<P: ReducedCoordinatePenalty>(
         &self,
         _: &Workspace<P>,
         outer: &Self::Outer,
@@ -104,7 +104,7 @@ impl HybridPathDatafit for Binomial<'_> {
     where
         M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
         V: ProximalVector,
-        P: HybridPenalty,
+        P: ReducedCoordinatePenalty,
     {
         let (inner, outer) = work;
         irls::iterate_with_workspace_observed(
@@ -135,7 +135,7 @@ impl<M, D, P, Q, V> PathSolver<Problem<&M, D, P>, Q> for Hybrid<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     D: HybridPathDatafit,
-    Q: HybridPenalty,
+    Q: ReducedCoordinatePenalty,
     V: ProximalVector,
 {
     type Fit = HybridFit;
@@ -194,7 +194,7 @@ where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     D: HybridPathDatafit,
     P: PathPenalty,
-    P::AtStrength: HybridPenalty,
+    P::AtStrength: ReducedCoordinatePenalty,
     V: ProximalVector,
 {
     type Fit = HybridFit;

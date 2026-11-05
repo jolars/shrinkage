@@ -13,7 +13,7 @@ fn fixture() -> Matrix {
     ])
 }
 
-fn compare_gaussian<P: HybridPenalty + Clone>(penalty: P) {
+fn compare_gaussian<P: ReducedCoordinatePenalty + Clone>(penalty: P) {
     let x = fixture();
     let y = [-3.0, 3.0, -3.0, 3.0, -3.0, 3.0];
     let problem = Problem::new(&x, Gaussian::new(&y), penalty).normalize(Normalization::None);
@@ -66,7 +66,7 @@ fn gaussian_screening_retains_complete_penalties_and_full_diagnostics() {
     compare_gaussian(Slope::new(vec![0.3, 0.25, 0.2, 0.15]));
 }
 
-fn compare_binomial<P: HybridPenalty + Clone>(penalty: P) {
+fn compare_binomial<P: ReducedCoordinatePenalty + Clone>(penalty: P) {
     let x = fixture();
     let y = [0.1, 0.9, 0.1, 0.9, 0.1, 0.9];
     let problem = Problem::new(&x, Binomial::new(&y), penalty).normalize(Normalization::None);

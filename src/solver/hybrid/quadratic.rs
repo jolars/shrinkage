@@ -373,7 +373,7 @@ impl Weights {
 mod tests {
     use super::*;
     use crate::solver::hybrid::tests::matrix::Matrix;
-    use crate::solver::hybrid::{HybridPenalty, Workspace, iterate_quadratic};
+    use crate::solver::hybrid::{ReducedCoordinatePenalty, Workspace, iterate_quadratic};
     use crate::solver::proximal::NativeDesign;
     use crate::{
         ChainFusedLasso, ClusteredLasso, Hybrid, Normalization, Penalty, Problem, ProximalGradient,
@@ -399,7 +399,7 @@ mod tests {
         }
     }
 
-    fn compare<P: HybridPenalty + Clone>(penalty: P) {
+    fn compare<P: ReducedCoordinatePenalty + Clone>(penalty: P) {
         let rows = [
             [1.0, 2.0, -1.0],
             [0.0, 1.0, 2.0],

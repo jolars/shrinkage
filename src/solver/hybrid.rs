@@ -29,7 +29,8 @@ use crate::{
     Solver, StoppingCriterion, Termination,
 };
 
-trait HybridPenalty: crate::GapSafePenalty + Sized {
+/// A convex penalty supporting exact scalar updates along reduced-coordinate directions.
+trait ReducedCoordinatePenalty: crate::GapSafePenalty + Sized {
     type State: Partition<Self>;
 }
 
@@ -77,15 +78,15 @@ trait Partition<P>: Sized {
     fn values(&self) -> Vec<f64>;
 }
 
-impl HybridPenalty for ClusteredLasso {
+impl ReducedCoordinatePenalty for ClusteredLasso {
     type State = cluster::State;
 }
 
-impl HybridPenalty for ChainFusedLasso {
+impl ReducedCoordinatePenalty for ChainFusedLasso {
     type State = segment::State;
 }
 
-impl HybridPenalty for Slope {
+impl ReducedCoordinatePenalty for Slope {
     type State = slope::State;
 }
 
@@ -401,7 +402,7 @@ fn solve<M, V, P>(
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     solve_observed(problem, options, None, &mut NoObserver)
 }
@@ -416,7 +417,7 @@ where
     T: SolverObserver + ?Sized,
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     let threshold = options.validate()?;
     problem.datafit().validate(problem.design().nrows())?;
@@ -492,7 +493,7 @@ enum Selection {
     Working,
 }
 
-struct Workspace<P: HybridPenalty = ClusteredLasso> {
+struct Workspace<P: ReducedCoordinatePenalty = ClusteredLasso> {
     coefficients: Vec<f64>,
     intercept: f64,
     residual: Vec<f64>,
@@ -512,7 +513,7 @@ struct Workspace<P: HybridPenalty = ClusteredLasso> {
     path: bool,
 }
 
-impl<P: HybridPenalty> Workspace<P> {
+impl<P: ReducedCoordinatePenalty> Workspace<P> {
     fn new(n: usize, p: usize) -> Self {
         Self {
             coefficients: vec![0.0; p],
@@ -877,7 +878,7 @@ fn iterate_quadratic<'a, M, V, W, P>(
 where
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     iterate_quadratic_observed(
         design,
@@ -903,7 +904,7 @@ where
     T: SolverObserver + ?Sized,
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     datafit
         .validate(design.nrows())
@@ -1174,7 +1175,7 @@ struct Progress {
 }
 
 impl Progress {
-    fn finish<P: HybridPenalty, V>(
+    fn finish<P: ReducedCoordinatePenalty, V>(
         self,
         work: &Workspace<P>,
         options: &Hybrid<V>,
@@ -1220,7 +1221,7 @@ fn iterate<M, V, W, P>(
 where
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     iterate_observed(
         design,
@@ -1246,7 +1247,7 @@ where
     T: SolverObserver + ?Sized,
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     work.working
         .begin(options.working_set_policy, work.path, &work.coefficients);

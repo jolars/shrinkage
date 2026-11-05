@@ -7,7 +7,7 @@ impl<M, V, P> Solver<Problem<&M, Binomial<'_>, P>> for Hybrid<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     type Fit = HybridFit;
     type Error = FitError<M::Error>;
@@ -53,7 +53,7 @@ impl<M, V, P> ObservedSolver<Problem<&M, Binomial<'_>, P>> for Hybrid<V>
 where
     M: RawColumns<f64> + ColumnStats<f64> + MatVecInto<V> + MatTransposeVecInto<V> + ?Sized,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     fn solve_from_with_observer<O: SolverObserver + ?Sized>(
         &self,
@@ -142,7 +142,7 @@ fn iterate<M, V, W, P>(
 where
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     iterate_observed(
         design,
@@ -168,7 +168,7 @@ where
     T: SolverObserver + ?Sized,
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     let mut outer = Outer::new(design.nrows(), design.ncols());
     iterate_with_workspace_observed(
@@ -195,7 +195,7 @@ where
     T: SolverObserver + ?Sized,
     M: RawColumns<f64> + MatVecInto<V> + MatTransposeVecInto<V>,
     V: ProximalVector,
-    P: HybridPenalty,
+    P: ReducedCoordinatePenalty,
 {
     let (inner, outer) = work;
     inner
