@@ -9,7 +9,7 @@ wrappers live in `src/model/`. Typed composition, datafits, penalties, and
 fitted results live in their respective modules. Keep individual datafits in
 `src/datafit/` and fitted result types in `src/fit/`. Model fitting follows
 `DESIGN.md`. The `normalization` and `lasso` examples exercise dense and sparse
-CSC input through LazyMatrix 0.10.0. Optional `faer_v0_24`, `nalgebra_v0_34`,
+CSC input through LazyMatrix 0.11.0. Optional `faer_v0_24`, `nalgebra_v0_34`,
 `ndarray_v0_17`, and `sprs_v0_11` features expose its matrix integrations. The
 short names `faer`, `nalgebra`, `ndarray`, and `sprs` are aliases. sprs input
 uses LazyMatrix's checked `SprsCsc` wrapper.
