@@ -186,6 +186,7 @@ packages:
     repository: "shrinkage"
     path: "packages/python"
     metadata-path: "pyproject.toml"
+    overview: "docs/overview.md"
     targets:
       - id: "api"
         extractor: "python"

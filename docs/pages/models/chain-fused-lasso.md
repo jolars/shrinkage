@@ -109,5 +109,5 @@ Gaussian and binomial [hybrid paths](../modeling.md#regularization-paths)
 support explicit strength pairs and automatic fixed-ratio sequences. Python
 exposes fits, paths, and prediction with explicit hybrid or PG selection; see
 the [Python path
-guide](../../../packages/python/README.md#regularization-paths). Fusion
+guide](../../../packages/python/docs/overview.md#regularization-paths). Fusion
 screening and sparse-specific optimizations follow later roadmap milestones.

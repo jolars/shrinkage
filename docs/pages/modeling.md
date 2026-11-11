@@ -8,7 +8,7 @@ components described here are available through Rust. Python exposes Gaussian
 lasso and compositional Gaussian and binomial fits with the three MVP penalties,
 using explicit hybrid or proximal-gradient solvers. See the [Python installation
 guide](installation.md#python) and [package
-guide](../../packages/python/README.md) for fitting and prediction.
+guide](../../packages/python/docs/overview.md) for fitting and prediction.
 
 ## Objective and notation {#objective-and-notation}
 
@@ -16,8 +16,11 @@ For a design with $n$ observations and $p$ features, Shrinkage minimizes the
 composite primal objective
 
 $$
-  \min_{\beta_0,\beta} P(\beta_0,\beta), \qquad P(\beta_0,\beta)
-  = F(\beta_0,\beta) + R(\beta), \qquad \eta = \beta_0\mathbf{1} + \widetilde X\beta.
+  \min_{\beta_0,\beta} P(\beta_0,\beta),
+  \qquad
+  P(\beta_0,\beta) = F(\beta_0,\beta) + R(\beta),
+  \qquad
+  \eta = \beta_0\mathbf{1} + \widetilde X\beta.
 $$
 
 The datafit $F$ averages over observations. The complete penalty $R$ includes

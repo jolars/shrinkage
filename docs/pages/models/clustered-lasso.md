@@ -166,5 +166,5 @@ Run `task bench:hybrid:irls` for complete-fit comparisons with PG and
 Gaussian and binomial [hybrid paths](../modeling.md#regularization-paths) reuse
 the solver's workspaces across tuning points. Python exposes fits, paths, and
 prediction with explicit hybrid or PG selection; see the [Python path
-guide](../../../packages/python/README.md#regularization-paths). Fusion
+guide](../../../packages/python/docs/overview.md#regularization-paths). Fusion
 screening and sparse-specific extensions follow in later roadmap milestones.
