@@ -30,7 +30,6 @@ in
     (inputs.diplodocus.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
       patches = (old.patches or [ ]) ++ [
         ./docs/diplodocus-generated-inputs.patch
-        ./docs/diplodocus-components.patch
       ];
     }))
   ] ++ lib.optionals pkgs.stdenv.isLinux [
