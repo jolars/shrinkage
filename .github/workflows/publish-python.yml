@@ -1,0 +1,131 @@
+name: Publish Python
+
+on:
+  push:
+    tags: ["shrinkage-python-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Check release metadata
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          package = Path("packages/python")
+          version = tomllib.loads((package / "pyproject.toml").read_text())["project"]["version"]
+          native_version = tomllib.loads((package / "Cargo.toml").read_text())["package"]["version"]
+          assert version == native_version, (version, native_version)
+          if os.environ["GITHUB_REF"].startswith("refs/tags/"):
+              assert os.environ["GITHUB_REF_NAME"] == f"shrinkage-python-v{version}"
+          PY
+
+  wheels:
+    name: CPython ${{ matrix.python }} (${{ matrix.platform.target }})
+    needs: metadata
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+        platform:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            manylinux: "2014"
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+          - os: macos-15
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Rust
+        if: runner.os != 'Linux'
+        run: rustup toolchain install
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: "1.16.0"
+          rust-toolchain: "1.89.0"
+          working-directory: packages/python
+          target: ${{ matrix.platform.target }}
+          manylinux: ${{ matrix.platform.manylinux }}
+          args: --release --locked --out dist --strip --interpreter ${{ runner.os == 'Linux' && format('python{0}', matrix.python) || 'python' }}
+      - name: Install and test the built wheel
+        shell: bash
+        run: |
+          python -m pip install packages/python/dist/*.whl
+          python -I -m unittest discover --start-directory "$GITHUB_WORKSPACE/packages/python/tests"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-${{ matrix.platform.target }}-${{ matrix.python }}
+          path: packages/python/dist/*.whl
+          if-no-files-found: error
+
+  sdist:
+    needs: metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install Rust
+        run: rustup toolchain install
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: "1.16.0"
+          working-directory: packages/python
+          command: sdist
+          args: --out dist
+      - name: Rebuild and test the source distribution
+        run: |
+          python -m pip install packages/python/dist/*.tar.gz
+          python -I -m unittest discover --start-directory "$GITHUB_WORKSPACE/packages/python/tests"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-sdist
+          path: packages/python/dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: [wheels, sdist]
+    if: startsWith(github.ref, 'refs/tags/shrinkage-python-v')
+    runs-on: ubuntu-latest
+    environment:
+      name: release
+      url: https://pypi.org/p/shrinkage
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: python-*
+          path: dist
+          merge-multiple: true
+      - uses: pypa/gh-action-pypi-publish@release/v1

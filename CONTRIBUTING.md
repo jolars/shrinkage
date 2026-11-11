@@ -13,6 +13,41 @@ installs the prebuilt Diplodocus 0.9.0 release through
 `jolars/setup-diplodocus@v1`, which includes native GFM math, and keeps its
 Python environment outside the checkout.
 
+## Releases
+
+Versionary manages Rust and Python releases independently. CI uses the
+`RELEASE_TOKEN` secret to create release pull requests and tags after the checks
+pass. Rust releases use `v*` tags; Python releases use `shrinkage-python-v*`
+tags.
+
+The `Publish Crate` workflow publishes the root Rust package to crates.io when a
+`v*` tag is pushed. To retry a release manually, run the workflow with that tag
+selected. Publishing runs `cargo publish --locked` with the pinned Rust
+toolchain and uses the GitHub `release` environment.
+
+Configure a [crates.io trusted
+publisher](https://crates.io/docs/trusted-publishing) for the `shrinkage` crate
+with repository owner `jolars`, repository `shrinkage`, workflow filename
+`publish-crates.yml`, and environment `release`. The workflow obtains a
+temporary publishing token through GitHub OIDC, so it does not require a
+crates.io token secret. Python release tags do not trigger this workflow.
+
+The `Publish Python` workflow builds wheels for CPython 3.11 through 3.15 on
+Linux and Windows x86-64 and on macOS Intel and Apple Silicon. It tests every
+wheel and rebuilds and tests the source distribution before publishing to PyPI.
+Python releases use `shrinkage-python-v*` tags. Manual runs on branches build
+and test artifacts; manual runs on a matching Python release tag also publish
+them.
+
+For the first PyPI release, register a [pending trusted
+publisher](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/)
+from your PyPI account's [Publishing
+settings](https://pypi.org/manage/account/publishing/). Use project name
+`shrinkage`, owner `jolars`, repository `shrinkage`, workflow filename
+`publish-python.yml`, and environment `release`. The first successful upload
+creates the project and activates its publisher. Later releases use the same
+configuration, with no PyPI token secret required.
+
 ## Python package
 
 The optional package lives in `packages/python`. Its native crate and Cargo
