@@ -5,3 +5,5 @@ extend-exclude = ["CHANGELOG.md"]
 [formatters]
 rust = "rustfmt"
 toml = "taplo"
+python = "ruff"
+r = "arity"
