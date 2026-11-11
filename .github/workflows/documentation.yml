@@ -18,14 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # Keep this revision and the patches aligned with devenv's generator.
-      - name: Check out the pinned documentation generator
-        uses: actions/checkout@v7
-        with:
-          repository: jolars/diplodocus
-          ref: f677d820a4e613161c87fd4e8b75b071fe17931c
-          path: .build/diplodocus
-          persist-credentials: false
+      - uses: jolars/setup-diplodocus@v1
       - name: Install Rust toolchains
         run: |
           rustup toolchain install 1.89.0 --profile minimal --target wasm32-unknown-unknown
@@ -38,14 +31,7 @@ jobs:
             .
             packages/python
             docs/widget
-            .build/diplodocus
           key: documentation-components
-      - name: Build the pinned documentation generator
-        run: |
-          git -C .build/diplodocus apply "$GITHUB_WORKSPACE/docs/diplodocus-generated-inputs.patch"
-          git -C .build/diplodocus apply "$GITHUB_WORKSPACE/docs/diplodocus-components.patch"
-          cargo +1.98.0 build --locked --release --manifest-path .build/diplodocus/Cargo.toml --bin diplodocus
-          echo "$GITHUB_WORKSPACE/.build/diplodocus/target/release" >> "$GITHUB_PATH"
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
