@@ -207,7 +207,7 @@ checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 
 [[package]]
 name = "shrinkage"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "lazymatrix",
  "libm",
@@ -216,7 +216,7 @@ dependencies = [
 
 [[package]]
 name = "shrinkage-python"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bytemuck",
  "memmap2",
@@ -227,9 +227,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "3.0.9"
+version = "3.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d78c8dee4c7bf0e14673097256fed6142ce9d3b85a408189d07482442145823b"
+checksum = "4ae9ccbea3a7b0b09443036490c8f34a8b1b760fd345e5c0dae0aac718faea79"
 dependencies = [
  "proc-macro2",
  "quote",

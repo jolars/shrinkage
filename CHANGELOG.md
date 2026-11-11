@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.4.0](https://github.com/jolars/shrinkage/compare/v0.3.0...v0.4.0) (2026-11-10)
+
+### Breaking changes
+
+- rename `Hybrid` to `HybridCoordinateDescent` ([`3c34886`](https://github.com/jolars/shrinkage/commit/3c348866f288534a0ddb94e9d6e8d0afbce99b95))
+- support configurable GLM links ([`4f38932`](https://github.com/jolars/shrinkage/commit/4f38932f1b9473ec6269c7afb5570c46296b716c))
+- rename `nobs()` to `n_obs()` ([`2b71a4f`](https://github.com/jolars/shrinkage/commit/2b71a4f3a152843db6717c7350b6d11828c20227))
+
+### Features
+
+- **python:** bind Gaussian and logistic paths ([`4282b34`](https://github.com/jolars/shrinkage/commit/4282b34066d389093b170fd1919ef1adcfc821d0))
+- support configurable GLM links ([`4f38932`](https://github.com/jolars/shrinkage/commit/4f38932f1b9473ec6269c7afb5570c46296b716c))
+- rename `nobs()` to `n_obs()` ([`2b71a4f`](https://github.com/jolars/shrinkage/commit/2b71a4f3a152843db6717c7350b6d11828c20227))
+- upgrade to `lazymatrix` 0.10.0 ([`f283dec`](https://github.com/jolars/shrinkage/commit/f283decc1329dae6d6cfc2cdaa2b777c781061e0))
+- **python:** add hybrid fitting and prediction ([`7bd8c6c`](https://github.com/jolars/shrinkage/commit/7bd8c6c5f3a3814551f8edf481d198914c912f13))
+- add cross-validation with warm-start paths ([`6f70587`](https://github.com/jolars/shrinkage/commit/6f705874351453b2ce23b21eb5422abaf5838a7a))
+- lower MSRV to 1.84 ([`97500f6`](https://github.com/jolars/shrinkage/commit/97500f69b4e7422bcd8423821f2d65989feec2fe))
+- add warm-started paths for all solvers ([`d1a94e7`](https://github.com/jolars/shrinkage/commit/d1a94e79a0b3fefe3ee49f05696fe534d76d1ceb))
+- add default working-set policies ([`3404fb2`](https://github.com/jolars/shrinkage/commit/3404fb2e3f092ed2e0e861d31a09c110c424a7aa))
+- add dynamic Gap Safe zero screening ([`71f5ec9`](https://github.com/jolars/shrinkage/commit/71f5ec948e974a7887ef3e7f2286fe81eb0d2616))
+
+### Bug Fixes
+
+- **ci:** bind MSRV cache to Python version ([`87a735c`](https://github.com/jolars/shrinkage/commit/87a735cdac7880cfe43a1219b19465587c1e9754))
+
+### Performance Improvements
+
+- accelerate dense Python lasso fits ([`3dd3c09`](https://github.com/jolars/shrinkage/commit/3dd3c095547f9893c429646a991323e870eb0d9a))
+- share KKT and dual correlations ([`800af43`](https://github.com/jolars/shrinkage/commit/800af43f060265e31871411284e5dc283725942d))
+- batch coordinate descent convergence checks ([`7eef81a`](https://github.com/jolars/shrinkage/commit/7eef81a7b5b92878c9adc488edc58ba6a0720cd1))
+
 ## [0.3.0](https://github.com/jolars/shrinkage/compare/v0.2.0...v0.3.0) (2026-10-27)
 
 ### Features
