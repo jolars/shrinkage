@@ -16,11 +16,8 @@ For a design with $n$ observations and $p$ features, Shrinkage minimizes the
 composite primal objective
 
 $$
-  \min_{\beta_0,\beta} P(\beta_0,\beta),
-  \qquad
-  P(\beta_0,\beta) = F(\beta_0,\beta) + R(\beta),
-  \qquad
-  \eta = \beta_0\mathbf{1} + \widetilde X\beta.
+  \min_{\beta_0,\beta} P(\beta_0,\beta), \qquad P(\beta_0,\beta)
+  = F(\beta_0,\beta) + R(\beta), \qquad \eta = \beta_0\mathbf{1} + \widetilde X\beta.
 $$
 
 The datafit $F$ averages over observations. The complete penalty $R$ includes
