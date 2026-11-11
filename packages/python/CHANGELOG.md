@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1](https://github.com/jolars/shrinkage/compare/shrinkage-python-v0.3.0...shrinkage-python-v0.3.1) (2026-11-11)
+
+### Bug Fixes
+
+- **docs:** use a dedicated Python overview ([`2827160`](https://github.com/jolars/shrinkage/commit/2827160dabdeb383f677a33d24bcdc86ab78b7bf))
+
 ## [0.3.0](https://github.com/jolars/shrinkage/compare/shrinkage-python-v0.2.0...shrinkage-python-v0.3.0) (2026-11-10)
 
 ### Breaking changes
