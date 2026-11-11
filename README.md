@@ -28,9 +28,8 @@ The core library requires Rust 1.84 or newer. Some optional matrix backends
 require a newer compiler; see the [compatibility
 guide](https://shrinkage.cc/installation/).
 
-Python bindings are under development. See the [Python package
-guide](packages/python/README.md) for their current status and source
-installation.
+For Python, run `pip install shrinkage` and see the [Python
+README](packages/python/README.md) for a quick start.
 
 ## Usage
 
@@ -145,7 +144,7 @@ storage.
 - [Examples](examples): runnable Rust models and matrix integrations.
 - [Design](DESIGN.md): architecture, statistical conventions, and extension
   contracts.
-- [Python package](packages/python/README.md): binding status and installation.
+- [Python package](packages/python/README.md): installation and usage.
 
 ## Citation
 
