@@ -1,0 +1,21 @@
+[package]
+name = "shrinkage-rust-benchmarks"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+publish = false
+
+[dependencies]
+linfa = { version = "=0.8.1", default-features = false }
+linfa-elasticnet = { version = "=0.8.1", default-features = false }
+ndarray = { version = "0.17.2", default-features = false, features = ["std"] }
+ndarray_0_16 = { package = "ndarray", version = "0.16.1", default-features = false, features = ["std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+shrinkage = { path = "../..", default-features = false, features = ["ndarray_v0_17"] }
+
+[workspace]
+resolver = "3"
+
+[lints.rust]
+unsafe_code = "forbid"

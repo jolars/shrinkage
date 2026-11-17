@@ -13,6 +13,9 @@ Browse the API reference below, or explore the mathematical definitions of
 [datafits](pages/datafits/index.md), [penalties](pages/penalties/index.md), and
 [solvers](pages/reference/solvers/index.md).
 
+See how the Gaussian elastic net fit compares with Linfa at a shared accuracy
+target in the [Rust benchmark](rust/benchmarks.md).
+
 Fitted results retain original-scale coefficients and preprocessing for
 prediction. Inspect the termination reason and stopping diagnostics before
 treating a fit as converged. Single typed fits also support `fit_with_observer`

@@ -1,0 +1,99 @@
+version: 1
+name: rust-elastic-net
+
+datasets:
+  correlated:
+    sources: [data.json]
+    output-schema: &dataset-schema {type: object}
+
+problems:
+  elastic_net:
+    family: gaussian-regression
+    parameters:
+      lambda: {type: number, exclusiveMinimum: 0, default: 0.125}
+      l1_ratio: {type: number, exclusiveMinimum: 0, exclusiveMaximum: 1, default: 0.5}
+    dataset-schemas: [*dataset-schema]
+    result:
+      coefficients: {type: array, items: number, minItems: 1}
+    metrics:
+      objective: {type: number, minimum: 0, optional: true}
+      kkt_violation: {type: number, minimum: 0, optional: true}
+    allowed-timing-scopes: [execute_only]
+    supported-budgets: [none]
+    semantics:
+      objective: "||y - X beta||^2 / (2 n) + lambda * (l1_ratio * ||beta||_1 + (1 - l1_ratio) * ||beta||_2^2 / 2)"
+      preprocessing:
+        shared_materialization: dense_column_major_f64
+        allowed_outside_timed_scope: [load_arrays]
+        normalization: false
+        intercept: false
+      validity: {coefficients: finite_vector_matching_feature_count}
+      one_shot_completion: {kkt_violation: &target 1.0e-7}
+    reference-cases:
+      - dataset: &identity {columns: [[1, 0], [0, 1]], y: [1.25, -1.25]}
+        result: {coefficients: [1, -1]}
+        expected-metrics: {objective: 0.21875, kkt_violation: 0}
+      - dataset: *identity
+        result: {coefficients: [0, 0]}
+        expected-metrics: {objective: 0.78125, kkt_violation: 0.5625}
+        expected-verdict: not_reached
+      - dataset: *identity
+        result: {coefficients: [0]}
+        expected-metrics: {}
+        expected-verdict: invalid
+    evaluator:
+      runner: command
+      program: ./worker
+      args: [evaluator]
+      sources: &worker-sources [worker, Cargo.lock, build.json]
+
+implementations:
+  shrinkage: &implementation
+    runner: command
+    program: ./worker
+    args: [shrinkage]
+    sources: *worker-sources
+    problem-contracts: [elastic_net]
+    capabilities: [fresh_sequence]
+  linfa:
+    <<: *implementation
+    args: [linfa]
+
+experiments:
+  - name: convergence
+    problem: elastic_net
+    datasets: [correlated]
+    implementations: [shrinkage, linfa]
+    execution-policy: serial
+    observation-policy: accuracy
+    measurement-repetitions: 5
+    seed: 42
+
+execution-policies:
+  serial:
+    timing-scope: execute_only
+    primary-time: implementation_time
+    run-order: randomized
+    max-concurrency: 1
+    worker-reuse: true
+    warmup-runs: 1
+    timeout: 5 s
+
+observation-policies:
+  accuracy:
+    kind: profile
+    metric: kkt_violation
+    direction: at_most
+    threshold: *target
+    max-observations: 9
+    max-active-time: 10 s
+    implementations:
+      shrinkage: &tolerances
+        delivery: fresh_sequence
+        control-schema:
+          type: object
+          properties: {tolerance: {type: number, exclusiveMinimum: 0}}
+          required: [tolerance]
+          additionalProperties: false
+        schedule: {kind: geometric, field: tolerance, start: 0.1, ratio: 0.1, count: 9}
+      linfa: *tolerances

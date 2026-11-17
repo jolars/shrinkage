@@ -6,6 +6,7 @@ tasks:
     cmds:
       - cargo fmt --all
       - cargo fmt --manifest-path packages/python/Cargo.toml
+      - cargo fmt --manifest-path packages/rust-benchmarks/Cargo.toml
       - cargo fmt --manifest-path docs/widget/Cargo.toml
       - ruff format packages/python scripts
       - ruff check --fix packages/python scripts
@@ -57,6 +58,11 @@ tasks:
     desc: Benchmark Gaussian lasso with only the faer backend enabled
     cmds:
       - cargo bench --locked --no-default-features --features faer_v0_24 --bench lasso
+
+  bench:elastic-net:
+    desc: Compare Rust elastic net fits with Linfa at verified accuracy
+    cmds:
+      - uv run --script scripts/rust_elastic_net_benchmark.py --run
 
   bench:heap:
     desc: Measure lasso allocations and peak live heap with linear memory budgets
@@ -296,9 +302,10 @@ tasks:
       - uv run --script scripts/penalty_regions.py
 
   docs:figures:check:
-    desc: Verify penalty geometry and committed constraint figures
+    desc: Check the penalty and Rust benchmark figures
     cmds:
       - uv run --script scripts/penalty_regions.py --check
+      - uv run --script scripts/rust_elastic_net_benchmark.py --check
 
   docs:build:
     desc: Validate and build the shared documentation site
