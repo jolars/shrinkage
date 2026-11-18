@@ -22,7 +22,13 @@ from tempfile import mkdtemp
 ROOT = Path(__file__).resolve().parents[1]
 BENCHMARK = ROOT / "packages/rust-benchmarks"
 FIGURES = ROOT / "docs/rust/figures"
-METHODS = ("shrinkage", "linfa")
+METHODS = ("shrinkage", "linfa", "smartcore")
+METEWAND_RUN_FAILED = 5
+PROFILE_STOPS = {
+    ("accepted", "target_reached"),
+    ("censored", "schedule_exhausted"),
+    ("censored", "active_time_limit"),
+}
 
 
 def metewand_executable():
@@ -76,7 +82,14 @@ def build_worker(directory):
     shutil.copy2(target / "release/shrinkage-rust-benchmarks", worker)
     shutil.copyfile(BENCHMARK / "Cargo.lock", directory / "Cargo.lock")
     lock = tomllib.loads((directory / "Cargo.lock").read_text(encoding="utf-8"))
-    tracked = {"shrinkage", "linfa", "linfa-elasticnet", "lazymatrix", "ndarray"}
+    tracked = {
+        "shrinkage",
+        "linfa",
+        "linfa-elasticnet",
+        "smartcore",
+        "lazymatrix",
+        "ndarray",
+    }
     versions = defaultdict(list)
     for package in lock["package"]:
         if package["name"] in tracked:
@@ -89,6 +102,7 @@ def build_worker(directory):
                 ["rustc", "--version"], cwd=ROOT, text=True
             ).strip(),
             "shrinkage_features": ["ndarray_v0_17"],
+            "smartcore_features": ["lazy-normalization", "ndarray-bindings", "std"],
             "versions": dict(versions),
             "source_sha256": source_sha256,
             "worker_sha256": digest(worker),
@@ -113,20 +127,26 @@ def prepare_comparison(metewand):
 def run_comparison():
     metewand = metewand_executable()
     directory = prepare_comparison(metewand)
-    run(
-        metewand,
-        "run",
-        "--manifest",
-        directory / "metewand.yaml",
-        "--output-dir",
-        directory / "run",
+    measurement = subprocess.run(
+        [
+            metewand,
+            "run",
+            "--manifest",
+            directory / "metewand.yaml",
+            "--output-dir",
+            directory / "run",
+        ],
+        cwd=ROOT,
+        check=False,
     )
+    # Metewand reports budget-limited profiles with the same exit code as failures.
+    if measurement.returncode != METEWAND_RUN_FAILED:
+        measurement.check_returncode()
     run(
         metewand,
         "export",
         "--format",
         "json",
-        "--require-complete",
         "--output-dir",
         directory / "run",
         "--destination",
@@ -138,19 +158,49 @@ def run_comparison():
     return directory
 
 
+def validate_export(snapshot):
+    budget_limited = {
+        profile["candidate_id"]
+        for profile in snapshot["profiles"]
+        if profile["status"] == "censored"
+        and (profile["status"], profile["reason"]) in PROFILE_STOPS
+    }
+    censored_slots = {
+        slot["id"]
+        for slot in snapshot["slots"]
+        if slot["state"] == "censored" and slot["candidate_id"] in budget_limited
+    }
+    failed_slots = {
+        attempt["slot_id"]
+        for attempt in snapshot["attempts"]
+        if attempt["state"] == "failed"
+    }
+    for issue in snapshot["completeness"]["issues"]:
+        if (
+            issue["code"] == "unfinished_profile"
+            and issue["candidate_id"] in budget_limited
+        ) or (
+            issue["code"] == "unsatisfied_slot"
+            and issue["slot_id"] in censored_slots
+            and issue["slot_id"] not in failed_slots
+        ):
+            continue
+        raise ValueError(f"The Metewand run is incomplete. {issue['message']}")
+
+
 def summarize(directory):
     snapshot = json.loads(
         (directory / "analysis/results.json").read_text(encoding="utf-8")
     )
-    if not snapshot["completeness"]["complete"]:
-        raise ValueError("The Metewand run is incomplete.")
+    validate_export(snapshot)
     candidates = {
         candidate["implementation"]: candidate for candidate in snapshot["candidates"]
     }
-    if len(snapshot["candidates"]) != 2 or set(candidates) != set(METHODS):
-        raise ValueError(
-            "Expected one Shrinkage configuration and one Linfa configuration."
-        )
+    if len(snapshot["candidates"]) != len(candidates) or set(candidates) not in (
+        {"shrinkage", "linfa"},
+        set(METHODS),
+    ):
+        raise ValueError("Expected one configuration per benchmarked solver.")
 
     parameters = candidates["shrinkage"]["parameters"]["problem"]
     target = candidates["shrinkage"]["observation_policy"]["profile"]["policy"][
@@ -160,6 +210,12 @@ def summarize(directory):
     build = json.loads((directory / "build.json").read_text(encoding="utf-8"))
     data_path = directory / "data.json"
     dataset = json.loads(data_path.read_text(encoding="utf-8"))
+    y = dataset["y"]
+    null_model_loss = math.fsum(value * value for value in y) / (2 * len(y))
+    if not 0.0 < null_model_loss < math.inf:
+        raise ValueError(
+            "The relative duality gap requires a positive finite null-model loss."
+        )
     rows = [
         row for row in snapshot["observations"] if row["selected"] and not row["warmup"]
     ]
@@ -175,22 +231,44 @@ def summarize(directory):
         )
 
     methods = {}
+    profile_stops = {}
     for method in METHODS:
+        if method not in candidates:
+            continue
         candidate = candidates[method]
         policy = candidate["observation_policy"]["profile"]["policy"]
         if (
             candidate["parameters"]["problem"] != parameters
             or candidate["measurement_repetitions"] != repetitions
-            or policy["metric"] != "kkt_violation"
-            or policy["threshold"] != target
         ):
-            raise ValueError(
-                "Expected a shared problem, accuracy target, and repetition count."
-            )
+            raise ValueError("Expected a shared problem and repetition count.")
+        if (
+            policy.get("threshold") != target
+            or policy.get("metric") != "relative_gap"
+            or policy.get("direction") != "at_most"
+        ):
+            raise ValueError("Expected a shared relative duality gap target.")
+        profiles = sorted(
+            (
+                profile
+                for profile in snapshot["profiles"]
+                if profile["candidate_id"] == candidate["id"]
+            ),
+            key=lambda profile: profile["measurement_index"],
+        )
+        if [profile["measurement_index"] for profile in profiles] != list(
+            range(repetitions)
+        ) or any(
+            (profile["status"], profile["reason"]) not in PROFILE_STOPS
+            for profile in profiles
+        ):
+            raise ValueError("Expected every repetition to reach its target or budget.")
+        stops = [profile["reason"] for profile in profiles]
+        profile_stops[method] = stops
         methods[method] = profile_points(
             [row for row in rows if row["implementation"] == method],
             target,
-            repetitions,
+            stops,
         )
 
     provenance = provenances[0]
@@ -204,22 +282,24 @@ def summarize(directory):
         "metewand_sha256": provenance["runner"]["executable_sha256"],
         "build": build,
         "dataset": {
-            "n_samples": len(dataset["y"]),
+            "n_samples": len(y),
             "n_features": len(dataset["columns"]),
+            "null_model_loss": null_model_loss,
             "seed": dataset["seed"],
             "signals": dataset.get("signals", []),
             "artifact": artifacts.pop(),
             "data_sha256": digest(data_path),
         },
         "parameters": parameters,
-        "kkt_target": target,
+        "relative_gap_target": target,
         "repetitions": repetitions,
+        "profile_stops": profile_stops,
         "methods": methods,
     }
 
 
-def profile_points(rows, target, repetitions):
-    groups = defaultdict(list)
+def profile_points(rows, target, stops):
+    sequences = defaultdict(list)
     for row in rows:
         profile = row["profile"]
         time_ns = row["implementation_time_ns"]
@@ -233,37 +313,45 @@ def profile_points(rows, target, repetitions):
             or row["primary_time_ns"] != time_ns
             or profile["delivery"] != "fresh_sequence"
             or not all(
-                math.isfinite(metrics[key]) for key in ("kkt_violation", "objective")
+                0.0 <= metrics.get(key, math.nan) < math.inf
+                for key in ("objective", "duality_gap", "relative_gap", "kkt_violation")
             )
         ):
             raise ValueError(
-                "Expected a valid fresh fit with both metrics and a positive fit time."
+                "Expected a valid fresh fit with finite metrics and a positive fit time."
             )
-        groups[profile["schedule_index"]].append(row)
+        sequences[row["measurement_index"]].append(row)
 
-    if sorted(groups) != list(range(len(groups))) or len(groups) < 2:
-        raise ValueError("Expected consecutive schedule points leading to the target.")
-    points = []
-    for index in sorted(groups):
-        group = sorted(groups[index], key=lambda row: row["measurement_index"])
-        tolerances = {
-            row["profile"]["observation_control"]["tolerance"] for row in group
-        }
-        if len(tolerances) != 1 or [row["measurement_index"] for row in group] != list(
-            range(repetitions)
-        ):
-            raise ValueError(
-                "Each plotted tolerance must have all declared repetitions."
-            )
-        final = index == len(groups) - 1
-        samples = []
-        for row in group:
-            if (row["metrics"]["kkt_violation"] <= target) != final:
+    if sorted(sequences) != list(range(len(stops))):
+        raise ValueError("Expected measurements for every repetition.")
+    groups = defaultdict(list)
+    for repetition, stop in enumerate(stops):
+        sequence = sorted(
+            sequences[repetition], key=lambda row: row["profile"]["schedule_index"]
+        )
+        for index, row in enumerate(sequence):
+            if row["profile"]["schedule_index"] != index:
+                raise ValueError("Expected consecutive schedule points.")
+            reached = row["metrics"]["relative_gap"] <= target
+            if reached != (
+                index == len(sequence) - 1 and stop == "target_reached"
+            ) or row["completion"] != ("reached" if reached else "not_reached"):
                 raise ValueError(
                     "Each profile must end at its first fit that meets the target."
                 )
-            samples.append({"time_ns": row["implementation_time_ns"], **row["metrics"]})
-        points.append({"tolerance": tolerances.pop(), "measurements": samples})
+            groups[index].append(row)
+
+    points = []
+    for index in range(len(groups)):
+        group = groups[index]
+        control = group[0]["profile"]["observation_control"]
+        if any(row["profile"]["observation_control"] != control for row in group):
+            raise ValueError("Expected matching solver settings across repetitions.")
+        samples = [
+            {"time_ns": row["implementation_time_ns"], **row["metrics"]}
+            for row in group
+        ]
+        points.append({**control, "measurements": samples})
     return points
 
 
@@ -273,34 +361,39 @@ def render(summary):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    null_model_loss = summary["dataset"]["null_model_loss"]
     with plt.rc_context({"font.family": "DejaVu Sans", "font.size": 11}):
         figure, ax = plt.subplots(figsize=(7.2, 4.6), layout="constrained")
-        versions = summary["build"]["versions"]
         series = (
-            (
-                "shrinkage",
-                f"Shrinkage {versions['shrinkage'][0]} (IRLS)",
-                "#2563a6",
-                "o",
-            ),
-            ("linfa", f"Linfa {versions['linfa-elasticnet'][0]}", "#bb5725", "s"),
+            ("shrinkage", "Shrinkage", "#2563a6", "o"),
+            ("linfa", "Linfa", "#bb5725", "s"),
+            ("smartcore", "SmartCore", "#267253", "^"),
         )
         for method, label, color, marker in series:
-            times, violations, lower_errors, upper_errors = [], [], [], []
+            if method not in summary["methods"]:
+                continue
+            times, gaps, lower_errors, upper_errors = [], [], [], []
             for point in summary["methods"][method]:
                 measurements = point["measurements"]
-                milliseconds = [row["time_ns"] / 1e6 for row in measurements]
-                time = median(milliseconds)
-                lower, _, upper = quantiles(milliseconds, n=4, method="inclusive")
+                seconds = [row["time_ns"] / 1e9 for row in measurements]
+                time = median(seconds)
+                lower, _, upper = (
+                    quantiles(seconds, n=4, method="inclusive")
+                    if len(seconds) > 1
+                    else (time, time, time)
+                )
                 times.append(time)
                 lower_errors.append(time - lower)
                 upper_errors.append(upper - time)
-                violations.append(
-                    max(1e-16, median(row["kkt_violation"] for row in measurements))
+                gaps.append(
+                    median(
+                        row.get("relative_gap", row["duality_gap"] / null_model_loss)
+                        for row in measurements
+                    )
                 )
             ax.plot(
                 times,
-                violations,
+                gaps,
                 marker=marker,
                 color=color,
                 label=label,
@@ -308,7 +401,7 @@ def render(summary):
             )
             ax.errorbar(
                 times,
-                violations,
+                gaps,
                 xerr=[lower_errors, upper_errors],
                 fmt="none",
                 ecolor=color,
@@ -316,30 +409,9 @@ def render(summary):
                 capsize=2,
             )
 
-        ax.axhline(
-            summary["kkt_target"],
-            color="#596473",
-            linestyle="--",
-            linewidth=1,
-            label="Shared accuracy target",
-        )
         ax.set_yscale("log")
-        ax.set_xlim(left=0)
-        ax.set_xlabel("Rust fit time (ms)")
-        ax.set_ylabel("Maximum KKT violation")
-        ax.set_title("Elastic net convergence", loc="left", weight="bold", pad=26)
-        shape = summary["dataset"]
-        signals = shape.get("signals", [])
-        signal_label = f"{len(signals)} signals · " if signals else ""
-        ax.text(
-            0,
-            1.03,
-            f"{shape['n_samples']:,} observations · {shape['n_features']:,} features · "
-            f"{signal_label}{summary['repetitions']} profiles per solver",
-            transform=ax.transAxes,
-            fontsize=10,
-            color="#4b5563",
-        )
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Relative duality gap")
         ax.grid(color="#e5e7eb")
         ax.set_axisbelow(True)
         ax.legend(frameon=False)

@@ -55,7 +55,7 @@ struct Semantics {
 
 #[derive(Deserialize)]
 struct Completion {
-    kkt_violation: f64,
+    relative_gap: f64,
 }
 
 #[derive(Deserialize)]
@@ -110,11 +110,8 @@ impl Worker {
                     .prepared
                     .take()
                     .ok_or("execute requires a prepared fit")?;
-                let tolerance = observation_control["tolerance"]
-                    .as_f64()
-                    .filter(|tolerance| *tolerance > 0.0)
-                    .ok_or("execute requires a positive tolerance")?;
-                let model = prepared.fit(tolerance)?;
+                let control = serde_json::from_value(observation_control.clone())?;
+                let model = prepared.fit(control)?;
                 let result = json!({
                     "schema_version": 1, "data": {"coefficients": model.coefficients}, "files": [],
                 });
@@ -141,8 +138,8 @@ impl Worker {
                 let (metrics, verdict) =
                     match evaluate(&data, &result.data.coefficients, problem_parameters) {
                         Some(metrics) => {
-                            let target = problem_semantics.one_shot_completion.kkt_violation;
-                            let verdict = if metrics.kkt_violation <= target {
+                            let target = problem_semantics.one_shot_completion.relative_gap;
+                            let verdict = if metrics.relative_gap <= target {
                                 "reached"
                             } else {
                                 "not_reached"
@@ -197,8 +194,9 @@ fn main() -> WorkerResult<()> {
     match arguments.as_slice() {
         [role] if role == "shrinkage" => serve(Role::Shrinkage),
         [role] if role == "linfa" => serve(Role::Linfa),
+        [role] if role == "smartcore" => serve(Role::SmartCore),
         [role] if role == "evaluator" => serve(Role::Evaluator),
         [command, path] if command == "generate" => Dataset::generate(path.as_ref()),
-        _ => Err("expected shrinkage, linfa, evaluator, or generate PATH".into()),
+        _ => Err("expected shrinkage, linfa, smartcore, evaluator, or generate PATH".into()),
     }
 }

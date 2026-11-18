@@ -17,6 +17,8 @@ problems:
       coefficients: {type: array, items: number, minItems: 1}
     metrics:
       objective: {type: number, minimum: 0, optional: true}
+      duality_gap: {type: number, minimum: 0, optional: true}
+      relative_gap: {type: number, minimum: 0, optional: true}
       kkt_violation: {type: number, minimum: 0, optional: true}
     allowed-timing-scopes: [execute_only]
     supported-budgets: [none]
@@ -25,18 +27,29 @@ problems:
       preprocessing:
         shared_materialization: dense_column_major_f64
         allowed_outside_timed_scope: [load_arrays]
+        response: centered
         normalization: false
         intercept: false
       validity: {coefficients: finite_vector_matching_feature_count}
-      one_shot_completion: {kkt_violation: &target 1.0e-7}
+      one_shot_completion: {relative_gap: &target 1.0e-8}
     reference-cases:
       - dataset: &identity {columns: [[1, 0], [0, 1]], y: [1.25, -1.25]}
         result: {coefficients: [1, -1]}
-        expected-metrics: {objective: 0.21875, kkt_violation: 0}
+        expected-metrics: {objective: 0.21875, duality_gap: 0, relative_gap: 0, kkt_violation: 0}
       - dataset: *identity
         result: {coefficients: [0, 0]}
-        expected-metrics: {objective: 0.78125, kkt_violation: 0.5625}
+        expected-metrics: {objective: 0.78125, duality_gap: 5.0625, relative_gap: 6.48, kkt_violation: 0.5625}
         expected-verdict: not_reached
+      - dataset: *identity
+        result: {coefficients: [1.00006103515625, -1]}
+        expected-metrics: {objective: 0.2187500010477379, duality_gap: 9.42964106798172e-9, relative_gap: 1.2069940567016602e-8, kkt_violation: 3.4332275390625e-5}
+        metric-tolerance: {absolute: 1.0e-15}
+        expected-verdict: not_reached
+      - dataset: *identity
+        result: {coefficients: [1.000030517578125, -1]}
+        expected-metrics: {objective: 0.21875000026193447, duality_gap: 2.35741026699543e-9, relative_gap: 3.0174851417541506e-9, kkt_violation: 1.71661376953125e-5}
+        metric-tolerance: {absolute: 1.0e-15}
+        expected-verdict: reached
       - dataset: *identity
         result: {coefficients: [0]}
         expected-metrics: {}
@@ -58,6 +71,9 @@ implementations:
   linfa:
     <<: *implementation
     args: [linfa]
+  smartcore:
+    <<: *implementation
+    args: [smartcore]
 
 experiments:
   - name: convergence
@@ -68,9 +84,17 @@ experiments:
     observation-policy: accuracy
     measurement-repetitions: 5
     seed: 42
+  - name: interior-point
+    problem: elastic_net
+    datasets: [correlated]
+    implementations: [smartcore]
+    execution-policy: smartcore
+    observation-policy: iteration-caps
+    measurement-repetitions: 5
+    seed: 42
 
 execution-policies:
-  serial:
+  serial: &serial
     timing-scope: execute_only
     primary-time: implementation_time
     run-order: randomized
@@ -78,11 +102,17 @@ execution-policies:
     worker-reuse: true
     warmup-runs: 1
     timeout: 5 s
+  smartcore:
+    <<: *serial
+    timeout: 2 min
+
+worker-timeouts:
+  execute: 3 min
 
 observation-policies:
   accuracy:
     kind: profile
-    metric: kkt_violation
+    metric: relative_gap
     direction: at_most
     threshold: *target
     max-observations: 9
@@ -97,3 +127,19 @@ observation-policies:
           additionalProperties: false
         schedule: {kind: geometric, field: tolerance, start: 0.1, ratio: 0.1, count: 9}
       linfa: *tolerances
+  iteration-caps:
+    kind: profile
+    metric: relative_gap
+    direction: at_most
+    threshold: *target
+    max-observations: 3
+    max-active-time: 5 min
+    implementations:
+      smartcore:
+        delivery: fresh_sequence
+        control-schema:
+          type: object
+          properties: {iterations: {type: integer, minimum: 1}}
+          required: [iterations]
+          additionalProperties: false
+        schedule: {kind: explicit, controls: [{iterations: 1}, {iterations: 4}, {iterations: 16}]}

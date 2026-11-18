@@ -1,23 +1,29 @@
 {
-  "date_utc": "2026-11-17",
+  "date_utc": "2026-11-18",
   "host": {
     "architecture": "x86_64",
     "cpu_model": "AMD Ryzen 9 7900 12-Core Processor",
-    "kernel": "6.18.60",
-    "memory": "MemTotal:       64889980 kB",
+    "kernel": "6.18.62",
+    "memory": "MemTotal:       64889964 kB",
     "os": "linux",
     "phase": "run_preflight"
   },
   "metewand_version": "0.8.0",
-  "metewand_sha256": "207826baa7ecc31e99abab646d9e26d62b2fa92bebf94556f87826db7fa90f1b",
+  "metewand_sha256": "b5fef1c6f704aa19f10e485ea4571b312040626b14fbd8a5ebcd78d1707bcbde",
   "build": {
     "profile": "release",
     "rustc": "rustc 1.89.0 (29483883e 2025-08-04)",
     "shrinkage_features": [
       "ndarray_v0_17"
     ],
+    "smartcore_features": [
+      "lazy-normalization",
+      "ndarray-bindings",
+      "std"
+    ],
     "versions": {
       "lazymatrix": [
+        "0.7.0",
         "0.11.0"
       ],
       "linfa": [
@@ -32,15 +38,19 @@
       ],
       "shrinkage": [
         "0.4.0"
+      ],
+      "smartcore": [
+        "0.7.0"
       ]
     },
-    "source_sha256": "9548f957ba34944c3ec64f73bef4fa97d8e05bfca8f1e40931d40eb3e31a79f6",
-    "worker_sha256": "e61a7225a3b164188f26f2b3796aa35541fed214ec59e0baafc5e9aaa9daf809",
-    "lockfile_sha256": "3462bcc9deb3566301a67ca449e93e1d857870daab5870eb917a50d729b3b379"
+    "source_sha256": "e64c681b765d88bc62c75a404c7873ea878b9a4b1f49f93c5d1c647eae101c8b",
+    "worker_sha256": "657f0f66248ca29ffd29f4721b4c8a54bbd9f0c09f89c45611b6bd03960e1c8a",
+    "lockfile_sha256": "0f775a435ebc39ad8aa5dfb2145ae6d39b5d90efa64175008aeec3ebf9e59fb9"
   },
   "dataset": {
     "n_samples": 100,
     "n_features": 10000,
+    "null_model_loss": 2.002334033143402,
     "seed": 20261026,
     "signals": [
       [
@@ -84,44 +94,77 @@
         -1.0
       ]
     ],
-    "artifact": "mw1-artifact-fe5935fb7daa1764bdcfde684efff185792a782fe657b728a0aa6ff742445b91",
-    "data_sha256": "7e90a45e80993d7b204ebfd8678bf2353a36a85ed7e0626514922016fc94e5b4"
+    "artifact": "mw1-artifact-0fd3218bceb1081bf57f186ede2693d93be27e1912602233cdd4509cad046055",
+    "data_sha256": "64e9680af2ac169b91db8282319eef343780eeeed53b3da5837108c70d21af6f"
   },
   "parameters": {
     "l1_ratio": 0.5,
     "lambda": 0.125
   },
-  "kkt_target": 1e-07,
+  "relative_gap_target": 1e-08,
   "repetitions": 5,
+  "profile_stops": {
+    "shrinkage": [
+      "target_reached",
+      "target_reached",
+      "target_reached",
+      "target_reached",
+      "target_reached"
+    ],
+    "linfa": [
+      "target_reached",
+      "target_reached",
+      "target_reached",
+      "target_reached",
+      "target_reached"
+    ],
+    "smartcore": [
+      "schedule_exhausted",
+      "schedule_exhausted",
+      "schedule_exhausted",
+      "schedule_exhausted",
+      "schedule_exhausted"
+    ]
+  },
   "methods": {
     "shrinkage": [
       {
         "tolerance": 0.1,
         "measurements": [
           {
-            "time_ns": 4324919,
-            "kkt_violation": 0.04484106386107596,
-            "objective": 0.6797821101179949
+            "time_ns": 4454726,
+            "duality_gap": 0.650734184055598,
+            "kkt_violation": 0.04683450922291208,
+            "objective": 0.683827001459424,
+            "relative_gap": 0.3249878258494317
           },
           {
-            "time_ns": 6070640,
-            "kkt_violation": 0.04484106386107596,
-            "objective": 0.6797821101179949
+            "time_ns": 4414070,
+            "duality_gap": 0.650734184055598,
+            "kkt_violation": 0.04683450922291208,
+            "objective": 0.683827001459424,
+            "relative_gap": 0.3249878258494317
           },
           {
-            "time_ns": 4702925,
-            "kkt_violation": 0.04484106386107596,
-            "objective": 0.6797821101179949
+            "time_ns": 4530609,
+            "duality_gap": 0.650734184055598,
+            "kkt_violation": 0.04683450922291208,
+            "objective": 0.683827001459424,
+            "relative_gap": 0.3249878258494317
           },
           {
-            "time_ns": 4610862,
-            "kkt_violation": 0.04484106386107596,
-            "objective": 0.6797821101179949
+            "time_ns": 4672186,
+            "duality_gap": 0.650734184055598,
+            "kkt_violation": 0.04683450922291208,
+            "objective": 0.683827001459424,
+            "relative_gap": 0.3249878258494317
           },
           {
-            "time_ns": 4648445,
-            "kkt_violation": 0.04484106386107596,
-            "objective": 0.6797821101179949
+            "time_ns": 4436542,
+            "duality_gap": 0.650734184055598,
+            "kkt_violation": 0.04683450922291208,
+            "objective": 0.683827001459424,
+            "relative_gap": 0.3249878258494317
           }
         ]
       },
@@ -129,29 +172,39 @@
         "tolerance": 0.010000000000000002,
         "measurements": [
           {
-            "time_ns": 7305665,
-            "kkt_violation": 0.004465971979409608,
-            "objective": 0.6436379823935695
+            "time_ns": 8512704,
+            "duality_gap": 0.0017376333822843272,
+            "kkt_violation": 0.003821781394331536,
+            "objective": 0.6366352505941011,
+            "relative_gap": 0.000867803949552049
           },
           {
-            "time_ns": 12880343,
-            "kkt_violation": 0.004465971979409608,
-            "objective": 0.6436379823935695
+            "time_ns": 9817583,
+            "duality_gap": 0.0017376333822843272,
+            "kkt_violation": 0.003821781394331536,
+            "objective": 0.6366352505941011,
+            "relative_gap": 0.000867803949552049
           },
           {
-            "time_ns": 7838524,
-            "kkt_violation": 0.004465971979409608,
-            "objective": 0.6436379823935695
+            "time_ns": 8399601,
+            "duality_gap": 0.0017376333822843272,
+            "kkt_violation": 0.003821781394331536,
+            "objective": 0.6366352505941011,
+            "relative_gap": 0.000867803949552049
           },
           {
-            "time_ns": 7672434,
-            "kkt_violation": 0.004465971979409608,
-            "objective": 0.6436379823935695
+            "time_ns": 9205651,
+            "duality_gap": 0.0017376333822843272,
+            "kkt_violation": 0.003821781394331536,
+            "objective": 0.6366352505941011,
+            "relative_gap": 0.000867803949552049
           },
           {
-            "time_ns": 7867986,
-            "kkt_violation": 0.004465971979409608,
-            "objective": 0.6436379823935695
+            "time_ns": 8512104,
+            "duality_gap": 0.0017376333822843272,
+            "kkt_violation": 0.003821781394331536,
+            "objective": 0.6366352505941011,
+            "relative_gap": 0.000867803949552049
           }
         ]
       },
@@ -159,29 +212,39 @@
         "tolerance": 0.0010000000000000002,
         "measurements": [
           {
-            "time_ns": 10831638,
-            "kkt_violation": 0.0004021164447082781,
-            "objective": 0.6425413216320678
+            "time_ns": 11687779,
+            "duality_gap": 7.3652868181873746e-06,
+            "kkt_violation": 0.00033198458441691114,
+            "objective": 0.6360981846908939,
+            "relative_gap": 3.678350712855258e-06
           },
           {
-            "time_ns": 10810994,
-            "kkt_violation": 0.0004021164447082781,
-            "objective": 0.6425413216320678
+            "time_ns": 11990780,
+            "duality_gap": 7.3652868181873746e-06,
+            "kkt_violation": 0.00033198458441691114,
+            "objective": 0.6360981846908939,
+            "relative_gap": 3.678350712855258e-06
           },
           {
-            "time_ns": 11411930,
-            "kkt_violation": 0.0004021164447082781,
-            "objective": 0.6425413216320678
+            "time_ns": 12326593,
+            "duality_gap": 7.3652868181873746e-06,
+            "kkt_violation": 0.00033198458441691114,
+            "objective": 0.6360981846908939,
+            "relative_gap": 3.678350712855258e-06
           },
           {
-            "time_ns": 11710368,
-            "kkt_violation": 0.0004021164447082781,
-            "objective": 0.6425413216320678
+            "time_ns": 11999517,
+            "duality_gap": 7.3652868181873746e-06,
+            "kkt_violation": 0.00033198458441691114,
+            "objective": 0.6360981846908939,
+            "relative_gap": 3.678350712855258e-06
           },
           {
-            "time_ns": 17135352,
-            "kkt_violation": 0.0004021164447082781,
-            "objective": 0.6425413216320678
+            "time_ns": 12734051,
+            "duality_gap": 7.3652868181873746e-06,
+            "kkt_violation": 0.00033198458441691114,
+            "objective": 0.6360981846908939,
+            "relative_gap": 3.678350712855258e-06
           }
         ]
       },
@@ -189,29 +252,39 @@
         "tolerance": 0.00010000000000000003,
         "measurements": [
           {
-            "time_ns": 13891123,
-            "kkt_violation": 3.940720484454929e-05,
-            "objective": 0.6425370269140223
+            "time_ns": 15386861,
+            "duality_gap": 7.040623596844154e-08,
+            "kkt_violation": 2.7993996020839185e-05,
+            "objective": 0.6360945238216276,
+            "relative_gap": 3.516208325037206e-08
           },
           {
-            "time_ns": 13801520,
-            "kkt_violation": 3.940720484454929e-05,
-            "objective": 0.6425370269140223
+            "time_ns": 16820103,
+            "duality_gap": 7.040623596844154e-08,
+            "kkt_violation": 2.7993996020839185e-05,
+            "objective": 0.6360945238216276,
+            "relative_gap": 3.516208325037206e-08
           },
           {
-            "time_ns": 14414119,
-            "kkt_violation": 3.940720484454929e-05,
-            "objective": 0.6425370269140223
+            "time_ns": 15799418,
+            "duality_gap": 7.040623596844154e-08,
+            "kkt_violation": 2.7993996020839185e-05,
+            "objective": 0.6360945238216276,
+            "relative_gap": 3.516208325037206e-08
           },
           {
-            "time_ns": 21142842,
-            "kkt_violation": 3.940720484454929e-05,
-            "objective": 0.6425370269140223
+            "time_ns": 15736430,
+            "duality_gap": 7.040623596844154e-08,
+            "kkt_violation": 2.7993996020839185e-05,
+            "objective": 0.6360945238216276,
+            "relative_gap": 3.516208325037206e-08
           },
           {
-            "time_ns": 14642973,
-            "kkt_violation": 3.940720484454929e-05,
-            "objective": 0.6425370269140223
+            "time_ns": 15430082,
+            "duality_gap": 7.040623596844154e-08,
+            "kkt_violation": 2.7993996020839185e-05,
+            "objective": 0.6360945238216276,
+            "relative_gap": 3.516208325037206e-08
           }
         ]
       },
@@ -219,89 +292,39 @@
         "tolerance": 1.0000000000000004e-05,
         "measurements": [
           {
-            "time_ns": 16787432,
-            "kkt_violation": 3.7396269512435243e-06,
-            "objective": 0.6425369915406671
+            "time_ns": 18723169,
+            "duality_gap": 4.857039239423232e-10,
+            "kkt_violation": 2.573197618066514e-06,
+            "objective": 0.6360944941690956,
+            "relative_gap": 2.4256888006834295e-10
           },
           {
-            "time_ns": 16955705,
-            "kkt_violation": 3.7396269512435243e-06,
-            "objective": 0.6425369915406671
+            "time_ns": 20072692,
+            "duality_gap": 4.857039239423232e-10,
+            "kkt_violation": 2.573197618066514e-06,
+            "objective": 0.6360944941690956,
+            "relative_gap": 2.4256888006834295e-10
           },
           {
-            "time_ns": 17305992,
-            "kkt_violation": 3.7396269512435243e-06,
-            "objective": 0.6425369915406671
+            "time_ns": 18698833,
+            "duality_gap": 4.857039239423232e-10,
+            "kkt_violation": 2.573197618066514e-06,
+            "objective": 0.6360944941690956,
+            "relative_gap": 2.4256888006834295e-10
           },
           {
-            "time_ns": 17525432,
-            "kkt_violation": 3.7396269512435243e-06,
-            "objective": 0.6425369915406671
+            "time_ns": 20651503,
+            "duality_gap": 4.857039239423232e-10,
+            "kkt_violation": 2.573197618066514e-06,
+            "objective": 0.6360944941690956,
+            "relative_gap": 2.4256888006834295e-10
           },
           {
-            "time_ns": 17465506,
-            "kkt_violation": 3.7396269512435243e-06,
-            "objective": 0.6425369915406671
-          }
-        ]
-      },
-      {
-        "tolerance": 1.0000000000000004e-06,
-        "measurements": [
-          {
-            "time_ns": 19887333,
-            "kkt_violation": 3.671092834445222e-07,
-            "objective": 0.6425369911528209
-          },
-          {
-            "time_ns": 20307473,
-            "kkt_violation": 3.671092834445222e-07,
-            "objective": 0.6425369911528209
-          },
-          {
-            "time_ns": 20384576,
-            "kkt_violation": 3.671092834445222e-07,
-            "objective": 0.6425369911528209
-          },
-          {
-            "time_ns": 20348446,
-            "kkt_violation": 3.671092834445222e-07,
-            "objective": 0.6425369911528209
-          },
-          {
-            "time_ns": 28826583,
-            "kkt_violation": 3.671092834445222e-07,
-            "objective": 0.6425369911528209
-          }
-        ]
-      },
-      {
-        "tolerance": 1.0000000000000005e-07,
-        "measurements": [
-          {
-            "time_ns": 23057959,
-            "kkt_violation": 3.110421814556119e-08,
-            "objective": 0.6425369911469712
-          },
-          {
-            "time_ns": 24835348,
-            "kkt_violation": 3.110421814556119e-08,
-            "objective": 0.6425369911469712
-          },
-          {
-            "time_ns": 23891689,
-            "kkt_violation": 3.110421814556119e-08,
-            "objective": 0.6425369911469712
-          },
-          {
-            "time_ns": 23826535,
-            "kkt_violation": 3.110421814556119e-08,
-            "objective": 0.6425369911469712
-          },
-          {
-            "time_ns": 34760764,
-            "kkt_violation": 3.110421814556119e-08,
-            "objective": 0.6425369911469712
+            "time_ns": 18642547,
+            "duality_gap": 4.857039239423232e-10,
+            "kkt_violation": 2.573197618066514e-06,
+            "objective": 0.6360944941690956,
+            "relative_gap": 2.4256888006834295e-10
           }
         ]
       }
@@ -311,29 +334,39 @@
         "tolerance": 0.1,
         "measurements": [
           {
-            "time_ns": 4588546,
-            "kkt_violation": 0.027531331752077122,
-            "objective": 0.6559531951738999
+            "time_ns": 4611531,
+            "duality_gap": 0.048522153620469445,
+            "kkt_violation": 0.02919230992798756,
+            "objective": 0.6468074952396626,
+            "relative_gap": 0.024232796734866478
           },
           {
-            "time_ns": 5878066,
-            "kkt_violation": 0.027531331752077122,
-            "objective": 0.6559531951738999
+            "time_ns": 4798885,
+            "duality_gap": 0.048522153620469445,
+            "kkt_violation": 0.02919230992798756,
+            "objective": 0.6468074952396626,
+            "relative_gap": 0.024232796734866478
           },
           {
-            "time_ns": 5064035,
-            "kkt_violation": 0.027531331752077122,
-            "objective": 0.6559531951738999
+            "time_ns": 5312923,
+            "duality_gap": 0.048522153620469445,
+            "kkt_violation": 0.02919230992798756,
+            "objective": 0.6468074952396626,
+            "relative_gap": 0.024232796734866478
           },
           {
-            "time_ns": 5345116,
-            "kkt_violation": 0.027531331752077122,
-            "objective": 0.6559531951738999
+            "time_ns": 5519203,
+            "duality_gap": 0.048522153620469445,
+            "kkt_violation": 0.02919230992798756,
+            "objective": 0.6468074952396626,
+            "relative_gap": 0.024232796734866478
           },
           {
-            "time_ns": 4733445,
-            "kkt_violation": 0.027531331752077122,
-            "objective": 0.6559531951738999
+            "time_ns": 5357478,
+            "duality_gap": 0.048522153620469445,
+            "kkt_violation": 0.02919230992798756,
+            "objective": 0.6468074952396626,
+            "relative_gap": 0.024232796734866478
           }
         ]
       },
@@ -341,29 +374,39 @@
         "tolerance": 0.010000000000000002,
         "measurements": [
           {
-            "time_ns": 9647837,
-            "kkt_violation": 0.001759282471027579,
-            "objective": 0.642685271483103
+            "time_ns": 10034383,
+            "duality_gap": 0.00047771089395663496,
+            "kkt_violation": 0.002462542734714246,
+            "objective": 0.6362158487525227,
+            "relative_gap": 0.00023857702363810476
           },
           {
-            "time_ns": 12689052,
-            "kkt_violation": 0.001759282471027579,
-            "objective": 0.642685271483103
+            "time_ns": 9856327,
+            "duality_gap": 0.00047771089395663496,
+            "kkt_violation": 0.002462542734714246,
+            "objective": 0.6362158487525227,
+            "relative_gap": 0.00023857702363810476
           },
           {
-            "time_ns": 10285997,
-            "kkt_violation": 0.001759282471027579,
-            "objective": 0.642685271483103
+            "time_ns": 9721483,
+            "duality_gap": 0.00047771089395663496,
+            "kkt_violation": 0.002462542734714246,
+            "objective": 0.6362158487525227,
+            "relative_gap": 0.00023857702363810476
           },
           {
-            "time_ns": 10129727,
-            "kkt_violation": 0.001759282471027579,
-            "objective": 0.642685271483103
+            "time_ns": 10282190,
+            "duality_gap": 0.00047771089395663496,
+            "kkt_violation": 0.002462542734714246,
+            "objective": 0.6362158487525227,
+            "relative_gap": 0.00023857702363810476
           },
           {
-            "time_ns": 9950693,
-            "kkt_violation": 0.001759282471027579,
-            "objective": 0.642685271483103
+            "time_ns": 10076763,
+            "duality_gap": 0.00047771089395663496,
+            "kkt_violation": 0.002462542734714246,
+            "objective": 0.6362158487525227,
+            "relative_gap": 0.00023857702363810476
           }
         ]
       },
@@ -371,29 +414,39 @@
         "tolerance": 0.0010000000000000002,
         "measurements": [
           {
-            "time_ns": 17099387,
-            "kkt_violation": 0.00017242120431391894,
-            "objective": 0.6425381349428333
+            "time_ns": 17802003,
+            "duality_gap": 1.7231305162009181e-06,
+            "kkt_violation": 0.00023126362730885308,
+            "objective": 0.6360950308298702,
+            "relative_gap": 8.605609691884573e-07
           },
           {
-            "time_ns": 26958644,
-            "kkt_violation": 0.00017242120431391894,
-            "objective": 0.6425381349428333
+            "time_ns": 17918512,
+            "duality_gap": 1.7231305162009181e-06,
+            "kkt_violation": 0.00023126362730885308,
+            "objective": 0.6360950308298702,
+            "relative_gap": 8.605609691884573e-07
           },
           {
-            "time_ns": 16667227,
-            "kkt_violation": 0.00017242120431391894,
-            "objective": 0.6425381349428333
+            "time_ns": 17829515,
+            "duality_gap": 1.7231305162009181e-06,
+            "kkt_violation": 0.00023126362730885308,
+            "objective": 0.6360950308298702,
+            "relative_gap": 8.605609691884573e-07
           },
           {
-            "time_ns": 16765307,
-            "kkt_violation": 0.00017242120431391894,
-            "objective": 0.6425381349428333
+            "time_ns": 17711823,
+            "duality_gap": 1.7231305162009181e-06,
+            "kkt_violation": 0.00023126362730885308,
+            "objective": 0.6360950308298702,
+            "relative_gap": 8.605609691884573e-07
           },
           {
-            "time_ns": 24484448,
-            "kkt_violation": 0.00017242120431391894,
-            "objective": 0.6425381349428333
+            "time_ns": 17730499,
+            "duality_gap": 1.7231305162009181e-06,
+            "kkt_violation": 0.00023126362730885308,
+            "objective": 0.6360950308298702,
+            "relative_gap": 8.605609691884573e-07
           }
         ]
       },
@@ -401,29 +454,39 @@
         "tolerance": 0.00010000000000000003,
         "measurements": [
           {
-            "time_ns": 22750917,
-            "kkt_violation": 2.1035466862502628e-05,
-            "objective": 0.6425370022715451
+            "time_ns": 23336905,
+            "duality_gap": 2.0783035344544796e-08,
+            "kkt_violation": 2.736292743964197e-05,
+            "objective": 0.6360945032425616,
+            "relative_gap": 1.037940473494233e-08
           },
           {
-            "time_ns": 22722342,
-            "kkt_violation": 2.1035466862502628e-05,
-            "objective": 0.6425370022715451
+            "time_ns": 23931687,
+            "duality_gap": 2.0783035344544796e-08,
+            "kkt_violation": 2.736292743964197e-05,
+            "objective": 0.6360945032425616,
+            "relative_gap": 1.037940473494233e-08
           },
           {
-            "time_ns": 23422040,
-            "kkt_violation": 2.1035466862502628e-05,
-            "objective": 0.6425370022715451
+            "time_ns": 24738146,
+            "duality_gap": 2.0783035344544796e-08,
+            "kkt_violation": 2.736292743964197e-05,
+            "objective": 0.6360945032425616,
+            "relative_gap": 1.037940473494233e-08
           },
           {
-            "time_ns": 22877000,
-            "kkt_violation": 2.1035466862502628e-05,
-            "objective": 0.6425370022715451
+            "time_ns": 24061300,
+            "duality_gap": 2.0783035344544796e-08,
+            "kkt_violation": 2.736292743964197e-05,
+            "objective": 0.6360945032425616,
+            "relative_gap": 1.037940473494233e-08
           },
           {
-            "time_ns": 24543371,
-            "kkt_violation": 2.1035466862502628e-05,
-            "objective": 0.6425370022715451
+            "time_ns": 24488166,
+            "duality_gap": 2.0783035344544796e-08,
+            "kkt_violation": 2.736292743964197e-05,
+            "objective": 0.6360945032425616,
+            "relative_gap": 1.037940473494233e-08
           }
         ]
       },
@@ -431,89 +494,161 @@
         "tolerance": 1.0000000000000004e-05,
         "measurements": [
           {
-            "time_ns": 29693159,
-            "kkt_violation": 2.034619250523839e-06,
-            "objective": 0.6425369912387029
+            "time_ns": 30811664,
+            "duality_gap": 1.481967184358024e-10,
+            "kkt_violation": 2.2792518602002265e-06,
+            "objective": 0.636094493988875,
+            "relative_gap": 7.401198600373036e-11
           },
           {
-            "time_ns": 29703069,
-            "kkt_violation": 2.034619250523839e-06,
-            "objective": 0.6425369912387029
+            "time_ns": 30858402,
+            "duality_gap": 1.481967184358024e-10,
+            "kkt_violation": 2.2792518602002265e-06,
+            "objective": 0.636094493988875,
+            "relative_gap": 7.401198600373036e-11
           },
           {
-            "time_ns": 30216729,
-            "kkt_violation": 2.034619250523839e-06,
-            "objective": 0.6425369912387029
+            "time_ns": 30754725,
+            "duality_gap": 1.481967184358024e-10,
+            "kkt_violation": 2.2792518602002265e-06,
+            "objective": 0.636094493988875,
+            "relative_gap": 7.401198600373036e-11
           },
           {
-            "time_ns": 30236800,
-            "kkt_violation": 2.034619250523839e-06,
-            "objective": 0.6425369912387029
+            "time_ns": 31062736,
+            "duality_gap": 1.481967184358024e-10,
+            "kkt_violation": 2.2792518602002265e-06,
+            "objective": 0.636094493988875,
+            "relative_gap": 7.401198600373036e-11
           },
           {
-            "time_ns": 34648658,
-            "kkt_violation": 2.034619250523839e-06,
-            "objective": 0.6425369912387029
+            "time_ns": 30951167,
+            "duality_gap": 1.481967184358024e-10,
+            "kkt_violation": 2.2792518602002265e-06,
+            "objective": 0.636094493988875,
+            "relative_gap": 7.401198600373036e-11
+          }
+        ]
+      }
+    ],
+    "smartcore": [
+      {
+        "iterations": 1,
+        "measurements": [
+          {
+            "time_ns": 6912526762,
+            "duality_gap": 253.18860996899488,
+            "kkt_violation": 0.3735035042664628,
+            "objective": 1.517292741774384,
+            "relative_gap": 126.44673954401205
+          },
+          {
+            "time_ns": 6633139198,
+            "duality_gap": 253.18860996899488,
+            "kkt_violation": 0.3735035042664628,
+            "objective": 1.517292741774384,
+            "relative_gap": 126.44673954401205
+          },
+          {
+            "time_ns": 7105000250,
+            "duality_gap": 253.18860996899488,
+            "kkt_violation": 0.3735035042664628,
+            "objective": 1.517292741774384,
+            "relative_gap": 126.44673954401205
+          },
+          {
+            "time_ns": 6659625896,
+            "duality_gap": 253.18860996899488,
+            "kkt_violation": 0.3735035042664628,
+            "objective": 1.517292741774384,
+            "relative_gap": 126.44673954401205
+          },
+          {
+            "time_ns": 6685053781,
+            "duality_gap": 253.18860996899488,
+            "kkt_violation": 0.3735035042664628,
+            "objective": 1.517292741774384,
+            "relative_gap": 126.44673954401205
           }
         ]
       },
       {
-        "tolerance": 1.0000000000000004e-06,
+        "iterations": 4,
         "measurements": [
           {
-            "time_ns": 36631544,
-            "kkt_violation": 1.9164750093142446e-07,
-            "objective": 0.6425369911476881
+            "time_ns": 16785612543,
+            "duality_gap": 1.284139309552629,
+            "kkt_violation": 0.0627551021543231,
+            "objective": 1.4664191730062164,
+            "relative_gap": 0.6413212222821278
           },
           {
-            "time_ns": 49749142,
-            "kkt_violation": 1.9164750093142446e-07,
-            "objective": 0.6425369911476881
+            "time_ns": 17442906429,
+            "duality_gap": 1.284139309552629,
+            "kkt_violation": 0.0627551021543231,
+            "objective": 1.4664191730062164,
+            "relative_gap": 0.6413212222821278
           },
           {
-            "time_ns": 36965092,
-            "kkt_violation": 1.9164750093142446e-07,
-            "objective": 0.6425369911476881
+            "time_ns": 17453528170,
+            "duality_gap": 1.284139309552629,
+            "kkt_violation": 0.0627551021543231,
+            "objective": 1.4664191730062164,
+            "relative_gap": 0.6413212222821278
           },
           {
-            "time_ns": 37317410,
-            "kkt_violation": 1.9164750093142446e-07,
-            "objective": 0.6425369911476881
+            "time_ns": 16547992596,
+            "duality_gap": 1.284139309552629,
+            "kkt_violation": 0.0627551021543231,
+            "objective": 1.4664191730062164,
+            "relative_gap": 0.6413212222821278
           },
           {
-            "time_ns": 36905847,
-            "kkt_violation": 1.9164750093142446e-07,
-            "objective": 0.6425369911476881
+            "time_ns": 16455098446,
+            "duality_gap": 1.284139309552629,
+            "kkt_violation": 0.0627551021543231,
+            "objective": 1.4664191730062164,
+            "relative_gap": 0.6413212222821278
           }
         ]
       },
       {
-        "tolerance": 1.0000000000000005e-07,
+        "iterations": 16,
         "measurements": [
           {
-            "time_ns": 43857911,
-            "kkt_violation": 2.261185241825281e-08,
-            "objective": 0.6425369911469354
+            "time_ns": 83099901160,
+            "duality_gap": 0.001311857003970224,
+            "kkt_violation": 0.06434598293636276,
+            "objective": 0.6373832834342466,
+            "relative_gap": 0.0006551639148393141
           },
           {
-            "time_ns": 43747964,
-            "kkt_violation": 2.261185241825281e-08,
-            "objective": 0.6425369911469354
+            "time_ns": 88008941654,
+            "duality_gap": 0.001311857003970224,
+            "kkt_violation": 0.06434598293636276,
+            "objective": 0.6373832834342466,
+            "relative_gap": 0.0006551639148393141
           },
           {
-            "time_ns": 43687196,
-            "kkt_violation": 2.261185241825281e-08,
-            "objective": 0.6425369911469354
+            "time_ns": 83490314558,
+            "duality_gap": 0.001311857003970224,
+            "kkt_violation": 0.06434598293636276,
+            "objective": 0.6373832834342466,
+            "relative_gap": 0.0006551639148393141
           },
           {
-            "time_ns": 43741965,
-            "kkt_violation": 2.261185241825281e-08,
-            "objective": 0.6425369911469354
+            "time_ns": 84063746265,
+            "duality_gap": 0.001311857003970224,
+            "kkt_violation": 0.06434598293636276,
+            "objective": 0.6373832834342466,
+            "relative_gap": 0.0006551639148393141
           },
           {
-            "time_ns": 63174169,
-            "kkt_violation": 2.261185241825281e-08,
-            "objective": 0.6425369911469354
+            "time_ns": 87262896158,
+            "duality_gap": 0.001311857003970224,
+            "kkt_violation": 0.06434598293636276,
+            "objective": 0.6373832834342466,
+            "relative_gap": 0.0006551639148393141
           }
         ]
       }

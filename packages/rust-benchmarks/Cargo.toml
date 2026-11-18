@@ -13,6 +13,7 @@ ndarray_0_16 = { package = "ndarray", version = "0.16.1", default-features = fal
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 shrinkage = { path = "../..", default-features = false, features = ["ndarray_v0_17"] }
+smartcore = { version = "=0.7.0", default-features = false, features = ["lazy-normalization", "ndarray-bindings", "std"] }
 
 [workspace]
 resolver = "3"
