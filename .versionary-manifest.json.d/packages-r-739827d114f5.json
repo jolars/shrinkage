@@ -1,0 +1,11 @@
+{
+  "manifest-version": 1,
+  "path": "packages/r",
+  "baseline-sha": "3b0232a767a70395b38be36de7f776c387f5746d",
+  "release-target": {
+    "path": "packages/r",
+    "version": "0.1.0",
+    "tag": "shrinkage-r-v0.1.0"
+  },
+  "release-branch": "versionary/release-shrinkage-r-739827d114f5"
+}
