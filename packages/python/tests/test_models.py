@@ -636,7 +636,9 @@ class ModelTests(unittest.TestCase):
             with self.assertRaisesRegex(FloatingPointError, "predicting.*iteration"):
                 fit.predict(np.array([[1e308]]))
 
-    def _during_native(self, action: Callable[[], T], mutate: Callable[[], None]) -> T:
+    def _during_native(
+        self, action: Callable[[], T], mutate: Callable[[], None]
+    ) -> tuple[T, bool]:
         ready, start, changed = threading.Event(), threading.Event(), threading.Event()
 
         def worker() -> None:
@@ -659,10 +661,7 @@ class ModelTests(unittest.TestCase):
             sys.setswitchinterval(interval)
             start.set()
             thread.join()
-        self.assertTrue(
-            ran_during_native, "a Python thread could not run during native work"
-        )
-        return result
+        return result, ran_during_native
 
     def test_native_fits_release_gil_after_snapshot_for_both_families(self) -> None:
         rng = np.random.default_rng(42)
@@ -680,9 +679,12 @@ class ModelTests(unittest.TestCase):
                 spec = ClusteredLasso(0.01, 0.001)._spec()
                 expected = native.fit(x, y, family, True, "auto", spec)
 
-                actual = self._during_native(
+                actual, ran_during_native = self._during_native(
                     partial(native.fit, x, y, family, True, "auto", spec),
                     partial(zero_arrays, x, y),
+                )
+                self.assertTrue(
+                    ran_during_native, "a Python thread could not run during native fit"
                 )
                 np.testing.assert_array_equal(
                     actual.coefficients, expected.coefficients
@@ -698,12 +700,18 @@ class ModelTests(unittest.TestCase):
                 Gaussian(original[:100] @ np.linspace(1, 2, 40)),
                 ClusteredLasso(0, 0),
             ).fit_with(solver)
-            x = original.copy()
-            expected = fit._native.predict(x)
-            actual = self._during_native(
-                partial(fit._native.predict, x), partial(zero_arrays, x)
-            )
-            np.testing.assert_array_equal(actual, expected)
+            expected = fit._native.predict(original)
+            # A short prediction can finish before the OS schedules the worker.
+            for _ in range(5):
+                x = original.copy()
+                actual, ran_during_native = self._during_native(
+                    partial(fit._native.predict, x), partial(zero_arrays, x)
+                )
+                np.testing.assert_array_equal(actual, expected)
+                if ran_during_native:
+                    break
+            else:
+                self.fail("a Python thread could not run during native prediction")
 
     def test_same_problem_and_solver_support_concurrent_fits(self) -> None:
         from concurrent.futures import ThreadPoolExecutor
