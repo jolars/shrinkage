@@ -45,14 +45,9 @@ in
   };
 
   env.DIPLODOCUS_RUST_TOOLCHAIN = rustDocumentationToolchain;
-  env.PLAYWRIGHT_BROWSERS_PATH =
-    assert lib.assertMsg (
-      (builtins.fromJSON (builtins.readFile ./docs/widget/package.json))
-      .devDependencies."@playwright/test" == pkgs.playwright-driver.version
-    ) "Keep the widget's Playwright version aligned with the locked devenv.";
-    pkgs.playwright-driver.browsers-chromium;
-  env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
-  env.PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+  env.SHRINKAGE_CHROMIUM_EXECUTABLE = lib.mkIf pkgs.stdenv.isLinux (lib.getExe pkgs.chromium);
+  env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = lib.mkIf pkgs.stdenv.isLinux "1";
+  env.PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = lib.mkIf pkgs.stdenv.isLinux "true";
 
   # NumPy wheels need these shared libraries outside Nix's patched executables.
   env.LD_LIBRARY_PATH = lib.makeLibraryPath [

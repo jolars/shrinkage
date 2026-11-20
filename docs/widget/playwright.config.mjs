@@ -9,6 +9,9 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:8792",
     browserName: "chromium",
     channel: "chromium",
+    launchOptions: {
+      executablePath: process.env.SHRINKAGE_CHROMIUM_EXECUTABLE,
+    },
     reducedMotion: "reduce",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
