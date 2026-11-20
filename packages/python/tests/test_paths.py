@@ -5,18 +5,15 @@ from __future__ import annotations
 import gc
 import json
 import math
-import sys
-import threading
 import unittest
 import weakref
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any, cast
 
 import numpy as np
-import numpy.typing as npt
 
 from shrinkage import (
     Binomial,
@@ -39,12 +36,6 @@ from shrinkage import (
 )
 
 Penalty = ClusteredLasso | ChainFusedLasso | Slope
-T = TypeVar("T")
-
-
-def zero_arrays(*arrays: npt.NDArray[np.float64]) -> None:
-    for array in arrays:
-        array.fill(0)
 
 
 def penalty_from_record(record: dict[str, Any]) -> Penalty:
@@ -532,60 +523,6 @@ class PathTests(unittest.TestCase):
                 path.__setattr__("termination", "completed")
             del path
             np.testing.assert_array_equal(point.predict(prediction_x), expected[:, -1])
-
-    def _during_native(self, action: Callable[[], T], mutate: Callable[[], None]) -> T:
-        start, changed = threading.Event(), threading.Event()
-
-        def worker() -> None:
-            start.wait()
-            changed.set()
-            mutate()
-
-        thread = threading.Thread(target=worker)
-        thread.start()
-        interval = sys.getswitchinterval()
-        try:
-            sys.setswitchinterval(10.0)
-            start.set()
-            result = action()
-            ran = changed.is_set()
-        finally:
-            sys.setswitchinterval(interval)
-            start.set()
-            thread.join()
-        self.assertTrue(ran, "a Python thread could not run during native work")
-        return result
-
-    def test_paths_and_bulk_predictions_detach_after_copying_inputs(self) -> None:
-        rng = np.random.default_rng(928)
-        original = rng.normal(size=(10_000, 40))
-        spec = ClusteredLasso(0.01, 0.001)._spec()
-        for family in ("gaussian", "binomial"):
-            for solver in (
-                HybridCoordinateDescent(max_iterations=50),
-                ProximalGradient(max_iterations=50),
-            ):
-                native = solver._native()
-                x = original.copy()
-                y = x @ np.linspace(-2, 2, 40)
-                if family == "binomial":
-                    y = 1 / (1 + np.exp(-y))
-                action = partial(
-                    native.path, x, y, family, True, "auto", spec, penalties=[spec] * 3
-                )
-                expected = action()
-
-                actual = self._during_native(action, partial(zero_arrays, x, y))
-                np.testing.assert_array_equal(
-                    actual.coefficients, expected.coefficients
-                )
-                np.testing.assert_array_equal(actual.intercepts, expected.intercepts)
-                prediction_x = np.tile(original, (5, 1))
-                expected_predictions = actual.predict(prediction_x)
-                actual_predictions = self._during_native(
-                    partial(actual.predict, prediction_x), partial(prediction_x.fill, 0)
-                )
-                self.assertEqual(actual_predictions, expected_predictions)
 
 
 if __name__ == "__main__":

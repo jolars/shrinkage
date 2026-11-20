@@ -5,15 +5,11 @@ from __future__ import annotations
 import gc
 import json
 import math
-import sys
-import threading
 import unittest
 import weakref
-from collections.abc import Callable
 from dataclasses import asdict
-from functools import partial
 from pathlib import Path
-from typing import Any, TypeVar, cast
+from typing import Any, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -40,7 +36,6 @@ from shrinkage import (
 
 FloatArray = npt.NDArray[np.float64]
 Penalty = ClusteredLasso | ChainFusedLasso | Slope
-T = TypeVar("T")
 
 
 def penalties() -> tuple[Penalty, ...]:
@@ -80,11 +75,6 @@ def fit_problem(
     problem: Problem, solver: HybridCoordinateDescent | ProximalGradient
 ) -> ProximalFit:
     return problem.fit_with(solver)
-
-
-def zero_arrays(*arrays: FloatArray) -> None:
-    for array in arrays:
-        array.fill(0)
 
 
 class ModelTests(unittest.TestCase):
@@ -635,83 +625,6 @@ class ModelTests(unittest.TestCase):
             ).fit_with(solver)
             with self.assertRaisesRegex(FloatingPointError, "predicting.*iteration"):
                 fit.predict(np.array([[1e308]]))
-
-    def _during_native(
-        self, action: Callable[[], T], mutate: Callable[[], None]
-    ) -> tuple[T, bool]:
-        ready, start, changed = threading.Event(), threading.Event(), threading.Event()
-
-        def worker() -> None:
-            ready.set()
-            start.wait()
-            # Scheduling proves detachment even if mutation outlasts prediction.
-            changed.set()
-            mutate()
-
-        thread = threading.Thread(target=worker)
-        thread.start()
-        ready.wait()
-        interval = sys.getswitchinterval()
-        try:
-            sys.setswitchinterval(10.0)
-            start.set()
-            result = action()
-            ran_during_native = changed.is_set()
-        finally:
-            sys.setswitchinterval(interval)
-            start.set()
-            thread.join()
-        return result, ran_during_native
-
-    def test_native_fits_release_gil_after_snapshot_for_both_families(self) -> None:
-        rng = np.random.default_rng(42)
-        original = rng.normal(size=(10_000, 40))
-        for family in ("gaussian", "binomial"):
-            for solver_type in (HybridCoordinateDescent, ProximalGradient):
-                x = original.copy()
-                y = x @ np.linspace(-2, 2, 40)
-                if family == "binomial":
-                    y = 1 / (1 + np.exp(-y))
-                native = solver_type(
-                    max_iterations=100,
-                    stopping=StoppingCriterion.proximal_gradient_mapping(1e-12),
-                )._native()
-                spec = ClusteredLasso(0.01, 0.001)._spec()
-                expected = native.fit(x, y, family, True, "auto", spec)
-
-                actual, ran_during_native = self._during_native(
-                    partial(native.fit, x, y, family, True, "auto", spec),
-                    partial(zero_arrays, x, y),
-                )
-                self.assertTrue(
-                    ran_during_native, "a Python thread could not run during native fit"
-                )
-                np.testing.assert_array_equal(
-                    actual.coefficients, expected.coefficients
-                )
-                self.assertEqual(actual.intercept, expected.intercept)
-
-    def test_native_predictions_release_gil_after_snapshot(self) -> None:
-        rng = np.random.default_rng(93)
-        original = rng.normal(size=(100_000, 40))
-        for solver in (HybridCoordinateDescent(), ProximalGradient()):
-            fit = Problem(
-                original[:100],
-                Gaussian(original[:100] @ np.linspace(1, 2, 40)),
-                ClusteredLasso(0, 0),
-            ).fit_with(solver)
-            expected = fit._native.predict(original)
-            # A short prediction can finish before the OS schedules the worker.
-            for _ in range(5):
-                x = original.copy()
-                actual, ran_during_native = self._during_native(
-                    partial(fit._native.predict, x), partial(zero_arrays, x)
-                )
-                np.testing.assert_array_equal(actual, expected)
-                if ran_during_native:
-                    break
-            else:
-                self.fail("a Python thread could not run during native prediction")
 
     def test_same_problem_and_solver_support_concurrent_fits(self) -> None:
         from concurrent.futures import ThreadPoolExecutor

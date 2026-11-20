@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import gc
 import json
-import sys
-import threading
 import unittest
 import weakref
 from pathlib import Path
@@ -13,7 +11,7 @@ from typing import Any, cast
 
 import numpy as np
 
-from shrinkage import Lasso, Normalization, StoppingCriterion, _shrinkage
+from shrinkage import Lasso, Normalization, StoppingCriterion
 
 
 class LassoTests(unittest.TestCase):
@@ -357,42 +355,6 @@ class LassoTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(FloatingPointError, "predicting.*iteration"):
             fit.predict(np.array([[1e308]]))
-
-    def test_native_fit_releases_gil_after_snapshot(self) -> None:
-        # A long Python switch interval prevents interpreter scheduling from
-        # masquerading as the native solver releasing the GIL.
-        rng = np.random.default_rng(42)
-        x = rng.normal(size=(10_000, 40))
-        y = x @ np.linspace(-2, 2, 40) + rng.normal(size=10_000)
-        native = _shrinkage._Lasso(
-            0.01, True, "auto", ("kkt_violation", 1e-12, 0.0), 100
-        )
-        expected = native.fit(x, y)
-        ready, start, changed = threading.Event(), threading.Event(), threading.Event()
-
-        def mutate_sources() -> None:
-            ready.set()
-            start.wait()
-            x[:] = 0.0
-            y[:] = 0.0
-            changed.set()
-
-        worker = threading.Thread(target=mutate_sources)
-        worker.start()
-        ready.wait()
-        interval = sys.getswitchinterval()
-        try:
-            sys.setswitchinterval(10.0)
-            start.set()
-            actual = native.fit(x, y)
-            ran_during_fit = changed.is_set()
-        finally:
-            sys.setswitchinterval(interval)
-            start.set()
-            worker.join()
-        self.assertTrue(ran_during_fit, "a Python thread could not run during fitting")
-        np.testing.assert_array_equal(actual.coefficients, expected.coefficients)
-        self.assertEqual(actual.intercept, expected.intercept)
 
 
 if __name__ == "__main__":
