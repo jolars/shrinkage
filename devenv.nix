@@ -72,6 +72,9 @@ in
         pkgs.rPackages.Matrix
         pkgs.rPackages.roxygen2
         pkgs.rPackages.testthat
+        pkgs.rPackages.knitr
+        pkgs.rPackages.rmarkdown
+        pkgs.rPackages.quarto
       ];
     };
   };

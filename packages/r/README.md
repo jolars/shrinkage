@@ -8,14 +8,16 @@ regularization paths, and cross-validation.
 
 ## Installation
 
-Download and extract the `shrinkage-r-source` artifact from a successful [CI
-run](https://github.com/jolars/shrinkage/actions/workflows/ci.yml). In R, run
-the following and select the extracted `shrinkage_<version>.tar.gz` file when
-prompted.
+The R package lives in the `packages/r` subdirectory on GitHub. Its pak
+reference is:
 
 ```r
-pak::pak(paste0("local::", file.choose()))
+pak::pak("jolars/shrinkage/packages/r")
 ```
+
+Direct installation with this reference currently requires a packaging change.
+The R package’s Cargo manifest refers to the Rust crate at the repository root,
+and the R source tarball built from the subdirectory omits that crate.
 
 Source builds require R 4.4 or later, a C build toolchain, and Rust and Cargo
 1.89 or later. Cargo downloads locked dependencies. On Windows, install Rtools

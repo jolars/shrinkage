@@ -14,22 +14,19 @@ regularization paths, and cross-validation.
 
 ## Installation
 
-Download and extract the `shrinkage-r-source` artifact from a successful [CI
-run](https://github.com/jolars/shrinkage/actions/workflows/ci.yml). In R, run
-the following and select the extracted `shrinkage_<version>.tar.gz` file when
-prompted.
+The R package lives in the `packages/r` subdirectory on GitHub. Install it with:
 
 ```r
-pak::pak(paste0("local::", file.choose()))
+pak::pak("jolars/shrinkage/packages/r")
 ```
 
-Source builds require R 4.4 or later, a C build toolchain, and Rust and Cargo
-1.89 or later. Cargo downloads locked dependencies. On Windows, install Rtools
-and run `rustup target add x86_64-pc-windows-gnu`.
+Source builds require a C build toolchain, and Rust and Cargo 1.89 or later.
 
 ## Usage
 
-```r
+```{r}
+#| label: example
+
 library(shrinkage)
 
 x <- cbind(weight = mtcars$wt, power = mtcars$hp)
