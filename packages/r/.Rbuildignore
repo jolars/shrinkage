@@ -2,3 +2,4 @@
 ^src/\.cargo$
 ^src/.*\.(o|so|dll|dylib)$
 ^src/rust/target$
+^README\.qmd$

@@ -250,6 +250,13 @@ tasks:
       - cargo run --locked --manifest-path packages/r/src/rust/Cargo.toml --bin document
       - Rscript -e 'roxygen2::roxygenise("packages/r", load_code = roxygen2::load_source)'
 
+  r:readme:
+    desc: Regenerate the R package README from its Quarto source
+    dir: packages/r
+    cmds:
+      - quarto render README.qmd
+      - panache format README.md
+
   r:install:
     cmds:
       - Rscript packages/r/tools/package.R install

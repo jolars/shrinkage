@@ -83,7 +83,7 @@ package <- function(mode) {
     if (status != 0L) {
       for (log in c(
         "shrinkage.Rcheck/00install.out",
-        "shrinkage.Rcheck/tests/lasso.Rout.fail"
+        "shrinkage.Rcheck/tests/testthat.Rout.fail"
       )) {
         if (file.exists(log)) cat(readLines(log), sep = "\n")
       }

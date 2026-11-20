@@ -71,6 +71,7 @@ in
       packages = [
         pkgs.rPackages.Matrix
         pkgs.rPackages.roxygen2
+        pkgs.rPackages.testthat
       ];
     };
   };
