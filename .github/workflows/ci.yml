@@ -156,9 +156,65 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.11'
         run: uv run --locked --project packages/python python scripts/check_python_artifacts.py --sdist
 
+  r:
+    name: R ${{ matrix.config.r }} (${{ matrix.config.os }})
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { os: macos-latest, r: release }
+          - { os: windows-latest, r: release }
+          - { os: ubuntu-latest, r: devel, http-user-agent: release }
+          - { os: ubuntu-latest, r: release }
+          - { os: ubuntu-latest, r: oldrel-1 }
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: "yes"
+      _R_CHECK_COMPILED_CODE_USE_OBJECTS_SYMBOL_TABLES_: "false"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: packages/r
+          extra-packages: any::rcmdcheck
+          needs: check
+      - name: Install Rust
+        run: rustup toolchain install
+      - name: Install Windows GNU Rust target
+        if: runner.os == 'Windows'
+        run: rustup target add x86_64-pc-windows-gnu
+      - name: Check native binding
+        if: runner.os == 'Linux' && matrix.config.r == 'release'
+        run: |
+          cargo fmt --manifest-path packages/r/src/rust/Cargo.toml -- --check
+          cargo clippy --locked --manifest-path packages/r/src/rust/Cargo.toml --all-targets -- -D warnings
+          cargo run --locked --manifest-path packages/r/src/rust/Cargo.toml --bin document
+          git diff --exit-code -- packages/r/R/extendr-wrappers.R
+      - name: Stage R source package
+        run: Rscript packages/r/tools/package.R stage
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          working-directory: .build/r/shrinkage
+          args: '"--no-manual"'
+      - name: Build downloadable source archive
+        if: runner.os == 'Linux' && matrix.config.r == 'release'
+        run: Rscript packages/r/tools/package.R build
+      - uses: actions/upload-artifact@v7
+        if: runner.os == 'Linux' && matrix.config.r == 'release'
+        with:
+          name: shrinkage-r-source
+          path: dist/shrinkage_*.tar.gz
+          if-no-files-found: error
+
   versionary:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [msrv, check, python]
+    needs: [msrv, check, python, r]
     runs-on: ubuntu-latest
     permissions:
       contents: write

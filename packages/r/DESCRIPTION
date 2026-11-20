@@ -1,0 +1,30 @@
+Package: shrinkage
+Title: Regularized Statistical Models
+Version: 0.0.0.9000
+Authors@R:
+    person(
+      "Johan",
+      "Larsson",
+      email = "johan@jolars.co",
+      role = c("aut", "cre"),
+      comment = c(ORCID = "0000-0002-4029-5945")
+    )
+Description: Fits regularized statistical models with penalties that shrink
+    coefficients, select features, or encourage structure. Uses the Shrinkage
+    Rust library for model fitting. Currently provides Gaussian lasso fits,
+    regularization paths, and cross-validation for dense and sparse designs.
+License: MIT + file LICENSE
+URL: https://shrinkage.cc, https://github.com/jolars/shrinkage
+BugReports: https://github.com/jolars/shrinkage/issues
+Depends:
+    R (>= 4.4.0)
+Imports:
+    Matrix,
+    methods,
+    stats
+Config/rextendr/version: 0.5.0
+Config/roxygen2/markdown: TRUE
+Config/roxygen2/version: 8.0.0
+Encoding: UTF-8
+Language: en-US
+SystemRequirements: Cargo and rustc (>= 1.89)

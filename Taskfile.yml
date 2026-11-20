@@ -6,6 +6,7 @@ tasks:
     cmds:
       - cargo fmt --all
       - cargo fmt --manifest-path packages/python/Cargo.toml
+      - cargo fmt --manifest-path packages/r/src/rust/Cargo.toml
       - cargo fmt --manifest-path packages/rust-benchmarks/Cargo.toml
       - cargo fmt --manifest-path docs/widget/Cargo.toml
       - ruff format packages/python scripts
@@ -194,6 +195,7 @@ tasks:
       - panache format --check .
       - panache lint .
       - task: python:check
+      - task: r:check
       - task: python:artifacts
       - task: releases:check
 
@@ -241,6 +243,26 @@ tasks:
     desc: Test installed wheels and a wheel rebuilt from an isolated sdist
     cmds:
       - python scripts/check_python_artifacts.py --sdist
+
+  r:document:
+    desc: Regenerate the extendr wrappers, R help, and NAMESPACE
+    cmds:
+      - cargo run --locked --manifest-path packages/r/src/rust/Cargo.toml --bin document
+      - Rscript -e 'roxygen2::roxygenise("packages/r", load_code = roxygen2::load_source)'
+
+  r:install:
+    cmds:
+      - Rscript packages/r/tools/package.R install
+
+  r:build:
+    cmds:
+      - Rscript packages/r/tools/package.R build
+
+  r:check:
+    cmds:
+      - cargo fmt --manifest-path packages/r/src/rust/Cargo.toml -- --check
+      - cargo clippy --locked --manifest-path packages/r/src/rust/Cargo.toml --all-targets -- -D warnings
+      - Rscript packages/r/tools/package.R check
 
   docs:widget:build:
     desc: Build the browser explorer from the Rust solvers

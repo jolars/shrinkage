@@ -69,3 +69,18 @@ Rust-owned storage. Read-only arrays are copied too, and requests for zero-copy
 NumPy input are rejected. See the [full Python input
 contract](https://github.com/jolars/shrinkage/blob/main/packages/python/README.md#dense-input-contract)
 for ownership, copying, and validation details.
+
+## R
+
+The R package provides Gaussian lasso models, regularization paths, and
+cross-validation for dense numeric matrices and sparse `Matrix::dgCMatrix`
+inputs. Run `task r:install` from a checkout or install the source archive from
+the `shrinkage-r-source` artifact in a successful [CI
+run](https://github.com/jolars/shrinkage/actions/workflows/ci.yml) with
+`R CMD INSTALL`.
+
+Source builds require R 4.4 or later, Matrix, a C build toolchain, and Rust and
+Cargo 1.89 or later. Windows builds use Rtools and the `x86_64-pc-windows-gnu`
+Rust target. See the [R package
+README](https://github.com/jolars/shrinkage/blob/main/packages/r/README.md) for
+installation and examples.

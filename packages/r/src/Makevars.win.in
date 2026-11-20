@@ -1,0 +1,20 @@
+TARGET = x86_64-pc-windows-gnu
+TARGET_DIR = @TARGET_DIR@
+STATLIB = $(TARGET_DIR)/$(TARGET)/release/libshrinkage_r.a
+PKG_LIBS = "$(STATLIB)" -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll -lsynchronization
+
+all: $(SHLIB) rust_clean
+
+$(SHLIB): rust_build
+
+.PHONY: rust_build rust_clean
+rust_build:
+	mkdir -p .cargo/libgcc_mock
+	$(AR) cr .cargo/libgcc_mock/libgcc_eh.a
+	LIBRARY_PATH="$(LIBRARY_PATH);$(CURDIR)/.cargo/libgcc_mock" RUSTC=@RUSTC@ @CARGO@ build --manifest-path rust/Cargo.toml --target-dir "$(TARGET_DIR)" --target $(TARGET) --lib --locked --release -j 2
+
+rust_clean: $(SHLIB)
+	rm -rf "$(TARGET_DIR)" .cargo
+
+clean:
+	rm -rf $(SHLIB) $(OBJECTS) "$(TARGET_DIR)" .cargo

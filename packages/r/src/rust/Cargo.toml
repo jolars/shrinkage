@@ -1,0 +1,25 @@
+[package]
+name = "shrinkage-r"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.89"
+publish = false
+
+[workspace]
+exclude = ["core"]
+
+[lib]
+name = "shrinkage_r"
+crate-type = ["rlib", "staticlib"]
+
+[[bin]]
+name = "document"
+path = "document.rs"
+
+[dependencies]
+extendr-api = "0.9.0"
+faer = { version = "0.24", default-features = false, features = ["std", "linalg"] }
+shrinkage = { path = "../../../..", features = ["faer_v0_24"] }
+
+[lints.rust]
+unsafe_code = "forbid"

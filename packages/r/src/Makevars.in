@@ -1,0 +1,14 @@
+TARGET_DIR = @TARGET_DIR@
+STATLIB = $(TARGET_DIR)/release/libshrinkage_r.a
+PKG_LIBS = "$(STATLIB)" @NATIVE_LIBS@
+
+all: $(SHLIB)
+
+$(SHLIB): $(STATLIB)
+
+.PHONY: $(STATLIB)
+$(STATLIB):
+	RUSTC=@RUSTC@ @CARGO@ build --manifest-path rust/Cargo.toml --target-dir "$(TARGET_DIR)" --lib --locked --release -j 2
+
+clean:
+	rm -rf $(SHLIB) $(OBJECTS) "$(TARGET_DIR)"

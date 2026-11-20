@@ -11,6 +11,10 @@
     ".": {
       "exclude-paths": ["packages", "docs"]
     },
+    "packages/r": {
+      "release-type": "r",
+      "package-name": "shrinkage-r"
+    },
     "packages/python": {
       "release-type": "python",
       "package-name": "shrinkage-python",

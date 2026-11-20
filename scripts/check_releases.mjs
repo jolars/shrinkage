@@ -12,7 +12,7 @@ const config = JSON.parse(
   fs.readFileSync(path.join(repository, "versionary.jsonc"), "utf8"),
 );
 
-for (const scenario of ["rust", "python", "both", "documentation"]) {
+for (const scenario of ["rust", "python", "r", "both", "documentation"]) {
   const directory = fs.mkdtempSync(
     path.join(os.tmpdir(), "shrinkage-release-"),
   );
@@ -56,7 +56,14 @@ for (const scenario of ["rust", "python", "both", "documentation"]) {
       "packages/python/src/shrinkage/__init__.py",
       '__version__ = "0.3.0"\n',
     );
-    for (const cwd of [directory, path.join(directory, "packages/python")]) {
+    write("packages/r/DESCRIPTION", "Package: shrinkage\nVersion: 0.1.0\n");
+    write(
+      "packages/r/src/rust/Cargo.toml",
+      '[package]\nname="shrinkage-r"\nversion="0.0.0"\nedition="2024"\npublish=false\n[dependencies]\nshrinkage={path="../../../.."}\n[workspace]\n',
+    );
+    write("packages/r/src/rust/src/lib.rs", "pub use shrinkage::VALUE;\n");
+    for (const relative of [".", "packages/python", "packages/r/src/rust"]) {
+      const cwd = path.join(directory, relative);
       execFileSync("cargo", ["generate-lockfile", "--offline"], {
         cwd,
         stdio: "pipe",
@@ -69,6 +76,11 @@ for (const scenario of ["rust", "python", "both", "documentation"]) {
     commit("chore: initialize release fixture");
     git("tag", "v1.0.0");
     git("tag", "shrinkage-python-v0.3.0");
+    git("tag", "shrinkage-r-v0.1.0");
+    if (scenario === "r") {
+      write("packages/r/R/lasso.R", "lasso <- function() NULL\n");
+      commit("feat: add R model");
+    }
     if (scenario === "rust" || scenario === "both") {
       write("src/lib.rs", "pub const VALUE: i32 = 2;\n");
       commit("feat: improve Rust core");
@@ -85,6 +97,7 @@ for (const scenario of ["rust", "python", "both", "documentation"]) {
       commit("feat: improve documentation");
     }
     const expected = {
+      ...(scenario === "r" ? { "packages/r": "0.2.0" } : {}),
       ...(scenario === "rust" || scenario === "both" ? { ".": "1.1.0" } : {}),
       ...(scenario === "python" || scenario === "both"
         ? { "packages/python": "0.3.1" }
@@ -108,6 +121,15 @@ for (const scenario of ["rust", "python", "both", "documentation"]) {
         Object.keys(expected).sort(),
       );
       const branch = releases[0].branch;
+      if (expected["packages/r"]) {
+        assert.match(git("show", `${branch}:packages/r/DESCRIPTION`), /Version: 0\.2\.0/);
+      }
+      if (expected["."]) {
+        assert.match(
+          git("show", `${branch}:packages/r/src/rust/Cargo.lock`),
+          /name = "shrinkage"\nversion = "1\.1\.0"/,
+        );
+      }
       if (expected["packages/python"]) {
         for (const name of [
           "Cargo.toml",

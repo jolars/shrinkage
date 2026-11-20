@@ -1,0 +1,3 @@
+#!/bin/sh
+rm -rf src/.cargo src/rust/target
+rm -f src/Makevars src/Makevars.win

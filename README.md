@@ -145,6 +145,7 @@ storage.
 - [Design](DESIGN.md): architecture, statistical conventions, and extension
   contracts.
 - [Python package](packages/python/README.md): installation and usage.
+- [R package](packages/r/README.md): installation and usage.
 
 ## Citation
 

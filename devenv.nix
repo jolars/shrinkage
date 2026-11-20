@@ -32,7 +32,8 @@ in
         ./docs/diplodocus-generated-inputs.patch
       ];
     }))
-  ] ++ lib.optionals pkgs.stdenv.isLinux [
+  ]
+  ++ lib.optionals pkgs.stdenv.isLinux [
     pkgs.perf
     pkgs.valgrind
     pkgs.util-linux
@@ -68,6 +69,16 @@ in
         }/bin/workerd" "$@"
     ''
   );
+
+  languages.r = {
+    enable = true;
+    package = pkgs.rWrapper.override {
+      packages = [
+        pkgs.rPackages.Matrix
+        pkgs.rPackages.roxygen2
+      ];
+    };
+  };
 
   languages.rust = {
     enable = true;

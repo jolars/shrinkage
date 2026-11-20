@@ -42,3 +42,10 @@ result-*
 /docs/widget/dist/
 /docs/widget/node_modules/
 /docs/widget/artifacts/
+/packages/r/src/Makevars
+/packages/r/src/Makevars.win
+/packages/r/src/.cargo/
+/packages/r/src/rust/target/
+/packages/r/src/*.o
+/packages/r/src/*.so
+/packages/r/src/*.dll
