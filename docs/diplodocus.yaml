@@ -2,6 +2,20 @@ project:
   name: "Shrinkage"
 
 presentation:
+  assets:
+    - {repository: shrinkage, path: docs/public/apple-touch-icon.png, publish: apple-touch-icon.png}
+    - {repository: shrinkage, path: docs/public/favicon-96x96.png, publish: favicon-96x96.png}
+    - {repository: shrinkage, path: docs/public/favicon.ico, publish: favicon.ico}
+    - {repository: shrinkage, path: docs/public/favicon.svg, publish: favicon.svg}
+    - {repository: shrinkage, path: docs/public/site.webmanifest, publish: site.webmanifest}
+    - {repository: shrinkage, path: docs/public/web-app-manifest-192x192.png, publish: web-app-manifest-192x192.png}
+    - {repository: shrinkage, path: docs/public/web-app-manifest-512x512.png, publish: web-app-manifest-512x512.png}
+  icons:
+    - {path: favicon-96x96.png, rel: icon, type: image/png, sizes: 96x96}
+    - {path: favicon.svg, rel: icon, type: image/svg+xml}
+    - {path: favicon.ico, rel: icon}
+    - {path: apple-touch-icon.png, rel: apple-touch-icon}
+    - {path: site.webmanifest, rel: manifest}
   sections:
     - label: "Reference"
       path: "reference/index.html"

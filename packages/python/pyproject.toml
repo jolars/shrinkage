@@ -31,6 +31,7 @@ Repository = "https://github.com/jolars/shrinkage"
 Issues = "https://github.com/jolars/shrinkage/issues"
 
 [dependency-groups]
+docs = ["sphinx"]
 dev = ["maturin>=1.15,<2", "mypy>=1.14", "pytest>=8.3", "ruff>=0.16"]
 benchmark = [
     "matplotlib>=3.10",

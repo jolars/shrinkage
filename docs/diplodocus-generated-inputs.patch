@@ -1,6 +1,6 @@
 --- a/src/assembly/rust_native.rs
 +++ b/src/assembly/rust_native.rs
-@@ -850,6 +850,12 @@
+@@ -1130,6 +1130,12 @@
      matches!(
          name,
          ".git"
@@ -13,10 +13,13 @@
              | ".devenv"
              | ".direnv"
              | ".cache"
-@@ -1227,6 +1233,24 @@
-         );
-     }
- 
+@@ -1609,6 +1615,24 @@
+                 PathBuf::from("src/with space.rs"),
+                 PathBuf::from("src/continued.rs")
+             ]
++        );
++    }
++
 +    #[cfg(unix)]
 +    #[test]
 +    fn inventory_skips_generated_python_and_nix_environment_links() {
@@ -32,9 +35,6 @@
 +        assert_eq!(
 +            inventory(&fixture.repository, roots, &BTreeSet::new(), &cache).unwrap(),
 +            before
-+        );
-+    }
-+
-     #[test]
-     fn inventory_observes_membership_and_skips_generated_caches() {
-         let fixture = Fixture::new("");
+         );
+     }
+ 

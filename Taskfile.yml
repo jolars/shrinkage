@@ -323,7 +323,7 @@ tasks:
     desc: Preview the shared Rust and Python documentation
     deps: [docs:prepare, docs:widget:build]
     cmds:
-      - uv run --locked --project packages/python diplodocus serve --config docs/diplodocus.yaml --output docs/site
+      - uv run --locked --group docs --project packages/python diplodocus serve --config docs/diplodocus.yaml --output docs/site
 
   docs:figures:
     desc: Regenerate the penalty constraint figures
@@ -340,8 +340,8 @@ tasks:
     desc: Validate and build the shared documentation site
     deps: [docs:prepare, docs:widget:build]
     cmds:
-      - uv run --locked --project packages/python diplodocus check --config docs/diplodocus.yaml
-      - uv run --locked --project packages/python diplodocus build --config docs/diplodocus.yaml --output docs/site
+      - uv run --locked --group docs --project packages/python diplodocus check --config docs/diplodocus.yaml
+      - uv run --locked --group docs --project packages/python diplodocus build --config docs/diplodocus.yaml --output docs/site
       - python scripts/prepare_documentation.py
 
   docs:check:

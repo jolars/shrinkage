@@ -1,8 +1,7 @@
-"""Install head markup, the explorer placeholder, and public documentation assets."""
+"""Install head markup and the explorer placeholder, and check rendered math."""
 
 import re
 from pathlib import Path
-from shutil import copyfile
 
 EXPLORER_FALLBACK = re.compile(
     r'<div class="diplodocus-component"'
@@ -21,7 +20,9 @@ def main(site: Path | None = None) -> None:
     site = site if site is not None else documentation / "site"
     pages = list(site.rglob("*.html"))
     if not pages:
-        raise RuntimeError("Build the documentation before installing public assets.")
+        raise RuntimeError(
+            "Build the documentation before preparing the rendered pages."
+        )
 
     head = (documentation / "head.html").read_text()
     for page in pages:
@@ -43,9 +44,6 @@ def main(site: Path | None = None) -> None:
             html = html.replace("</head>", head + "</head>", 1)
         if html != original:
             page.write_text(html)
-
-    for asset in (documentation / "public").iterdir():
-        copyfile(asset, site / asset.name)
 
 
 if __name__ == "__main__":
