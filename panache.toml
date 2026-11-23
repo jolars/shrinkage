@@ -1,6 +1,6 @@
 flavor = "gfm"
-# Versionary regenerates the changelog with its own formatting.
-extend-exclude = ["CHANGELOG.md"]
+# Versionary regenerates release notes with its own formatting.
+extend-exclude = ["CHANGELOG.md", "packages/r/NEWS.md"]
 
 [formatters]
 rust = "rustfmt"
