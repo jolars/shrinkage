@@ -1,6 +1,6 @@
 <!-- Generated from README.qmd with task r:readme. -->
 
-# Shrinkage for R
+# Shrinkage
 
 Fit regularized models with `shrinkage()`. Choose a loss and a penalty to fit
 one model, a regularization path, or a cross-validated path. The package accepts
@@ -8,10 +8,11 @@ dense numeric matrices and sparse `Matrix::dgCMatrix` matrices.
 
 ## Installation
 
-From a checkout, run `task r:install`. You can also download the
-`shrinkage-r-source` artifact from a successful [CI
-run](https://github.com/jolars/shrinkage/actions/workflows/ci.yml) and install
-the source archive with `R CMD INSTALL`.
+Install from GitHub with [pak](https://pak.r-lib.org/).
+
+```r
+pak::pak("jolars/shrinkage/packages/r")
+```
 
 Source builds require R 4.4 or later, a C build toolchain, and Rust and Cargo
 1.89 or later. Cargo downloads locked dependencies. On Windows, install Rtools

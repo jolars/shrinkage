@@ -56,30 +56,6 @@ package <- function(mode) {
     ),
     rust
   )
-  core <- file.path(rust, "core")
-  dir.create(core)
-  copy(c("Cargo.toml", "LICENSE", "README.md", "src"), core)
-  # The archive builds the core library without its Rust-only targets.
-  core_manifest <- file.path(core, "Cargo.toml")
-  core_lines <- readLines(core_manifest)
-  section <- cumsum(startsWith(core_lines, "["))
-  omitted <- section[
-    grepl("^\\[dev-dependencies\\]|^\\[\\[(example|bench)\\]\\]", core_lines)
-  ]
-  writeLines(core_lines[!section %in% omitted], core_manifest)
-  manifest <- file.path(rust, "Cargo.toml")
-  lines <- readLines(manifest)
-  dependency <- startsWith(lines, 'shrinkage = { path = "../../../.."')
-  if (sum(dependency) != 1L) {
-    stop("Could not locate the core Cargo dependency.")
-  }
-  lines[dependency] <- sub(
-    "../../../..",
-    "core",
-    lines[dependency],
-    fixed = TRUE
-  )
-  writeLines(lines, manifest)
   if (mode == "stage") {
     return(invisible(source))
   }

@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use extendr_api::{Result, prelude::*};
-use shrinkage::{
+use shrinkage_core::{
     AxisPenalty, ChainFusedLasso, ClusteredLasso, CoefficientLayout, DisjointGroups, ElasticNet,
     FitError, GapSafePenalty, GroupLasso, L1, Masked, PathPenalty, Penalty, PenaltyAxis,
     PenaltyMaximum, ProximalPenalty, RestrictedProximalPenalty, Ridge, Scaled, Slope,

@@ -1,5 +1,5 @@
 use extendr_api::prelude::*;
-use shrinkage::{
+use shrinkage_core::{
     AxisPenalty, ChainFusedLasso, ClusteredLasso, CrossValidationFit, ElasticNet, HybridFit,
     IrlsFit, L1, LassoFit, MultivariateFit, PathFit, PathTermination, PenaltyAxis, ProximalFit,
     Ridge, SelectionRule, Slope, StoppingCriterion, Termination, ValidationMetric,

@@ -1,8 +1,8 @@
 use extendr_api::Result;
 use extendr_api::prelude::*;
 use faer::Col;
-use shrinkage::lazymatrix::{MatTransposeVecInto, MatVecInto};
-use shrinkage::{
+use shrinkage_core::lazymatrix::{MatTransposeVecInto, MatVecInto};
+use shrinkage_core::{
     Binomial, CoefficientLayout, CoordinateDescent, CrossValidation, CrossValidationDatafit,
     FitError, FoldAssignments, Gaussian, HybridCoordinateDescent, Irls, MultivariateGaussian,
     Normalization, PathOptions, PathPenalty, PathSolver, Probit, Problem, ProximalGradient,

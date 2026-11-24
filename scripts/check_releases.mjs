@@ -57,11 +57,18 @@ for (const scenario of ["rust", "python", "r", "both", "documentation"]) {
       '__version__ = "0.3.0"\n',
     );
     write("packages/r/DESCRIPTION", "Package: shrinkage\nVersion: 0.1.0\n");
+    // Model the published Rust crate with a separate source so the fixture
+    // can exercise the pinned R dependency without using the registry.
+    write(
+      "published-core/Cargo.toml",
+      '[package]\nname="shrinkage"\nversion="0.4.0"\nedition="2024"\n',
+    );
+    write("published-core/src/lib.rs", "pub const VALUE: i32 = 1;\n");
     write(
       "packages/r/src/rust/Cargo.toml",
-      '[package]\nname="shrinkage-r"\nversion="0.0.0"\nedition="2024"\npublish=false\n[dependencies]\nshrinkage={path="../../../.."}\n[workspace]\n',
+      '[package]\nname="shrinkage-r"\nversion="0.0.0"\nedition="2024"\npublish=false\n[dependencies]\nshrinkage-core={package="shrinkage",version="=0.4.0",path="../../../../published-core"}\n[workspace]\n',
     );
-    write("packages/r/src/rust/src/lib.rs", "pub use shrinkage::VALUE;\n");
+    write("packages/r/src/rust/src/lib.rs", "pub use shrinkage_core::VALUE;\n");
     for (const relative of [".", "packages/python", "packages/r/src/rust"]) {
       const cwd = path.join(directory, relative);
       execFileSync("cargo", ["generate-lockfile", "--offline"], {
@@ -125,10 +132,10 @@ for (const scenario of ["rust", "python", "r", "both", "documentation"]) {
         assert.match(git("show", `${branch}:packages/r/DESCRIPTION`), /Version: 0\.2\.0/);
       }
       if (expected["."]) {
-        assert.match(
-          git("show", `${branch}:packages/r/src/rust/Cargo.lock`),
-          /name = "shrinkage"\nversion = "1\.1\.0"/,
-        );
+        for (const name of ["Cargo.toml", "Cargo.lock"]) {
+          const file = `packages/r/src/rust/${name}`;
+          assert.equal(git("show", `${branch}:${file}`), git("show", `${head}:${file}`));
+        }
       }
       if (expected["packages/python"]) {
         for (const name of [
