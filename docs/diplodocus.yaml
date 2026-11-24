@@ -117,9 +117,16 @@ presentation:
             link: "packages/python/index.html"
           - text: "Lasso benchmark"
             link: "packages/python/benchmarks.html"
+    /packages/r/:
+      - text: "R"
+        items:
+          - text: "Overview"
+            link: "packages/r/index.html"
+          - text: "Benchmarks"
+            link: "packages/r/vignettes/benchmarks.html"
   site-url: "https://shrinkage.cc/"
   canonical-url-style: "clean"
-  description: "Regularized statistical models in Rust and Python."
+  description: "Regularized statistical models in Rust, Python, and R."
   home:
     tagline: "Big models. Small coefficients."
     description: "Fit regularized statistical models with a Rust numerical core. Start with lasso, explore regularization paths, or compose a model from losses, penalties, and solvers."
@@ -207,6 +214,21 @@ packages:
       - id: "api"
         extractor: "python"
         path: "src/shrinkage"
+        role: "public-api"
+
+  - id: "r"
+    name: "Shrinkage for R"
+    slug: "r"
+    ecosystem: "r"
+    repository: "shrinkage"
+    path: "packages/r"
+    metadata-path: "DESCRIPTION"
+    r:
+      documentation: rd
+    targets:
+      - id: "api"
+        extractor: "r"
+        path: "."
         role: "public-api"
 
 content:

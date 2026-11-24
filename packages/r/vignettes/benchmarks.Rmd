@@ -1,0 +1,96 @@
+---
+title: "Benchmarks"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Benchmarks}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+## Gaussian lasso against glmnet
+
+This benchmark fits Gaussian lasso at one regularization strength. The design
+has 4,096 observations and 1,536 predictors drawn from a standard normal
+distribution. The response combines 20 nonzero coefficients with Gaussian noise.
+Both packages fit the same data with a centered response, no intercept, and no
+predictor standardization. The penalty is 10% of the smallest value that sets
+every coefficient to zero.
+
+The vertical axis shows the duality gap divided by the objective at zero
+coefficients. Metewand evaluates this gap from the returned coefficients. The
+dashed line marks the shared accuracy target of $10^{-8}$.
+
+```{r}
+#| label: convergence
+#| echo: false
+#| fig-width: 7
+#| fig-height: 4.5
+#| fig-alt: "Relative duality gap versus R fit time for Shrinkage and glmnet."
+
+measurements <- utils::read.csv("lasso-convergence.csv")
+groups <- split(
+  measurements,
+  list(measurements$method, measurements$control),
+  drop = TRUE
+)
+points <- do.call(
+  rbind,
+  lapply(groups, function(rows) {
+    times <- stats::quantile(rows$fit_ms, c(0.25, 0.5, 0.75), names = FALSE)
+    data.frame(
+      method = rows$method[1L],
+      control = rows$control[1L],
+      lower = times[1L],
+      time = times[2L],
+      upper = times[3L],
+      gap = max(1e-12, stats::median(rows$relative_gap))
+    )
+  })
+)
+colors <- c(shrinkage = "#23669b", glmnet = "#ad5026")
+plot(
+  NA,
+  xlim = c(0, max(points$upper) * 1.05),
+  ylim = range(c(points$gap, 1e-8)),
+  log = "y",
+  xlab = "R fit time (ms)",
+  ylab = "Relative duality gap",
+  las = 1,
+  bty = "l"
+)
+abline(h = 1e-8, col = "gray50", lty = 2)
+for (method in names(colors)) {
+  rows <- points[points$method == method, ]
+  rows <- rows[order(rows$control, decreasing = method == "glmnet"), ]
+  segments(rows$lower, rows$gap, rows$upper, rows$gap, col = colors[[method]])
+  lines(rows$time, rows$gap, type = "b", pch = 19, col = colors[[method]])
+}
+versions <- unique(measurements[c("method", "version")])
+labels <- paste(
+  c("Shrinkage", "glmnet"),
+  versions$version[match(names(colors), versions$method)]
+)
+legend("topright", labels, col = colors, lty = 1, pch = 19, bty = "n")
+```
+
+Each point represents five fresh fits at the same stopping setting. The point
+shows the median fit time and relative gap, and the horizontal bar spans the
+middle half of the times. Shrinkage varies its sweep limit. glmnet varies its
+coordinate descent threshold and uses the naive Gaussian algorithm. The settings
+control different quantities, so compare the methods at a common gap. Gaps
+smaller than $10^{-12}$ appear at the plotting floor.
+
+The timer covers the R fit call, including validation and solver setup. Dataset
+loading, coefficient extraction, and accuracy evaluation happen outside the
+timer. This comparison uses a single thread and applies to the specified dataset
+and lambda.
+
+The [benchmark
+harness](https://github.com/jolars/shrinkage/tree/main/benches/r-glmnet)
+describes setup and how to run other cases. From the repository root, prepare
+the published core and run the vignette experiment.
+
+```sh
+task r:bench:prepare -- .build/r-glmnet/publication published
+task r:bench -- .build/r-glmnet/publication vignette .build/r-glmnet/vignette-run
+```

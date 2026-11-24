@@ -62,3 +62,10 @@ predict(cv, x)
 Models fit an unpenalized intercept and standardize predictors by default.
 Coefficients and predictions use the original scale. See `?shrinkage` for
 supported losses, solvers, and return values.
+
+## Benchmarks
+
+The [Benchmarks
+vignette](https://shrinkage.cc/packages/r/vignettes/benchmarks.html) compares
+Shrinkage and glmnet at one regularization strength. In R, open it with
+`vignette("benchmarks", package = "shrinkage")`.

@@ -244,6 +244,29 @@ tasks:
     cmds:
       - python scripts/check_python_artifacts.py --sdist
 
+  r:bench:prepare:
+    desc: Prepare a release R benchmark workspace
+    cmds:
+      - Rscript benches/r-glmnet/prepare.R {{.CLI_ARGS}}
+
+  r:bench:
+    desc: Run a prepared Metewand comparison and export its results
+    cmds:
+      - Rscript benches/r-glmnet/run.R {{.CLI_ARGS}}
+
+  r:bench:publish:
+    desc: Refresh the vignette measurements from a completed Metewand export
+    cmds:
+      - Rscript benches/r-glmnet/publish.R {{.CLI_ARGS}}
+
+  r:docs:prepare:
+    desc: Compile the R extension for Diplodocus
+    cmds:
+      - |
+        library_dir=$(mktemp -d)
+        trap 'rm -rf "$library_dir"' EXIT
+        R CMD INSTALL --no-docs --no-html --library="$library_dir" packages/r
+
   r:document:
     desc: Regenerate the extendr wrappers, R help, and NAMESPACE
     cmds:
@@ -317,10 +340,11 @@ tasks:
     cmds:
       - cp CONTRIBUTING.md docs/pages/contributing.md
       - task: python:install
+      - task: r:docs:prepare
       - cargo fetch --locked
 
   docs:serve:
-    desc: Preview the shared Rust and Python documentation
+    desc: Preview the shared Rust, Python, and R documentation
     deps: [docs:prepare, docs:widget:build]
     cmds:
       - uv run --locked --group docs --project packages/python diplodocus serve --config docs/diplodocus.yaml --output docs/site

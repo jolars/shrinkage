@@ -196,6 +196,7 @@ jobs:
           cargo clippy --locked --manifest-path packages/r/src/rust/Cargo.toml --all-targets -- -D warnings
           R CMD cargo run --locked --manifest-path packages/r/src/rust/Cargo.toml --bin document
           git diff --exit-code -- packages/r/R/extendr-wrappers.R
+      - uses: r-lib/actions/setup-pandoc@v2
       - name: Stage R source package
         run: Rscript packages/r/tools/package.R stage
       - uses: r-lib/actions/check-r-package@v2

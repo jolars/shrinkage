@@ -1,9 +1,9 @@
-package <- function(mode) {
+package <- function(mode, stage_dir = NULL) {
   root <- normalizePath(".", winslash = "/")
   output <- file.path(root, "dist")
   dir.create(output, showWarnings = FALSE)
   staging <- if (mode == "stage") {
-    file.path(root, ".build", "r")
+    if (is.null(stage_dir)) file.path(root, ".build", "r") else stage_dir
   } else {
     tempfile("shrinkage-r-")
   }
@@ -31,6 +31,9 @@ package <- function(mode) {
     "cleanup",
     "cleanup.win"
   )
+  if (dir.exists("packages/r/vignettes")) {
+    entries <- c(entries, "vignettes")
+  }
   if (file.exists("packages/r/NEWS.md")) {
     entries <- c(entries, "NEWS.md")
   }
@@ -82,7 +85,7 @@ package <- function(mode) {
   }
   previous <- setwd(staging)
   on.exit(setwd(previous), add = TRUE, after = FALSE)
-  run("build", "--no-build-vignettes", "shrinkage")
+  run("build", "shrinkage")
   version <- read.dcf(file.path(source, "DESCRIPTION"), fields = "Version")[[
     1L
   ]]
@@ -103,7 +106,8 @@ package <- function(mode) {
 }
 
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 1L || !args %in% c("build", "check", "install", "stage")) {
-  stop("Usage: Rscript packages/r/tools/package.R {build|check|install|stage}")
+if (length(args) < 1L || length(args) > 2L ||
+    (length(args) == 2L && args[[1L]] != "stage") || !args[[1L]] %in% c("build", "check", "install", "stage")) {
+  stop("Usage: Rscript packages/r/tools/package.R {build|check|install|stage [DIRECTORY]}")
 }
-package(args)
+package(args[[1L]], if (length(args) == 2L) args[[2L]] else NULL)

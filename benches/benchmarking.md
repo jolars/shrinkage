@@ -102,6 +102,12 @@ and at the iteration limit; intermediate truncated fits therefore perform a
 final check that a longer unconstrained fit may defer. Read the implementation
 and manifest instead of applying this schedule to every solver.
 
+## R comparison
+
+The [R benchmark harness](r-glmnet/README.md) compares Shrinkage and glmnet on
+Gaussian lasso. Use the smoke experiment to check an edited checkout, or run the
+vignette experiment to measure convergence at one lambda.
+
 ## Allocation and numerical checks
 
 Heap harnesses use DHAT separately from timing. For example:

@@ -85,4 +85,6 @@ Source builds require R 4.4 or later, Matrix, a C build toolchain, and Rust and
 Cargo 1.89 or later. Windows builds use Rtools and the `x86_64-pc-windows-gnu`
 Rust target. See the [R package
 README](https://github.com/jolars/shrinkage/blob/main/packages/r/README.md) for
-installation and examples.
+installation and examples. The [R
+documentation](../../packages/r/vignettes/benchmarks.Rmd) includes a convergence
+benchmark.

@@ -84,6 +84,12 @@ the independently evaluated duality gap. `task python:bench:check` checks the
 report and saved figure without rerunning the benchmark. Benchmark dependencies
 belong to the optional `benchmark` group.
 
+The [R lasso
+benchmark](https://github.com/jolars/shrinkage/tree/main/benches/r-glmnet)
+compares Shrinkage and glmnet on dense and sparse Gaussian problems. Run the
+smoke experiment after changing the solver or R binding. The vignette uses a
+saved convergence experiment.
+
 ## Documentation
 
 Edit this guide in the root `CONTRIBUTING.md`. Documentation tasks and CI copy
