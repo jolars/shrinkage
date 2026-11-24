@@ -117,7 +117,8 @@ penalty_slope <- function(weights) {
 #'   from the data and penalty.
 #' @param early_stopping Whether an automatic path can stop based on deviance.
 #' @param penalties A nonempty list of complete penalty specifications in
-#'   fitting order. Put simpler candidates first for the one-standard-error rule.
+#'   fitting order. Put simpler candidates first for the one-standard-error
+#'   rule.
 #' @return A path specification for the `penalty` argument of [shrinkage()].
 #' @export
 path_auto <- function(
@@ -173,8 +174,8 @@ check_penalty <- function(x) {
 
 #' Specify cross-validation
 #'
-#' @param foldid One-based consecutive fold IDs, with at least two folds.
-#'   Supply either `foldid` or `nfolds`.
+#' @param foldid One-based consecutive fold IDs, with at least two folds. Supply
+#'   either `foldid` or `nfolds`.
 #' @param nfolds Number of generated folds. The default is the smaller of ten
 #'   and the number of observations.
 #' @param seed Nonnegative integer seed for generated folds.
@@ -283,14 +284,14 @@ penalty_group_lasso <- function(
 #' @param penalty A complete penalty specification from [penalty_l1()] or
 #'   another penalty constructor.
 #' @param scale Finite nonnegative multiplier for the penalty value.
-#' @param unpenalized Logical vector with one entry per coefficient.
-#'   `TRUE` excludes a coefficient from penalization. The inner penalty
-#'   must be L1, ridge, or elastic net.
+#' @param unpenalized Logical vector with one entry per coefficient. `TRUE`
+#'   excludes a coefficient from penalization. The inner penalty must be L1,
+#'   ridge, or elastic net.
 #' @param axis For multivariate fits, apply the penalty to each response's
 #'   feature vector (`"features"`), each feature's response vector
 #'   (`"responses"`), or the entire coefficient matrix in column order
-#'   (`"all"`). For groups and masks, indices refer to the vector on
-#'   the chosen axis.
+#'   (`"all"`). For groups and masks, indices refer to the vector on the chosen
+#'   axis.
 #' @return A penalty specification for [shrinkage()].
 #' @export
 penalty_scaled <- function(penalty, scale) {

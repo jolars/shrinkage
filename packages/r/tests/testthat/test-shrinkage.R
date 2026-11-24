@@ -1,46 +1,55 @@
-test_that("default and explicit Gaussian L1 specifications select coordinate descent", {
-  x <- cbind(wt = mtcars$wt, hp = mtcars$hp)
-  y <- mtcars$mpg
-  default <- shrinkage(x, y)
-  expect_s3_class(default, "shrinkage_path")
-  expect_identical(default$fits[[1L]]$solver, "coordinate_descent")
+test_that(
+  "default and explicit Gaussian L1 specifications select coordinate descent",
+  {
+    x <- cbind(wt = mtcars$wt, hp = mtcars$hp)
+    y <- mtcars$mpg
+    default <- shrinkage(x, y)
+    expect_s3_class(default, "shrinkage_path")
+    expect_identical(default$fits[[1L]]$solver, "coordinate_descent")
 
-  spec <- path_explicit(list(penalty_l1(0.1)))
-  path <- shrinkage(x, y, penalty = spec)
-  expect_s3_class(path, "shrinkage_path")
-  expect_identical(path$penalties, spec$penalties)
-  expect_equal(path$lambda, 0.1)
-})
+    spec <- path_explicit(list(penalty_l1(0.1)))
+    path <- shrinkage(x, y, penalty = spec)
+    expect_s3_class(path, "shrinkage_path")
+    expect_identical(path$penalties, spec$penalties)
+    expect_equal(path$lambda, 0.1)
+  }
+)
 
-test_that("binomial fits and cross-validation retain their loss and penalties", {
-  x <- cbind(wt = mtcars$wt, hp = mtcars$hp)
-  y <- mtcars$am
-  loss <- loss_binomial()
-  penalties <- list(
-    penalty_clustered_lasso(0.1, 0.1),
-    penalty_clustered_lasso(0.1, 0.02)
-  )
-  cv <- shrinkage(
-    x,
-    y,
-    loss,
-    path_explicit(penalties),
-    cv = cv_options(nfolds = 3)
-  )
-  expect_s3_class(cv, "shrinkage_cv")
-  expect_identical(cv$path$penalties, penalties)
-  expect_null(cv$path$lambda)
-  expect_equal(predict(cv, x, type = "response"), plogis(predict(cv, x)))
-  expect_equal(predict(cv, x), predict(cv$path, x)[, cv$selected_index])
+test_that(
+  "binomial fits and cross-validation retain their loss and penalties",
+  {
+    x <- cbind(wt = mtcars$wt, hp = mtcars$hp)
+    y <- mtcars$am
+    loss <- loss_binomial()
+    penalties <- list(
+      penalty_clustered_lasso(0.1, 0.1),
+      penalty_clustered_lasso(0.1, 0.02)
+    )
+    cv <- shrinkage(
+      x,
+      y,
+      loss,
+      path_explicit(penalties),
+      cv = cv_options(nfolds = 3)
+    )
+    expect_s3_class(cv, "shrinkage_cv")
+    expect_identical(cv$path$penalties, penalties)
+    expect_null(cv$path$lambda)
+    expect_equal(predict(cv, x, type = "response"), plogis(predict(cv, x)))
+    expect_equal(predict(cv, x), predict(cv$path, x)[, cv$selected_index])
 
-  sparse <- methods::as(Matrix::Matrix(x, sparse = TRUE), "CsparseMatrix")
-  probit <- shrinkage(sparse, y, loss_binomial("probit"), penalty_ridge(0.1))
-  expect_equal(predict(probit, x, type = "response"), pnorm(predict(probit, x)))
-  expect_error(
-    shrinkage(x, y, loss, penalties[[1L]], solver = "coordinate_descent"),
-    "solver.*coordinate_descent"
-  )
-})
+    sparse <- methods::as(Matrix::Matrix(x, sparse = TRUE), "CsparseMatrix")
+    probit <- shrinkage(sparse, y, loss_binomial("probit"), penalty_ridge(0.1))
+    expect_equal(
+      predict(probit, x, type = "response"),
+      pnorm(predict(probit, x))
+    )
+    expect_error(
+      shrinkage(x, y, loss, penalties[[1L]], solver = "coordinate_descent"),
+      "solver.*coordinate_descent"
+    )
+  }
+)
 
 test_that("automatic paths retain complete elastic net penalties", {
   x <- cbind(wt = mtcars$wt, hp = mtcars$hp)

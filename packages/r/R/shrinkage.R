@@ -17,25 +17,27 @@
 #' @param tolerance Positive convergence tolerance. The default and criterion
 #'   depend on the solver.
 #' @param max_iterations Positive iteration limit.
-#' @return A `shrinkage_fit` for one penalty, a `shrinkage_path` for a path
-#'   specification, or a `shrinkage_cv` when requesting cross-validation.
+#' @return
+#' A `shrinkage_fit` for one penalty, a `shrinkage_path` for a path
+#' specification, or a `shrinkage_cv` when requesting cross-validation.
 #' @details
 #' Penalties apply to the coefficients on the normalized scale. Returned
 #' coefficients and predictions use the original scale. `predict()` uses the
-#' linear predictor by default. Use `type = "response"` for binomial probabilities.
+#' linear predictor by default. Use `type = "response"` for binomial
+#' probabilities.
 #'
 #' Paths retain the complete penalties in fitting order. A `lambda` vector is
-#' available for automatic paths and when every explicit point has a scalar
-#' L1 or ridge strength. Explicit paths can mix different penalty types with
+#' available for automatic paths and when every explicit point has a scalar L1
+#' or ridge strength. Explicit paths can mix different penalty types with
 #' proximal gradient. Group, scaled, and masked penalties require explicit
 #' candidates for paths.
 #'
 #' The probit link uses IRLS with L1, ridge, or elastic net. Multivariate
 #' Gaussian uses proximal gradient and applies the penalty by feature vector
-#' within each response by default. Use [penalty_axis()] to choose another
-#' axis. These two losses support single fits and paths.
-#' For multivariate fits, `coef()` and `predict()` return matrices with
-#' one column per response. A path adds a third dimension for its points.
+#' within each response by default. Use [penalty_axis()] to choose another axis.
+#' These two losses support single fits and paths. For multivariate fits,
+#' `coef()` and `predict()` return matrices with one column per response. A path
+#' adds a third dimension for its points.
 #'
 #' Cross-validation supports Gaussian and binomial logit losses.
 #' Cross-validation returns the selected full-data fit through `coef()` and

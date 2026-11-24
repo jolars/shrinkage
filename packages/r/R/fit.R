@@ -92,7 +92,9 @@ coef.shrinkage_fit <- function(object, ...) {
   c("(Intercept)" = object$intercept, coefficients)
 }
 
-feature_names <- function(n) paste0("V", seq_len(n), recycle0 = TRUE)
+feature_names <- function(n) {
+  paste0("V", seq_len(n), recycle0 = TRUE)
+}
 
 stack_responses <- function(points) {
   first <- points[[1L]]

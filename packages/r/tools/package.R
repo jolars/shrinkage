@@ -2,10 +2,18 @@ package <- function(mode) {
   root <- normalizePath(".", winslash = "/")
   output <- file.path(root, "dist")
   dir.create(output, showWarnings = FALSE)
-  staging <- if (mode == "stage") file.path(root, ".build", "r") else tempfile("shrinkage-r-")
-  if (dir.exists(file.path(staging, "shrinkage"))) stop("The staging directory already exists.")
+  staging <- if (mode == "stage") {
+    file.path(root, ".build", "r")
+  } else {
+    tempfile("shrinkage-r-")
+  }
+  if (dir.exists(file.path(staging, "shrinkage"))) {
+    stop("The staging directory already exists.")
+  }
   dir.create(staging, recursive = TRUE, showWarnings = FALSE)
-  if (mode != "stage") on.exit(unlink(staging, recursive = TRUE))
+  if (mode != "stage") {
+    on.exit(unlink(staging, recursive = TRUE))
+  }
   source <- file.path(staging, "shrinkage")
   dir.create(source)
   entries <- c(
@@ -72,7 +80,9 @@ package <- function(mode) {
     fixed = TRUE
   )
   writeLines(lines, manifest)
-  if (mode == "stage") return(invisible(source))
+  if (mode == "stage") {
+    return(invisible(source))
+  }
 
   r <- file.path(
     R.home("bin"),
