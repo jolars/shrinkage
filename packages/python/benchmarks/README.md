@@ -12,8 +12,8 @@ Install the Metewand CLI separately, using a revision that supports
 worker package independently; both use binding API version 1:
 
 ```sh
-compute run -- rustup toolchain install 1.98.0 --profile minimal
-compute run -- rustup run 1.98.0 cargo install --locked --git https://github.com/jolars/metewand \
+rustup toolchain install 1.98.0 --profile minimal
+rustup run 1.98.0 cargo install --locked --git https://github.com/jolars/metewand \
   metewand
 ```
 
@@ -24,7 +24,7 @@ CLI also works: set `METEWAND=/absolute/path/to/metewand` to select it.
 From the shrinkage repository root:
 
 ```sh
-compute bench --reason "Python lasso versus scikit-learn and skglm" -- devenv shell -- task python:bench
+devenv shell -- task python:bench
 ```
 
 The task rebuilds shrinkage in release mode, runs worker and analytic reference

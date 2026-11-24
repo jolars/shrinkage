@@ -121,3 +121,12 @@ match it.
   manifest, and lockfile synchronized through its package-scoped Versionary
   rules. Versionary 1.6 composite strategies do not scope secondary manifests
   correctly for nested packages.
+
+## Performance investigations
+
+Use the [benchmark protocol](benches/benchmarking.md) for comparable solver
+work, supported backend features, and timing boundaries. Use the [profiling
+guide](benches/profiling.md) to attribute work across the solver and language
+bindings. For Python comparisons, verify the path and hash of the loaded
+extension. Check attained objective and KKT accuracy independently before
+comparing solver times.

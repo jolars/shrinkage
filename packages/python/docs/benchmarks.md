@@ -41,9 +41,9 @@ the same Fortran-contiguous NumPy `float64` arrays.
 All three methods minimize
 
 $$
-  \frac{1}{2n}\lVert y - X\beta\rVert_2^2
-  + \alpha\lVert\beta\rVert_1, \qquad \alpha
-  = 0.1\,\frac{\lVert X^T y\rVert_\infty}{n}.
+  \frac{1}{2n}\lVert y - X\beta\rVert_2^2 + \alpha\lVert\beta\rVert_1,
+  \qquad
+  \alpha = 0.1\,\frac{\lVert X^T y\rVert_\infty}{n}.
 $$
 
 The plotted gap is the primal objective minus a feasible dual objective. It
@@ -94,8 +94,8 @@ worker, and five measured profiles per implementation. Metewand's
 without adding callbacks to the solvers. It randomizes method order within
 comparison blocks. Workers retain their imports, but every fit creates a new
 model. skglm's Numba compilation occurs during the discarded warm-up, so the
-figure describes fits with compiled kernels. A single `compute bench`
-reservation covers all three methods.
+figure describes fits with compiled kernels. All three methods ran in the same
+measurement session.
 
 The [retained measurements](figures/lasso.json) are Metewand's JSON analysis
 export. They contain complete observation metrics, effective settings, profile
@@ -114,7 +114,7 @@ an earlier failure. The full run directory retains the attempt history.
 From the repository root, with the Metewand CLI installed:
 
 ```sh
-compute bench --reason "Python lasso versus scikit-learn and skglm" -- devenv shell -- task python:bench
+devenv shell -- task python:bench
 ```
 
 The [benchmark sources and setup

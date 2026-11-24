@@ -35,7 +35,7 @@ or the library's MSRV. For a focused Criterion capture:
 
 ```sh
 mkdir -p .build/perf-investigation
-compute bench --reason "Profile dense lasso" -- devenv shell -- bash -c '
+devenv shell -- bash -c '
   export CARGO_TARGET_DIR="$PWD/.build/perf-investigation/target"
   export CARGO_PROFILE_BENCH_DEBUG=2 CARGO_PROFILE_BENCH_STRIP=none
   export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-C force-frame-pointers=yes"
@@ -59,10 +59,10 @@ perf record -e cycles:u -F 997 --call-graph fp --user-callchains \
   -o .build/perf-investigation/probe.data -- <executable> <arguments>
 ```
 
-Wrap the recording in `compute bench` as above. Get Cargo executable paths from
-JSON build artifacts rather than a wildcard that may select stale binaries or
-`.d` files. A focused production-code probe can separate setup from repeated
-solves without exporting new public APIs or reimplementing the hot kernel.
+Get Cargo executable paths from JSON build artifacts rather than a wildcard that
+may select stale binaries or `.d` files. A focused production-code probe can
+separate setup from repeated solves without exporting new public APIs or
+reimplementing the hot kernel.
 
 Use both `cycles:u` and `--user-callchains`. Excluding kernel events alone can
 still leave a request for kernel callchains, which can fail under

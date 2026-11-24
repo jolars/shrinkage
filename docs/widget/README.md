@@ -13,8 +13,7 @@ task docs:widget:check
 task docs:widget:figure
 ```
 
-Wrap expensive commands once with `compute run --` on shared local machines. The
-build requires the toolchain's `wasm32-unknown-unknown` target and
+The build requires the toolchain's `wasm32-unknown-unknown` target and
 `wasm-bindgen` 0.2.127. The CLI version must match the locked Rust dependency.
 Node dependencies are pinned in this package's lockfile. Generated bindings,
 bundles, test artifacts, and Rust build output stay untracked.

@@ -26,7 +26,7 @@ unless that exact configuration is the workload under investigation.
 For a focused lasso run:
 
 ```sh
-compute bench --reason "Dense lasso baseline" -- devenv shell -- \
+devenv shell -- \
   cargo bench --locked --no-default-features --features faer_v0_24 \
   --bench lasso -- 'lasso_1024x64/dense' --exact
 ```
@@ -39,10 +39,9 @@ establish that competing harnesses charge equivalent setup or teardown.
 Use separate checkouts and target directories for historical builds. Keep raw
 Criterion estimates and exact build identities. Prebuild contestants and
 alternate measurement order when drift could obscure a small effect. Keep the
-whole paired comparison in one `compute bench` reservation. Use `compute run`
-for preparation outside it; nested reservations fail. Avoid measuring debug
-builds, tracing observers, or a copied implementation of the suspected
-production kernel.
+whole paired comparison in one session. Complete preparation before timing.
+Avoid measuring debug builds, tracing observers, or a copied implementation of
+the suspected production kernel.
 
 ## Python comparison
 
@@ -50,7 +49,7 @@ The public reproduction command rebuilds the release extension, checks the
 harness, measures both packages, and overwrites the tracked JSON and figure:
 
 ```sh
-compute bench --reason "Python lasso versus scikit-learn" -- devenv shell -- \
+devenv shell -- \
   task python:bench
 ```
 
@@ -66,7 +65,7 @@ executable on PATH. `METEWAND` selects an explicit executable.
 For ordinary package preparation:
 
 ```sh
-compute run -- devenv shell -- uv sync --locked --project packages/python \
+devenv shell -- uv sync --locked --project packages/python \
   --group benchmark --reinstall-package shrinkage \
   --config-settings-package 'shrinkage:build-args=--profile release'
 ```
@@ -108,7 +107,7 @@ and manifest instead of applying this schedule to every solver.
 Heap harnesses use DHAT separately from timing. For example:
 
 ```sh
-compute run -- devenv shell -- cargo bench --locked --no-default-features \
+devenv shell -- cargo bench --locked --no-default-features \
   --features faer_v0_24 --bench lasso_heap
 ```
 
@@ -127,3 +126,36 @@ Gaussian CD check. HybridCoordinateDescent fits also distinguish accepted PG
 steps and coordinate sweeps. Avoid adding callbacks to both solvers merely to
 obtain convergence plots when independent truncated fits already answer the
 question.
+
+## Establish comparable work
+
+Keep the user's solver, workload, and competitor. If no case is specified,
+choose a bounded existing case and state the choice. Match data, matrix layout,
+precision, normalization, intercept treatment, penalty, initialization, thread
+counts, and timing boundaries. Record resolved backend versions and features. A
+dense Fortran-contiguous array and a strided view can exercise different work.
+
+Distinguish two questions:
+
+- **Solver effectiveness:** time to a common independently checked accuracy
+  target, or quality within the same budget. Retain failures and budget misses.
+- **Implementation cost:** identical kernel inputs or matched numerical work.
+  Compare feature visits, full checks, inner iterations, matrix products, and
+  allocations where relevant. Equal iteration limits do not imply equal work.
+
+Check the actual objective and termination semantics before timing. Preserve
+`P(beta_0, beta) = F(beta_0, beta) + R(beta)`, the sample normalization of the
+loss, and the complete penalty. Equal tolerance values across packages do not
+establish equal accuracy. For lasso, independently evaluate the primal
+objective, a feasible dual bound, and KKT violation outside the fit timer. For
+other models, use their applicable stationarity or optimality certificate. A
+budget-limited fit may supply an intermediate convergence point but does not
+certify success. Compare predictions and objective values when coefficients need
+not be unique.
+
+Check whether each iteration is a complete working-set sweep, an outer IRLS
+step, a proximal step, or a hybrid transition containing multiple inner sweeps.
+Identify check frequency, residual refreshes, screening, and working-set growth.
+A diagnostic matrix product or prox call is additional work, not an accepted
+solver step. Retain algorithm differences as part of the practical competitor
+comparison and isolate matched kernels when explaining implementation overhead.
