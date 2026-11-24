@@ -103,8 +103,6 @@ jobs:
           RUSTDOCFLAGS: -D warnings
 
       - uses: jolars/panache-action@v1
-        with:
-          version: v3.17.2
 
       - uses: actions/setup-node@v7
         with:
