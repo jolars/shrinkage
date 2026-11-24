@@ -11,8 +11,9 @@ Authors@R:
     )
 Description: Fits regularized statistical models with penalties that shrink
     coefficients, select features, or encourage structure. Uses the Shrinkage
-    Rust library for model fitting. Currently provides Gaussian lasso fits,
-    regularization paths, and cross-validation for dense and sparse designs.
+    Rust library for model fitting. Supports Gaussian and binomial losses,
+    composable penalties, regularization paths, and cross-validation for dense
+    and sparse designs.
 License: MIT + file LICENSE
 URL: https://shrinkage.cc, https://github.com/jolars/shrinkage
 BugReports: https://github.com/jolars/shrinkage/issues

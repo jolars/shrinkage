@@ -6,12 +6,31 @@ S3method(coef,shrinkage_path)
 S3method(predict,shrinkage_cv)
 S3method(predict,shrinkage_fit)
 S3method(predict,shrinkage_path)
-export(cv_lasso)
-export(lasso)
+export(cv_options)
+export(loss_binomial)
+export(loss_gaussian)
+export(loss_multivariate_gaussian)
+export(path_auto)
+export(path_explicit)
+export(penalty_axis)
+export(penalty_chain_fused_lasso)
+export(penalty_clustered_lasso)
+export(penalty_elastic_net)
+export(penalty_group_lasso)
+export(penalty_l1)
+export(penalty_masked)
+export(penalty_ridge)
+export(penalty_scaled)
+export(penalty_slope)
+export(shrinkage)
 importClassesFrom(Matrix,dgCMatrix)
-importFrom(methods,is)
-importFrom(methods,slot)
-importFrom(methods,validObject)
-importFrom(stats,coef)
-importFrom(stats,predict)
+importFrom(methods,
+  is,
+  slot,
+  validObject
+)
+importFrom(stats,
+  coef,
+  predict
+)
 useDynLib(shrinkage, .registration = TRUE)

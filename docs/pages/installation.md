@@ -72,10 +72,11 @@ for ownership, copying, and validation details.
 
 ## R
 
-The R package provides Gaussian lasso models, regularization paths, and
-cross-validation for dense numeric matrices and sparse `Matrix::dgCMatrix`
-inputs. Run `task r:install` from a checkout or install the source archive from
-the `shrinkage-r-source` artifact in a successful [CI
+The R package fits regularized models through `shrinkage()`. Choose a loss and a
+penalty to fit a model, a regularization path, or a cross-validated path with
+dense numeric matrices or sparse `Matrix::dgCMatrix` inputs. Run
+`task r:install` from a checkout or install the source archive from the
+`shrinkage-r-source` artifact in a successful [CI
 run](https://github.com/jolars/shrinkage/actions/workflows/ci.yml) with
 `R CMD INSTALL`.
 

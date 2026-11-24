@@ -2,11 +2,10 @@
 % Please edit documentation in R/shrinkage-package.R
 \docType{package}
 \name{shrinkage-package}
-\alias{shrinkage}
 \alias{shrinkage-package}
 \title{shrinkage: Regularized Statistical Models}
 \description{
-Fits regularized statistical models with penalties that shrink coefficients, select features, or encourage structure. Uses the Shrinkage Rust library for model fitting. Currently provides Gaussian lasso fits, regularization paths, and cross-validation for dense and sparse designs.
+Fits regularized statistical models with penalties that shrink coefficients, select features, or encourage structure. Uses the Shrinkage Rust library for model fitting. Supports Gaussian and binomial losses, composable penalties, regularization paths, and cross-validation for dense and sparse designs.
 }
 \seealso{
 Useful links:

@@ -2,50 +2,68 @@
 format:
   gfm:
     wrap: preserve
+execute:
+  eval: false
 ---
 
 <!-- Generated from README.qmd with task r:readme. -->
 
 # Shrinkage for R
 
-Shrinkage fits Gaussian lasso regression with dense R matrices and sparse
-`Matrix::dgCMatrix` matrices. It uses the Shrinkage Rust solver for single fits,
-regularization paths, and cross-validation.
+Fit regularized models with `shrinkage()`. Choose a loss and a penalty to fit
+one model, a regularization path, or a cross-validated path. The package accepts
+dense numeric matrices and sparse `Matrix::dgCMatrix` matrices.
 
 ## Installation
 
-The R package lives in the `packages/r` subdirectory on GitHub. Install it with:
+From a checkout, run `task r:install`. You can also download the
+`shrinkage-r-source` artifact from a successful
+[CI run](https://github.com/jolars/shrinkage/actions/workflows/ci.yml) and
+install the source archive with `R CMD INSTALL`.
 
-```r
-pak::pak("jolars/shrinkage/packages/r")
-```
-
-Source builds require a C build toolchain, and Rust and Cargo 1.89 or later.
+Source builds require R 4.4 or later, a C build toolchain, and Rust and Cargo
+1.89 or later. Cargo downloads locked dependencies. On Windows, install Rtools
+and run `rustup target add x86_64-pc-windows-gnu`.
 
 ## Usage
 
-```{r}
-#| label: example
+`shrinkage(x, y)` fits an automatic Gaussian L1 path. Supply a complete
+penalty to fit at one strength.
 
+```{r}
 library(shrinkage)
 
 x <- cbind(weight = mtcars$wt, power = mtcars$hp)
-y <- mtcars$mpg
-
-fit <- lasso(x, y, lambda = 0.5)
+fit <- shrinkage(x, mtcars$mpg, penalty = penalty_l1(0.5))
 coef(fit)
 predict(fit, x)
-fit$diagnostics
+```
 
-path <- lasso(x, y)
-coef(path)
+Choose another loss and penalty to fit a different model.
 
-cv <- cv_lasso(x, y, nfolds = 5, seed = 42, rule = "one_se")
-cv$lambda[cv$selected_index]
+```{r}
+logistic <- shrinkage(
+  x, mtcars$am,
+  loss = loss_binomial(),
+  penalty = penalty_clustered_lasso(l1 = 0.1, fusion = 0.05)
+)
+predict(logistic, x, type = "response")
+```
+
+Use `path_auto()` to vary a scalar strength while preserving the penalty
+shape. Use `path_explicit()` to supply complete penalties, for example to
+vary the two elastic-net strengths independently.
+
+```{r}
+cv <- shrinkage(
+  x, mtcars$mpg,
+  penalty = path_auto(penalty_elastic_net(l1 = 1, l2 = 0.5), nlambda = 20),
+  cv = cv_options(nfolds = 5, seed = 42)
+)
+cv$path$penalties[[cv$selected_index]]
 predict(cv, x)
 ```
 
-By default, the model fits an unpenalized intercept and standardizes the
-predictors using population standard deviations. Coefficients and predictions
-are on the original scale. See `?lasso` and `?cv_lasso` for options and return
-values.
+Models fit an unpenalized intercept and standardize predictors by default.
+Coefficients and predictions use the original scale. See `?shrinkage` for
+supported losses, solvers, and return values.
